@@ -43,7 +43,6 @@ export const DataResetView: React.FC = () => {
   const [operationalOptions, setOperationalOptions] = useState<OperationalResetOptions>({
     resetServices: true,
     resetTraining: true,
-    resetBoutique: true,
     resetClients: false,
     stockOption: 'PRESERVE',
     resetFinancialTreasury: true,
@@ -300,10 +299,6 @@ export const DataResetView: React.FC = () => {
                 <span className="text-[11px] text-slate-400 block">Paiements Clients</span>
                 <span className="text-base font-extrabold text-slate-900 dark:text-white">{summary.commercial.payments}</span>
               </div>
-              <div>
-                <span className="text-[11px] text-slate-400 block">Ventes Boutique</span>
-                <span className="text-base font-extrabold text-slate-900 dark:text-white">{summary.commercial.boutiqueSales}</span>
-              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
@@ -429,16 +424,6 @@ export const DataResetView: React.FC = () => {
                     className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4"
                   />
                   <span>Pôle Formation ({summary.operational.enrollments} inscr, {summary.operational.certificates} cert)</span>
-                </label>
-
-                <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={operationalOptions.resetBoutique}
-                    onChange={(e) => setOperationalOptions({ ...operationalOptions, resetBoutique: e.target.checked })}
-                    className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4"
-                  />
-                  <span>Pôle Boutique ({summary.operational.boutiqueSales} ventes)</span>
                 </label>
 
                 <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">

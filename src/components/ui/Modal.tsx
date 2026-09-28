@@ -55,24 +55,25 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal Container */}
-      <div className="flex min-h-full items-center justify-center p-4 sm:p-6 text-center">
+      <div className="flex min-h-full items-center justify-center p-2 sm:p-6 text-center">
         <div
           className={cn(
-            "w-full transform overflow-hidden rounded-2xl bg-white dark:bg-slate-900 text-left align-middle shadow-2xl transition-all border border-slate-200 dark:border-slate-800",
+            "w-full max-w-full transform overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 text-left align-middle shadow-2xl transition-all border border-slate-200 dark:border-slate-800 my-auto",
             maxWidths[maxWidth]
           )}
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
           {(title || description) && (
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-              <div>
-                {title && <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>}
-                {description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>}
+            <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+              <div className="min-w-0 pr-2">
+                {title && <h3 className="text-sm sm:text-lg font-bold text-slate-900 dark:text-white truncate">{title}</h3>}
+                {description && <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</p>}
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -80,7 +81,7 @@ export const Modal: React.FC<ModalProps> = ({
           )}
 
           {/* Body */}
-          <div className="p-6">{children}</div>
+          <div className="p-3.5 sm:p-6 overflow-x-hidden">{children}</div>
         </div>
       </div>
     </div>

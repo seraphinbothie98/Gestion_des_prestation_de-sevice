@@ -3,10 +3,22 @@
 @tailwind utilities;
 
 @layer base {
-  body {
+  html, body {
     @apply bg-slate-50 text-slate-900 dark:bg-navy-950 dark:text-slate-100 antialiased font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    max-width: 100vw;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Safe area padding for modern smartphone home indicators / notches */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));
+}
+
+.pt-safe {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0.5rem));
 }
 
 /* Glassmorphism & Modern Card Styling */
@@ -41,26 +53,100 @@
   background: rgba(100, 116, 139, 0.7);
 }
 
-/* Print Styles for Invoices, Receipts & Certificates */
+/* Print Styles for Invoices, Receipts & Certificates (Format A5 - 1 Page Strict) */
+@page {
+  size: A5 portrait;
+  margin: 0;
+}
+
 @media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 148mm !important;
+    height: 210mm !important;
+    max-height: 210mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: hidden !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Neutralize all parent containers & modal flex/transform/overflow wrappers */
+  #root,
+  body > div,
+  .fixed,
+  .absolute,
+  .overflow-y-auto,
+  .overflow-hidden,
+  .min-h-full,
+  .min-h-screen {
+    position: static !important;
+    transform: none !important;
+    overflow: visible !important;
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Hide entire page by default */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
-  #printable-document, #printable-document * {
-    visibility: visible;
+
+  /* Show ONLY printable document and its descendants */
+  #printable-document,
+  #printable-document * {
+    visibility: visible !important;
   }
+
   #printable-document {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-    background: white !important;
-    color: black !important;
+    position: fixed !important;
+    top: 4mm !important;
+    left: 4mm !important;
+    width: 140mm !important;
+    max-width: 140mm !important;
+    max-height: 202mm !important;
+    margin: 0 !important;
+    padding: 4mm !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    z-index: 2147483647 !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
   }
-  .no-print {
+
+  /* Ensure text colors & borders remain crisp on print */
+  #printable-document * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  .no-print *,
+  button,
+  nav,
+  header,
+  aside {
     display: none !important;
+    visibility: hidden !important;
   }
 }
 

@@ -1837,19 +1837,19 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
                               return (
                                 <div className="space-y-2 pt-1">
-                                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
                                     {/* Pages du document */}
-                                    <div className="sm:col-span-4">
-                                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                    <div className="sm:col-span-6">
+                                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
                                         📄 Pages du document *
                                       </label>
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1.5">
                                         <Button
                                           type="button"
                                           size="sm"
                                           variant="outline"
                                           onClick={() => handleUpdateLine(idx, { pageCount: Math.max(1, pages - 1) })}
-                                          className="h-8 w-8 p-0 shrink-0"
+                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                                         >
                                           -
                                         </Button>
@@ -1858,14 +1858,14 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                           min="1"
                                           value={pages}
                                           onChange={(e) => handleUpdateLine(idx, { pageCount: parseInt(e.target.value) || 1 })}
-                                          className="h-8 text-center text-xs font-bold"
+                                          className="h-11 text-center text-base sm:text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500"
                                         />
                                         <Button
                                           type="button"
                                           size="sm"
                                           variant="outline"
                                           onClick={() => handleUpdateLine(idx, { pageCount: pages + 1 })}
-                                          className="h-8 w-8 p-0 shrink-0"
+                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                                         >
                                           +
                                         </Button>
@@ -1873,17 +1873,17 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                     </div>
 
                                     {/* Nombre d'exemplaires */}
-                                    <div className="sm:col-span-4">
-                                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                    <div className="sm:col-span-6">
+                                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
                                         📑 Nombre d'exemplaires *
                                       </label>
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1.5">
                                         <Button
                                           type="button"
                                           size="sm"
                                           variant="outline"
                                           onClick={() => handleUpdateLine(idx, { copiesCount: Math.max(1, copies - 1) })}
-                                          className="h-8 w-8 p-0 shrink-0"
+                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                                         >
                                           -
                                         </Button>
@@ -1892,36 +1892,18 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                           min="1"
                                           value={copies}
                                           onChange={(e) => handleUpdateLine(idx, { copiesCount: parseInt(e.target.value) || 1 })}
-                                          className="h-8 text-center text-xs font-bold"
+                                          className="h-11 text-center text-base sm:text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500"
                                         />
                                         <Button
                                           type="button"
                                           size="sm"
                                           variant="outline"
                                           onClick={() => handleUpdateLine(idx, { copiesCount: copies + 1 })}
-                                          className="h-8 w-8 p-0 shrink-0"
+                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                                         >
                                           +
                                         </Button>
                                       </div>
-                                    </div>
-
-                                    {/* Department / Pôle */}
-                                    <div className="sm:col-span-4">
-                                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                                        Pôle / Atelier
-                                      </label>
-                                      <Select
-                                        value={line.assignedDepartment}
-                                        onChange={(e) => handleUpdateLine(idx, { assignedDepartment: e.target.value as any })}
-                                        className="text-xs h-8"
-                                      >
-                                        <option value="PHOTOCOPY">Photocopie</option>
-                                        <option value="PRINT">Impression</option>
-                                        <option value="DESIGN">Infographie & Design</option>
-                                        <option value="FINISHING">Façonnage & Reliure</option>
-                                        <option value="PHOTO">Photo Numérique</option>
-                                      </Select>
                                     </div>
                                   </div>
 
@@ -1958,18 +1940,18 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
                             return (
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end pt-1">
-                                {/* Quantity & Unit Selection */}
-                                <div className="sm:col-span-6">
-                                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                                {/* Quantity Selection */}
+                                <div className="sm:col-span-12">
+                                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
                                     Quantité ({line.unit}) *
                                   </label>
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap-1.5">
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleUpdateLine(idx, { quantity: Math.max(1, line.quantity - 1) })}
-                                      className="h-8 w-8 p-0 shrink-0"
+                                      className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                                     >
                                       -
                                     </Button>
@@ -1978,36 +1960,18 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                       min="1"
                                       value={line.quantity}
                                       onChange={(e) => handleUpdateLine(idx, { quantity: parseInt(e.target.value) || 1 })}
-                                      className="h-8 text-center text-xs font-bold"
+                                      className="h-11 text-center text-base sm:text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500"
                                     />
                                     <Button
                                       type="button"
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleUpdateLine(idx, { quantity: line.quantity + 1 })}
-                                      className="h-8 w-8 p-0 shrink-0"
+                                      className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                                     >
                                       +
                                     </Button>
                                   </div>
-                                </div>
-
-                                {/* Department / Pôle */}
-                                <div className="sm:col-span-6">
-                                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                                    Pôle / Atelier
-                                  </label>
-                                  <Select
-                                    value={line.assignedDepartment}
-                                    onChange={(e) => handleUpdateLine(idx, { assignedDepartment: e.target.value as any })}
-                                    className="text-xs h-8"
-                                  >
-                                    <option value="PHOTOCOPY">Photocopie</option>
-                                    <option value="PRINT">Impression</option>
-                                    <option value="DESIGN">Infographie & Design</option>
-                                    <option value="FINISHING">Façonnage & Reliure</option>
-                                    <option value="PHOTO">Photo Numérique</option>
-                                  </Select>
                                 </div>
                               </div>
                             );

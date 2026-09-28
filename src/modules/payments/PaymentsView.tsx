@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Payment, PaymentMethod } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { CreditCard, Search, Receipt, Printer, ArrowDownLeft, Smartphone } from 'lucide-react';
+import { PaymentReceiptModal } from '../orders/PaymentReceiptModal';
 
 export const PaymentsView: React.FC = () => {
   const { currentTenant } = useAuth();
@@ -157,80 +158,12 @@ export const PaymentsView: React.FC = () => {
         </Table>
       </Card>
 
-      {/* Printable Receipt Modal */}
+      {/* Standardized Unified Printable Receipt Modal (Format A5 - 1 Page) */}
       {selectedPayment && (
-        <Modal
-          isOpen={Boolean(selectedPayment)}
+        <PaymentReceiptModal
+          payment={selectedPayment}
           onClose={() => setSelectedPayment(null)}
-          title={`Reçu de Paiement : ${selectedPayment.paymentNumber}`}
-        >
-          <div id="printable-document" className="p-6 bg-white text-slate-900 border border-slate-200 rounded-2xl space-y-4">
-            <div className="text-center pb-4 border-b border-slate-200 flex flex-col items-center">
-              {currentTenant?.settings?.branding?.showLogo && currentTenant?.settings?.branding?.logoUrl && (
-                <img
-                  src={currentTenant.settings.branding.logoUrl}
-                  alt="Logo"
-                  className="h-12 w-auto object-contain rounded mb-1.5"
-                />
-              )}
-              <h3 className="font-extrabold text-base text-slate-900 uppercase tracking-tight">{currentTenant?.name}</h3>
-              {currentTenant?.settings?.branding?.slogan && (
-                <p className="text-[11px] font-semibold text-brand-600 italic">{currentTenant.settings.branding.slogan}</p>
-              )}
-              <p className="text-xs text-slate-500 mt-0.5">{currentTenant?.phone} • {currentTenant?.address}</p>
-              <h2 className="text-lg font-extrabold text-brand-600 mt-2">REÇU D'ENCAISSEMENT</h2>
-              <span className="text-xs font-mono font-bold text-slate-600">N° {selectedPayment.paymentNumber}</span>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Date et heure :</span>
-                <span className="font-semibold">{formatDate(selectedPayment.createdAt, 'dd/MM/yyyy HH:mm')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Versé par :</span>
-                <span className="font-bold">{selectedPayment.personName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Objet du versement :</span>
-                <span className="font-semibold">
-                  {selectedPayment.targetType === 'ORDER' ? `Commande ${selectedPayment.orderNumber}` : `Inscription Formation ${selectedPayment.enrollmentNumber}`}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Mode de règlement :</span>
-                <span className="font-bold">{selectedPayment.paymentMethod}</span>
-              </div>
-              {selectedPayment.reference && (
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Référence transaction :</span>
-                  <span className="font-mono">{selectedPayment.reference}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 bg-slate-100 rounded-xl text-center">
-              <span className="text-xs uppercase text-slate-500 block font-semibold">Montant Payé</span>
-              <span className="text-2xl font-extrabold text-emerald-600">
-                {formatCurrency(selectedPayment.amount)}
-              </span>
-            </div>
-
-            <div className="pt-4 border-t border-slate-200 flex justify-between items-center text-[11px] text-slate-400">
-              <span>Encaissé par : {selectedPayment.receivedByUserName || 'Caissier'}</span>
-              <span>Signature & Cachet</span>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4 no-print">
-            <Button variant="outline" onClick={() => setSelectedPayment(null)}>
-              Fermer
-            </Button>
-            <Button variant="primary" icon={Printer} onClick={() => window.print()}>
-              Imprimer le Reçu
-            </Button>
-          </div>
-        </Modal>
+        />
       )}
     </div>
   );

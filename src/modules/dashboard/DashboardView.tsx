@@ -24,12 +24,14 @@ import { OnboardingWizardModal } from '../onboarding/OnboardingWizardModal';
 interface DashboardViewProps {
   onNavigate: (section: NavSection) => void;
   onOpenQuickOrder: () => void;
+  onOpenQuickArticleSale: () => void;
   onOpenQuickEnrollment: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   onOpenQuickOrder,
+  onOpenQuickArticleSale,
   onOpenQuickEnrollment,
 }) => {
   const { currentUser, currentTenant, currentBranch, isSuperAdmin } = useAuth();
@@ -675,151 +677,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     );
   };
 
-  // ============================================================================
-  // 5. DASHBOARD: GESTION DE BOUTIQUE / COMMERCE DE DÉTAIL (RETAIL_STORE)
-  // ============================================================================
-  const renderRetailStoreDashboard = () => {
-    const boutiqueSales = (state.boutiqueSales || []).filter(s => s.tenantId === currentTenant?.id);
-    const tenantProducts = state.products.filter(p => p.tenantId === currentTenant?.id);
-    const totalBoutiqueRevenue = boutiqueSales.reduce((acc, s) => acc + (s.totalAmount || 0), 0);
-    const totalSalesCount = boutiqueSales.length;
-
-    const criticalStockItems = tenantProducts.filter(p => p.currentStock <= p.minStockAlert);
-    const totalStockUnits = tenantProducts.reduce((acc, p) => acc + (p.currentStock || 0), 0);
-    const totalStockValue = tenantProducts.reduce((acc, p) => acc + (p.currentStock || 0) * (p.costPrice || 0), 0);
-
-    const activeCashSession = state.cashSessions.find(cs => cs.tenantId === currentTenant?.id && cs.status === 'OPEN');
-    
-    // Single Source of Truth for Cash Balance
-    const retailTreasury = dbStore.getTreasuryMetrics(currentTenant?.id, isSuperAdmin);
-    const cashBalance = retailTreasury.cashTotal;
-
-    const retailTrendData = [
-      { period: 'Sem 1', ventes: 3200000 },
-      { period: 'Sem 2', ventes: 4500000 },
-      { period: 'Sem 3', ventes: 3900000 },
-      { period: 'Sem 4', ventes: 6100000 },
-    ];
-
-    return (
-      <div className="space-y-6">
-        {/* KPI Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/80 border-slate-200/80 dark:border-slate-800 border-l-4 border-l-emerald-500">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Chiffre d'Affaires Boutique</span>
-              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-                <DollarSign className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                {formatCurrency(totalBoutiqueRevenue)}
-              </span>
-              <span className="text-xs text-slate-400 block mt-0.5">{totalSalesCount} ventes enregistrées</span>
-            </div>
-          </Card>
-
-          <Card className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/80 border-slate-200/80 dark:border-slate-800 border-l-4 border-l-brand-500">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Valeur du Stock</span>
-              <div className="p-2.5 rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400">
-                <Boxes className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <span className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                {formatCurrency(totalStockValue)}
-              </span>
-              <span className="text-xs text-slate-400 block mt-0.5">{totalStockUnits.toLocaleString()} unités en stock</span>
-            </div>
-          </Card>
-
-          <Card className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/80 border-slate-200/80 dark:border-slate-800 border-l-4 border-l-amber-500">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Solde Caisse Actif</span>
-              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
-                <Wallet className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{formatCurrency(cashBalance)}</span>
-              <span className="text-xs text-slate-400 block mt-0.5">
-                {activeCashSession ? 'Session caisse ouverte' : 'Caisse fermée'}
-              </span>
-            </div>
-          </Card>
-
-          <Card className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/80 border-slate-200/80 dark:border-slate-800 border-l-4 border-l-rose-500">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alertes Réappro</span>
-              <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-            </div>
-            <div className="mt-3">
-              <span className="text-2xl font-extrabold text-slate-900 dark:text-white">{criticalStockItems.length}</span>
-              <span className="text-xs text-slate-400 block mt-0.5">articles sous le seuil critique</span>
-            </div>
-          </Card>
-        </div>
-
-        {/* Charts & Quick Retail Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 p-6">
-            <CardHeader className="p-0 pb-4 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
-                Courbe des Ventes Boutique & Comptoir
-              </CardTitle>
-            </CardHeader>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={retailTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="period" stroke="#888888" fontSize={11} />
-                  <YAxis stroke="#888888" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="ventes" name="Ventes Boutique" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card className="p-6 space-y-4">
-            <CardHeader className="p-0 pb-2">
-              <CardTitle className="text-sm font-bold">Actions Rapides Boutique</CardTitle>
-            </CardHeader>
-            <div className="space-y-2">
-              <Button variant="primary" className="w-full justify-start text-xs font-bold" onClick={() => onNavigate('boutique')}>
-                <ShoppingBag className="w-4 h-4 mr-2" /> Ouvrir Caisse & Vente POS
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-xs" onClick={() => onNavigate('stock')}>
-                <Boxes className="w-4 h-4 mr-2 text-brand-500" /> Gestion des Stocks & Articles
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-xs" onClick={() => onNavigate('suppliers')}>
-                <Truck className="w-4 h-4 mr-2 text-amber-500" /> Fournisseurs & Bons de Commande
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-xs" onClick={() => onNavigate('cash')}>
-                <Wallet className="w-4 h-4 mr-2 text-emerald-500" /> Gestion Caisse & Espèces
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-xs" onClick={() => onNavigate('persons')}>
-                <Users className="w-4 h-4 mr-2 text-brand-500" /> Répertoire Clients & Comptes
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  };
-
-  // Dispatch appropriate dashboard based on activity type & user role
+  // Dispatch appropriate dashboard based on user role
   const renderDashboardByRole = () => {
-    // If the active agency is a RETAIL_STORE, render the retail dashboard
-    if (currentTenant?.activityType === 'RETAIL_STORE') {
-      return renderRetailStoreDashboard();
-    }
-
     switch (roleCode) {
       case 'SUPER_ADMIN':
       case 'ADMIN_CENTRE':
@@ -839,12 +698,117 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   };
 
-  const isRetailStore = currentTenant?.activityType === 'RETAIL_STORE';
-
   return (
-    <div className="space-y-6">
-      {/* Dynamic Welcome Header with Role & Service Badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-brand-900 via-slate-900 to-navy-950 p-6 rounded-3xl text-white shadow-premium-dark border border-brand-800/30">
+    <div className="space-y-4 sm:space-y-6">
+      {/* 1. SMARTPHONE SIMPLIFIED HOME SECTION (< md) */}
+      <div className="md:hidden space-y-4">
+        {/* Mobile Greeting & Today's Date */}
+        <div className="bg-gradient-to-br from-brand-900 via-slate-900 to-navy-950 p-4 sm:p-5 rounded-3xl text-white shadow-lg border border-brand-800/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-brand-300 font-medium">
+                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+              <h2 className="text-xl font-black tracking-tight mt-0.5">
+                Bonjour, {currentUser?.firstName || 'Collaborateur'} 👋
+              </h2>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 font-bold">
+              {currentUser?.roles[0]?.name || 'Collaborateur'}
+            </span>
+          </div>
+
+          {/* MAIN ACTIONS: + COMMANDE PRESTATION / + VENDRE UN ARTICLE */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onOpenQuickOrder}
+              className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 active:scale-[0.98] transition-transform min-h-[48px]"
+            >
+              <Plus className="w-5 h-5 stroke-[3]" />
+              <span>+ Commande Prestation</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenQuickArticleSale}
+              className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-transform min-h-[48px]"
+            >
+              <ShoppingBag className="w-5 h-5 stroke-[2.5]" />
+              <span>+ Vendre un article</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Quick Action Cards Grid */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Mes Commandes */}
+          <button
+            type="button"
+            onClick={() => onNavigate('orders')}
+            className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-2 text-left active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[72px]"
+          >
+            <div className="p-2 bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 rounded-xl">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-extrabold text-xs text-slate-900 dark:text-white block">Mes commandes</span>
+              <span className="text-[10px] text-slate-400">
+                {state.orders.filter(o => o.tenantId === currentTenant?.id || o.tenantId === 'global').length} enregistrée(s)
+              </span>
+            </div>
+          </button>
+
+          {/* Clients */}
+          <button
+            type="button"
+            onClick={() => onNavigate('persons')}
+            className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-2 text-left active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[72px]"
+          >
+            <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-xl">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-extrabold text-xs text-slate-900 dark:text-white block">Clients</span>
+              <span className="text-[10px] text-slate-400">
+                {state.persons.filter(p => p.tenantId === currentTenant?.id || p.tenantId === 'global').length} contact(s)
+              </span>
+            </div>
+          </button>
+
+          {/* Caisse ou Atelier selon rôle */}
+          <button
+            type="button"
+            onClick={() => onNavigate('cash')}
+            className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-2 text-left active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[72px]"
+          >
+            <div className="p-2 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-extrabold text-xs text-slate-900 dark:text-white block">Caisse & Finance</span>
+              <span className="text-[10px] text-slate-400">Encaissements & solde</span>
+            </div>
+          </button>
+
+          {/* Notifications */}
+          <button
+            type="button"
+            onClick={() => onNavigate('notifications')}
+            className="p-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-start gap-2 text-left active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[72px]"
+          >
+            <div className="p-2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded-xl">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-extrabold text-xs text-slate-900 dark:text-white block">Notifications</span>
+              <span className="text-[10px] text-slate-400">Alertes & messages</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. DESKTOP & TABLET BANNER (>= md) */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-brand-900 via-slate-900 to-navy-950 p-6 rounded-3xl text-white shadow-premium-dark border border-brand-800/30">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Sparkles className="w-4 h-4 text-brand-400" />
@@ -858,7 +822,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex flex-wrap items-center gap-2 mt-2">
             <Badge variant="warning" size="sm">{currentUser?.roles[0]?.name || 'Collaborateur'}</Badge>
             <Badge variant="secondary" size="sm">
-              Univers: {isRetailStore ? 'Boutique & Commerce' : (currentUser?.department || 'Services')}
+              Univers: {currentUser?.department || 'Centre de Prestations'}
             </Badge>
             <span className="text-xs text-slate-400 font-medium ml-1">
               {currentTenant?.name} • {currentBranch?.name}
@@ -867,51 +831,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Global Quick Action Wizard */}
-        <div className="flex items-center gap-2">
-          {isRetailStore ? (
+        <div className="flex items-center gap-3 flex-wrap">
+          {(roleCode === 'ADMIN_CENTRE' || roleCode === 'SUPER_ADMIN' || roleCode === 'CAISSIER') && (
             <>
               <Button
-                size="sm"
+                size="md"
                 variant="primary"
-                icon={ShoppingBag}
-                onClick={() => onNavigate('boutique')}
-                className="shadow-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
+                icon={Plus}
+                onClick={onOpenQuickOrder}
+                className="px-5 py-3 text-sm sm:text-base font-extrabold shadow-md hover:scale-[1.02] transition-all"
               >
-                Vente Boutique POS
+                + Commande Prestation
               </Button>
               <Button
-                size="sm"
-                variant="outline"
-                icon={Boxes}
-                onClick={() => onNavigate('stock')}
-                className="bg-white/10 text-white border-white/20 hover:bg-white/20"
+                size="md"
+                variant="success"
+                icon={ShoppingBag}
+                onClick={onOpenQuickArticleSale}
+                className="px-5 py-3 text-sm sm:text-base font-extrabold shadow-md bg-emerald-600 hover:bg-emerald-700 text-white border-none hover:scale-[1.02] transition-all"
               >
-                Consulter Stock
+                + Vendre un article
+              </Button>
+              <Button
+                size="md"
+                variant="outline"
+                icon={GraduationCap}
+                onClick={onOpenQuickEnrollment}
+                className="px-5 py-3 text-sm sm:text-base font-extrabold bg-white/10 text-white border-white/25 hover:bg-white/20 hover:scale-[1.02] transition-all"
+              >
+                Inscription Formation
               </Button>
             </>
-          ) : (
-            (roleCode === 'ADMIN_CENTRE' || roleCode === 'SUPER_ADMIN' || roleCode === 'CAISSIER') && (
-              <>
-                <Button
-                  size="sm"
-                  variant="primary"
-                  icon={Plus}
-                  onClick={onOpenQuickOrder}
-                  className="shadow-sm"
-                >
-                  Commande Service
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  icon={GraduationCap}
-                  onClick={onOpenQuickEnrollment}
-                  className="bg-white/10 text-white border-white/20 hover:bg-white/20"
-                >
-                  Inscription Formation
-                </Button>
-              </>
-            )
           )}
         </div>
       </div>

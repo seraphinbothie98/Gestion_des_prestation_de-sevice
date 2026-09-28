@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, NavSection } from './Sidebar';
 import { Header } from './Header';
+import { MobileBottomNav } from './MobileBottomNav';
+import { MobileAccountDrawer } from './MobileAccountDrawer';
 import { TrialBanner } from './TrialBanner';
 import { GlobalSearchModal } from '../common/GlobalSearchModal';
 import { QuickOrderModal } from '../../modules/orders/QuickOrderModal';
+import { QuickArticleSaleModal } from '../../modules/orders/QuickArticleSaleModal';
 import { QuickEnrollmentModal } from '../../modules/enrollments/QuickEnrollmentModal';
 import { UserProfileModal } from '../../modules/auth/UserProfileModal';
 
@@ -17,7 +20,6 @@ import { ServicesPricingView } from '../../modules/services/ServicesPricingView'
 import { TrainingView } from '../../modules/training/TrainingView';
 import { PaymentsView } from '../../modules/payments/PaymentsView';
 import { CashView } from '../../modules/cash/CashView';
-import { BoutiqueView } from '../../modules/boutique/BoutiqueView';
 import { StockView } from '../../modules/stock/StockView';
 import { SuppliersView } from '../../modules/suppliers/SuppliersView';
 import { BillingView } from '../../modules/billing/BillingView';
@@ -29,8 +31,6 @@ import { SettingsView } from '../../modules/settings/SettingsView';
 import { LicenseManagementView } from '../../modules/license/LicenseManagementView';
 import { TrialExpiredScreen } from '../../modules/license/TrialExpiredScreen';
 import { SuperAdminDashboardView } from '../../modules/saas/SuperAdminDashboardView';
-import { BoutiqueMessagingView } from '../../modules/boutique/BoutiqueMessagingView';
-import { AdminStoresVerificationView } from '../../modules/saas/AdminStoresVerificationView';
 
 import { useAuth } from '../../context/AuthContext';
 import { evaluateTenantSubscription } from '../../lib/licenseEngine';
@@ -41,20 +41,17 @@ import { Button } from '../ui/Button';
 
 interface AppLayoutProps {
   onOpenCertificateVerification?: (code?: string) => void;
-  onOpenMarketplace?: () => void;
 }
 
 const VALID_SECTIONS: NavSection[] = [
-  'dashboard', 'persons', 'orders', 'boutique', 'production',
+  'dashboard', 'persons', 'orders', 'production',
   'equipment', 'services-pricing', 'training', 'payments', 'cash',
   'stock', 'suppliers', 'billing', 'reports', 'notifications',
-  'users-rbac', 'audit', 'settings', 'licenses', 'saas-superadmin',
-  'marketplace-messaging', 'stores-verification'
+  'users-rbac', 'audit', 'settings', 'licenses', 'saas-superadmin'
 ];
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ 
-  onOpenCertificateVerification,
-  onOpenMarketplace 
+  onOpenCertificateVerification
 }) => {
   const { hasPermission, hasAnyPermission, currentUser, currentTenant } = useAuth();
 
@@ -68,8 +65,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   });
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileAccountOpen, setIsMobileAccountOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isQuickOrderOpen, setIsQuickOrderOpen] = useState(false);
+  const [isQuickArticleSaleOpen, setIsQuickArticleSaleOpen] = useState(false);
   const [isQuickEnrollmentOpen, setIsQuickEnrollmentOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [userProfileTab, setUserProfileTab] = useState<'INFO' | 'EDIT' | 'PHOTO' | 'SECURITY'>('INFO');
@@ -154,13 +153,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <DashboardView
             onNavigate={handleNavigate}
             onOpenQuickOrder={() => setIsQuickOrderOpen(true)}
+            onOpenQuickArticleSale={() => setIsQuickArticleSaleOpen(true)}
             onOpenQuickEnrollment={() => setIsQuickEnrollmentOpen(true)}
           />
         );
       case 'persons':
         return <PersonsView />;
       case 'orders':
-        return <OrdersView onOpenQuickOrder={() => setIsQuickOrderOpen(true)} />;
+        return (
+          <OrdersView
+            onOpenQuickOrder={() => setIsQuickOrderOpen(true)}
+            onOpenQuickArticleSale={() => setIsQuickArticleSaleOpen(true)}
+          />
+        );
       case 'production':
         return <ProductionView />;
       case 'equipment':
@@ -184,8 +189,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         return <PaymentsView />;
       case 'cash':
         return <CashView />;
-      case 'boutique':
-        return <BoutiqueView />;
       case 'stock':
         if (!hasAnyPermission(['stock.view', 'stock.*', '*'])) {
           return renderAccessDenied('Stock & Consommables');
@@ -222,10 +225,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         return <SettingsView />;
       case 'licenses':
         return <LicenseManagementView />;
-      case 'marketplace-messaging':
-        return <BoutiqueMessagingView />;
-      case 'stores-verification':
-        return <AdminStoresVerificationView />;
       case 'saas-superadmin':
         return <SuperAdminDashboardView onNavigateToAgency={() => handleNavigate('dashboard')} />;
       default:
@@ -233,6 +232,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           <DashboardView
             onNavigate={handleNavigate}
             onOpenQuickOrder={() => setIsQuickOrderOpen(true)}
+            onOpenQuickArticleSale={() => setIsQuickArticleSaleOpen(true)}
             onOpenQuickEnrollment={() => setIsQuickEnrollmentOpen(true)}
           />
         );
@@ -247,7 +247,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         onNavigate={handleNavigate}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        onOpenMarketplace={onOpenMarketplace}
       />
 
       {/* Main Content Area */}
@@ -260,18 +259,37 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           onOpenSearch={() => setIsSearchOpen(true)}
           onNavigate={handleNavigate}
           onOpenQuickOrder={() => setIsQuickOrderOpen(true)}
+          onOpenQuickArticleSale={() => setIsQuickArticleSaleOpen(true)}
           onOpenQuickEnrollment={() => setIsQuickEnrollmentOpen(true)}
           onOpenUserProfile={(tab) => {
             setUserProfileTab(tab || 'INFO');
             setIsUserProfileOpen(true);
           }}
-          onOpenMarketplace={onOpenMarketplace}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto overflow-x-hidden">
           {renderCurrentSection()}
         </main>
       </div>
+
+      {/* Mobile Fixed Bottom Navigation */}
+      <MobileBottomNav
+        currentSection={currentSection}
+        onNavigate={handleNavigate}
+        onOpenQuickOrder={() => setIsQuickOrderOpen(true)}
+        onOpenAccountMenu={() => setIsMobileAccountOpen(true)}
+      />
+
+      {/* Mobile Account Bottom Drawer */}
+      <MobileAccountDrawer
+        isOpen={isMobileAccountOpen}
+        onClose={() => setIsMobileAccountOpen(false)}
+        onNavigate={handleNavigate}
+        onOpenUserProfile={(tab) => {
+          setUserProfileTab(tab || 'INFO');
+          setIsUserProfileOpen(true);
+        }}
+      />
 
       {/* Global Modals */}
       <GlobalSearchModal
@@ -284,6 +302,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         isOpen={isQuickOrderOpen}
         onClose={() => setIsQuickOrderOpen(false)}
         onOrderCreated={() => handleNavigate('orders')}
+      />
+
+      <QuickArticleSaleModal
+        isOpen={isQuickArticleSaleOpen}
+        onClose={() => setIsQuickArticleSaleOpen(false)}
+        onSaleCompleted={() => handleNavigate('orders')}
       />
 
       <QuickEnrollmentModal

@@ -6,43 +6,36 @@ import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { RegisterAgencyModal } from './RegisterAgencyModal';
-import { MarketplaceClientRegisterModal } from '../marketplace/MarketplaceClientRegisterModal';
 import { dbStore } from '../../server/db/mockStore';
 import { checkAccountLockout } from '../../server/security/securityEngine';
 import {
   Lock, User as UserIcon, LogIn, Sparkles, Building2,
   ShieldCheck, AlertCircle, Eye, EyeOff, Check, Crown,
-  Store, Building, Briefcase, ArrowRight, ShieldAlert, PlusCircle, Clock, ShieldX
+  Building, Briefcase, ArrowRight, ShieldAlert, PlusCircle, Clock, ShieldX
 } from 'lucide-react';
 
 interface LoginViewProps {
-  onBackToMarketplace?: () => void;
-  initialMode?: 'BOUTIQUE' | 'CLIENT' | 'SUPER_ADMIN';
+  initialMode?: 'AGENCY' | 'SUPER_ADMIN';
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ 
-  onBackToMarketplace,
-  initialMode = 'BOUTIQUE'
+  initialMode = 'AGENCY'
 }) => {
   const { login, allUsers, currentTenant } = useAuth();
   const state = dbStore.getState();
 
-  const [authMode, setAuthMode] = useState<'BOUTIQUE' | 'CLIENT' | 'SUPER_ADMIN'>(() => {
-    if (window.location.hash === '#login-superadmin' || window.location.hash === '#superadmin') return 'SUPER_ADMIN';
-    if (window.location.hash === '#login-client') return 'CLIENT';
-    if (window.location.hash === '#login-seller' || window.location.hash === '#login-boutique') return 'BOUTIQUE';
+  const [authMode, setAuthMode] = useState<'AGENCY' | 'SUPER_ADMIN'>(() => {
+    if (window.location.hash === '#login-superadmin' || window.location.hash === '#superadmin' || window.location.hash === '#saas-superadmin') return 'SUPER_ADMIN';
     return initialMode;
   });
 
   const [identifier, setIdentifier] = useState(() => {
     if (initialMode === 'SUPER_ADMIN') return 'superadmin';
-    if (initialMode === 'CLIENT') return '625102030';
     return 'admin';
   });
 
   const [password, setPassword] = useState(() => {
     if (initialMode === 'SUPER_ADMIN') return 'superadmin123';
-    if (initialMode === 'CLIENT') return 'client123';
     return 'admin123';
   });
 
@@ -51,13 +44,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [isLockedError, setIsLockedError] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [isClientRegisterOpen, setIsClientRegisterOpen] = useState(false);
 
   // Grouped users for clear demo hierarchy
   const superAdminUsers = state.users.filter(u => u.isSuperAdmin || u.username === 'superadmin' || u.roles.some(r => r.code === 'SUPER_ADMIN'));
   const agencyAdminUsers = state.users.filter(u => !u.isSuperAdmin && u.username !== 'superadmin' && u.roles.some(r => r.code === 'ADMIN_CENTRE' || r.code === 'GERANT' || r.code === 'ADMIN_AGENCY'));
-  const staffUsers = state.users.filter(u => !u.isSuperAdmin && u.username !== 'superadmin' && !u.roles.some(r => r.code === 'ADMIN_CENTRE' || r.code === 'GERANT' || r.code === 'ADMIN_AGENCY' || r.code === 'SUPER_ADMIN' || r.code === 'CLIENT'));
-  const clientUsers = state.users.filter(u => u.roles.some(r => r.code === 'CLIENT') || (!u.isSuperAdmin && u.username !== 'superadmin' && !u.roles.some(r => ['ADMIN_CENTRE', 'GERANT', 'ADMIN_AGENCY', 'CAISSIER', 'OPERATEUR', 'RESPONSABLE_FORMATION', 'FORMATEUR', 'MAGASINIER', 'RECEPTIONNISTE', 'SUPER_ADMIN'].includes(r.code))));
+  const staffUsers = state.users.filter(u => !u.isSuperAdmin && u.username !== 'superadmin' && !u.roles.some(r => r.code === 'ADMIN_CENTRE' || r.code === 'GERANT' || r.code === 'ADMIN_AGENCY' || r.code === 'SUPER_ADMIN'));
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +56,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsLockedError(false);
 
     if (!identifier.trim()) {
-      setErrorMsg("Veuillez saisir votre identifiant, téléphone ou adresse email.");
+      setErrorMsg("Veuillez saisir votre identifiant ou adresse email.");
       return;
     }
 
@@ -80,15 +71,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
       if (res.isLocked) {
         setIsLockedError(true);
       }
-    } else {
-      // Dismiss login view on successful login
-      if (onBackToMarketplace) {
-        onBackToMarketplace();
-      }
     }
   };
 
-  const handleQuickSelect = (username: string, pass: string, mode: 'BOUTIQUE' | 'CLIENT' | 'SUPER_ADMIN') => {
+  const handleQuickSelect = (username: string, pass: string, mode: 'AGENCY' | 'SUPER_ADMIN') => {
     setAuthMode(mode);
     setIdentifier(username);
     setPassword(pass);
@@ -97,75 +83,44 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
-      {/* Guinea Tri-color Background Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
+      {/* Background Glows */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-brand-600/15 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-600/15 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-xl relative z-10 space-y-6">
-        {onBackToMarketplace && (
-          <div className="flex justify-start">
-            <button
-              type="button"
-              onClick={onBackToMarketplace}
-              className="inline-flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-850 px-3.5 py-2 rounded-xl border border-slate-800 transition-all shadow-md cursor-pointer"
-            >
-              <ArrowRight className="w-3.5 h-3.5 rotate-180" />
-              <span>← Retour à la Marketplace Publique</span>
-            </button>
-          </div>
-        )}
-
-        {/* Brand Header with Guinea Tri-color Accents */}
+        {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 text-yellow-400 flex items-center justify-center mx-auto shadow-lg relative overflow-hidden">
-            <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-red-600 via-yellow-400 to-emerald-600" />
-            <Building2 className="w-8 h-8 relative z-10 text-yellow-400" />
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 text-brand-400 flex items-center justify-center mx-auto shadow-lg relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-brand-600 via-yellow-400 to-emerald-600" />
+            <Building2 className="w-8 h-8 relative z-10 text-brand-400" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            <span className="text-red-500">PLATEFORME</span> <span className="text-yellow-400">GESTION</span> & <span className="text-emerald-500">BOUTIQUES</span>
+            <span>GESTION DU CENTRE DE PRESTATIONS</span>
           </h1>
           <p className="text-xs text-slate-400 font-medium max-w-md mx-auto">
-            Système unifié : Clients, Boutiques & Administration en République de Guinée 🇬🇳
+            Plateforme complète : Services, Reprographie, Production, Caisse & Formations
           </p>
         </div>
 
-        {/* Mode Selector Switcher (3 Espaces Distincts) */}
+        {/* Mode Selector Switcher */}
         <div className="bg-slate-900/90 p-1 rounded-2xl border border-slate-800 flex flex-col sm:flex-row gap-1 shadow-lg">
           <button
             type="button"
             onClick={() => {
-              setAuthMode('BOUTIQUE');
+              setAuthMode('AGENCY');
               setIdentifier('admin');
               setPassword('admin123');
               setErrorMsg(null);
             }}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              authMode === 'BOUTIQUE'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              authMode === 'AGENCY'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
           >
-            <Store className="w-4 h-4" />
-            <span>Espace Vendeur & Boutique</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setAuthMode('CLIENT');
-              setIdentifier('625102030');
-              setPassword('client123');
-              setErrorMsg(null);
-            }}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              authMode === 'CLIENT'
-                ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <UserIcon className="w-4 h-4" />
-            <span>Espace Client</span>
+            <Building2 className="w-4 h-4" />
+            <span>Espace Centre & Agence</span>
           </button>
 
           <button
@@ -176,14 +131,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
               setPassword('superadmin123');
               setErrorMsg(null);
             }}
-            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               authMode === 'SUPER_ADMIN'
                 ? 'bg-yellow-500 text-slate-950 font-black shadow-md shadow-yellow-500/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
           >
             <Crown className="w-4 h-4" />
-            <span>Super Admin</span>
+            <span>Super Admin SaaS</span>
           </button>
         </div>
 
@@ -197,37 +152,26 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <Crown className="w-5 h-5 text-amber-400" />
                     Connexion Super Administrateur
                   </>
-                ) : authMode === 'CLIENT' ? (
-                  <>
-                    <UserIcon className="w-5 h-5 text-red-500" />
-                    Connexion Espace Client
-                  </>
                 ) : (
                   <>
-                    <Store className="w-5 h-5 text-emerald-400" />
-                    Connexion Espace Boutique & Vendeur
+                    <Building2 className="w-5 h-5 text-brand-400" />
+                    Connexion Centre de Prestations
                   </>
                 )}
               </h2>
               <p className="text-[11px] text-slate-400">
                 {authMode === 'SUPER_ADMIN'
                   ? 'Contrôle transverse de toute la plateforme SaaS et du parc des agences'
-                  : authMode === 'CLIENT'
-                  ? 'Accédez à votre espace personnel, vos commandes, messages et favoris'
-                  : 'Gérez vos produits, commandes, stocks, ventes et paramètres de boutique'}
+                  : 'Accédez à la gestion des prestations, caisse, production, stock et formations'}
               </p>
             </div>
             {authMode === 'SUPER_ADMIN' ? (
               <Badge variant="warning" size="sm" className="font-extrabold uppercase">
                 Global SaaS
               </Badge>
-            ) : authMode === 'CLIENT' ? (
-              <Badge variant="danger" size="sm" className="font-extrabold uppercase bg-red-500/20 text-red-300 border-red-500/40">
-                Client
-              </Badge>
             ) : (
-              <Badge variant="success" size="sm" className="font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border-emerald-500/40">
-                {currentTenant?.name?.split(' ')[0] || 'Boutique'}
+              <Badge variant="primary" size="sm" className="font-extrabold uppercase bg-brand-500/20 text-brand-300 border-brand-500/40">
+                {currentTenant?.name?.split(' ')[0] || 'Centre'}
               </Badge>
             )}
           </div>
@@ -260,9 +204,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <UserIcon className="w-3.5 h-3.5 text-brand-400" />
                 {authMode === 'SUPER_ADMIN' 
                   ? "Identifiant Super Admin ou Email" 
-                  : authMode === 'CLIENT'
-                  ? "Numéro de téléphone, Email ou Identifiant Client"
-                  : "Login Vendeur, Gestionnaire ou Email"}
+                  : "Identifiant Collaborateur ou Email"}
               </label>
               <input
                 type="text"
@@ -271,9 +213,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 placeholder={
                   authMode === 'SUPER_ADMIN' 
                     ? "superadmin" 
-                    : authMode === 'CLIENT'
-                    ? "Ex: 625102030 ou client@email.com"
-                    : "admin, admin.horizon, caisse..."
+                    : "admin, caissier, operateur..."
                 }
                 className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white text-xs font-medium focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder:text-slate-600 outline-none"
                 required
@@ -321,41 +261,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
               className={`w-full py-2.5 shadow-lg mt-2 font-extrabold cursor-pointer ${
                 authMode === 'SUPER_ADMIN'
                   ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/25'
-                  : authMode === 'CLIENT'
-                  ? 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/25'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/25'
+                  : 'bg-brand-600 hover:bg-brand-500 text-white shadow-brand-600/25'
               }`}
             >
               {authMode === 'SUPER_ADMIN' 
                 ? "Accéder à l'Administration Globale" 
-                : authMode === 'CLIENT'
-                ? "Se Connecter à mon Espace Client"
-                : "Se Connecter à l'Espace Boutique"}
+                : "Se Connecter à mon Espace de Gestion"}
             </Button>
 
-            {/* Inscription Client Marketplace */}
-            {authMode === 'CLIENT' && (
+            {/* Inscription d'un Nouveau Centre */}
+            {authMode === 'AGENCY' && (
               <div className="pt-3 border-t border-slate-800 text-center space-y-2">
                 <p className="text-xs text-slate-400 font-medium">
-                  Nouveau client sur la marketplace ?
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  icon={Sparkles}
-                  onClick={() => setIsClientRegisterOpen(true)}
-                  className="w-full py-2.5 bg-gradient-to-r from-red-600/20 via-amber-500/20 to-emerald-600/20 hover:from-red-600/30 hover:to-emerald-600/30 border-amber-500/40 text-amber-300 hover:text-white font-extrabold text-xs transition-all shadow-md cursor-pointer"
-                >
-                  Créer mon compte client gratuit
-                </Button>
-              </div>
-            )}
-
-            {/* Inscription Autonome d'une Nouvelle Agence */}
-            {authMode === 'BOUTIQUE' && (
-              <div className="pt-3 border-t border-slate-800 text-center space-y-2">
-                <p className="text-xs text-slate-400 font-medium">
-                  Vous souhaitez vendre sur la plateforme ?
+                  Nouveau centre de prestations ?
                 </p>
                 <Button
                   type="button"
@@ -364,7 +282,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   onClick={() => setIsRegisterModalOpen(true)}
                   className="w-full py-2.5 bg-gradient-to-r from-brand-600/15 via-amber-600/15 to-emerald-600/15 hover:from-brand-600/30 hover:via-amber-600/30 hover:to-emerald-600/30 border-brand-500/40 text-brand-300 hover:text-white font-extrabold text-xs transition-all shadow-md cursor-pointer"
                 >
-                  Créer mon agence ou boutique (Essai 15 jours)
+                  Créer mon centre de prestations (Essai 15 jours)
                 </Button>
               </div>
             )}
@@ -421,11 +339,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
           </div>
 
-          {/* Niveau 2: Administrateurs d'Agences */}
+          {/* Niveau 2: Administrateurs de Centres */}
           <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <Store className="w-3.5 h-3.5" />
-              NIVEAU 2 — ADMINISTRATEURS & GÉRANTS D'AGENCE / BOUTIQUE
+            <div className="text-[10px] font-black uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5" />
+              NIVEAU 2 — DIRECTEURS & GÉRANTS DU CENTRE
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {agencyAdminUsers.map(u => {
@@ -435,11 +353,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <button
                     key={u.id}
                     type="button"
-                    onClick={() => handleQuickSelect(u.username, u.passwordHash || 'admin123', 'BOUTIQUE')}
+                    onClick={() => handleQuickSelect(u.username, u.passwordHash || 'admin123', 'AGENCY')}
                     className={`p-2.5 rounded-2xl text-left border transition-all flex flex-col justify-between cursor-pointer ${
                       identifier === u.username
-                        ? 'bg-emerald-950/60 border-emerald-500 text-white shadow-md'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-emerald-600/60 hover:text-white'
+                        ? 'bg-brand-950/60 border-brand-500 text-white shadow-md'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-brand-600/60 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
@@ -448,8 +366,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         {isAgencyA ? 'CPEP' : 'Horizon'}
                       </Badge>
                     </div>
-                    <span className="text-[10px] text-emerald-300 font-medium truncate mt-0.5">
-                      {agency?.name || 'Boutique'}
+                    <span className="text-[10px] text-brand-300 font-medium truncate mt-0.5">
+                      {agency?.name || 'Centre'}
                     </span>
                     <span className="text-[9px] text-slate-400 font-mono mt-1">
                       login: <span className="text-white font-bold">{u.username}</span> • mdp: admin123
@@ -460,50 +378,21 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </div>
           </div>
 
-          {/* Niveau 3: Collaborateurs Métier Agence A */}
+          {/* Niveau 3: Collaborateurs Métier */}
           <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-wider text-brand-400 flex items-center justify-between">
+            <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Briefcase className="w-3.5 h-3.5" />
-                NIVEAU 3 — COLLABORATEURS AGENCE A (CPEP)
+                NIVEAU 3 — POSTES MÉTIER (CAISSE, ATELIER, FORMATION)
               </span>
-              <span className="text-[9px] text-slate-400 font-mono">t-001</span>
+              <span className="text-[9px] text-slate-400 font-mono">CPEP (t-001)</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               {staffUsers.filter(u => u.tenantId === 't-001').map(u => (
                 <button
                   key={u.id}
                   type="button"
-                  onClick={() => handleQuickSelect(u.username, u.passwordHash || `${u.username}123`, 'BOUTIQUE')}
-                  className={`p-2 rounded-xl text-left border transition-all flex flex-col justify-between cursor-pointer ${
-                    identifier === u.username
-                      ? 'bg-brand-950/60 border-brand-500 text-white'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="font-bold text-[11px] text-white truncate">{u.firstName} {u.lastName}</span>
-                  <span className="text-[10px] text-brand-300 font-semibold">{u.roles[0]?.name}</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">login: {u.username}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Niveau 3: Collaborateurs Métier Agence B */}
-          <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Store className="w-3.5 h-3.5" />
-                NIVEAU 3 — COLLABORATEURS AGENCE B (HORIZON)
-              </span>
-              <span className="text-[9px] text-slate-400 font-mono">t-002</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {staffUsers.filter(u => u.tenantId === 't-002').map(u => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => handleQuickSelect(u.username, u.passwordHash || `${u.username}123`, 'BOUTIQUE')}
+                  onClick={() => handleQuickSelect(u.username, u.passwordHash || `${u.username}123`, 'AGENCY')}
                   className={`p-2 rounded-xl text-left border transition-all flex flex-col justify-between cursor-pointer ${
                     identifier === u.username
                       ? 'bg-emerald-950/60 border-emerald-500 text-white'
@@ -513,40 +402,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <span className="font-bold text-[11px] text-white truncate">{u.firstName} {u.lastName}</span>
                   <span className="text-[10px] text-emerald-300 font-semibold">{u.roles[0]?.name}</span>
                   <span className="text-[9px] text-slate-500 font-mono mt-0.5">login: {u.username}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Niveau 4: Comptes Clients Marketplace */}
-          <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-wider text-red-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5" />
-                NIVEAU 4 — COMPTES CLIENTS MARKETPLACE
-              </span>
-              <span className="text-[9px] text-slate-400 font-mono">Clients</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {clientUsers.slice(0, 4).map(u => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => handleQuickSelect(u.username || u.phone || u.email, u.passwordHash || 'client123', 'CLIENT')}
-                  className={`p-2 rounded-xl text-left border transition-all flex flex-col justify-between cursor-pointer ${
-                    identifier === (u.username || u.phone || u.email)
-                      ? 'bg-red-950/60 border-red-500 text-white'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-[11px] text-white truncate">{u.firstName} {u.lastName}</span>
-                    <Badge variant="danger" size="sm" className="text-[8px] py-0 px-1 font-bold">Client</Badge>
-                  </div>
-                  <span className="text-[10px] text-red-300 font-medium truncate mt-0.5">
-                    {u.phone || u.email}
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">login: {u.username || u.phone} • mdp: client123</span>
                 </button>
               ))}
             </div>
@@ -568,19 +423,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <RegisterAgencyModal
         isOpen={isRegisterModalOpen}
         onClose={() => setIsRegisterModalOpen(false)}
-      />
-
-      {/* Register Client Modal */}
-      <MarketplaceClientRegisterModal
-        isOpen={isClientRegisterOpen}
-        onClose={() => setIsClientRegisterOpen(false)}
-        onSuccess={() => {
-          setIsClientRegisterOpen(false);
-          if (onBackToMarketplace) {
-            onBackToMarketplace();
-          }
-        }}
-        onSwitchToLogin={() => setIsClientRegisterOpen(false)}
       />
     </div>
   );

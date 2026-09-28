@@ -10,16 +10,15 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { BrandingSettingsView } from './BrandingSettingsView';
 import { SignaturesSettingsView } from './SignaturesSettingsView';
-import { BoutiqueCategoriesManager } from '../boutique/BoutiqueCategoriesManager';
 import { DataResetView } from '../maintenance/DataResetView';
-import { Settings, Building, Save, RefreshCw, Layout, Award, MapPin, ShieldAlert, ShieldCheck, Tag } from 'lucide-react';
+import { Settings, Building, Save, RefreshCw, Layout, Award, MapPin, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
   const { currentTenant, hasPermission } = useAuth();
   const { showToast } = useNotification();
   const state = dbStore.getState();
 
-  const [activeTab, setActiveTab] = useState<'branding' | 'signatures' | 'general' | 'categories' | 'branches' | 'maintenance'>('branding');
+  const [activeTab, setActiveTab] = useState<'branding' | 'signatures' | 'general' | 'branches' | 'maintenance'>('branding');
 
   const [centreName, setCentreName] = useState(currentTenant?.name || '');
   const [centrePhone, setCentrePhone] = useState(currentTenant?.phone || '');
@@ -98,7 +97,6 @@ export const SettingsView: React.FC = () => {
           { id: 'branding', label: 'Identité Visuelle & Logo', icon: Layout },
           { id: 'signatures', label: 'Signatures & Cachet Officiel', icon: ShieldCheck },
           { id: 'general', label: 'Paramètres Généraux', icon: Building },
-          { id: 'categories', label: 'Catégories Marketplace', icon: Tag },
           { id: 'branches', label: 'Agences & Annexes', icon: MapPin },
           { id: 'maintenance', label: 'Maintenance & Reset', icon: ShieldAlert },
         ]}
@@ -192,8 +190,6 @@ export const SettingsView: React.FC = () => {
         </form>
       )}
 
-      {/* TAB 4: CATÉGORIES MARKETPLACE */}
-      {activeTab === 'categories' && <BoutiqueCategoriesManager key={currentTenant?.id} />}
 
       {/* TAB 3: AGENCES */}
       {activeTab === 'branches' && (

@@ -29,3 +29,4 @@ dist-ssr
 .env.staging
 *.tsbuildinfo
 dist-tests
+*.lnk

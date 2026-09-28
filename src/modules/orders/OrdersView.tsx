@@ -24,15 +24,16 @@ import { PaymentReceiptModal } from './PaymentReceiptModal';
 
 interface OrdersViewProps {
   onOpenQuickOrder: () => void;
+  onOpenQuickArticleSale?: () => void;
 }
 
-export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
+export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder, onOpenQuickArticleSale }) => {
   const { currentTenant, currentUser, hasPermission } = useAuth();
   const { showToast } = useNotification();
   const state = dbStore.getState();
 
   const [search, setSearch] = useState('');
-  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'STANDARD' | 'MARKETPLACE' | 'QUOTES'>('ALL');
+  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'PRESTATIONS' | 'ARTICLE_SALES' | 'QUOTES'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | OrderStatus>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID'>('ALL');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -45,11 +46,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
   // Single Item Cancellation Modal
   const [itemToCancel, setItemToCancel] = useState<{ order: Order; item: OrderItem } | null>(null);
   const [cancelReason, setCancelReason] = useState('Demande du client avant fabrication');
-
-  // Marketplace Order Validation Modal State
-  const [marketplaceOrderToValidate, setMarketplaceOrderToValidate] = useState<Order | null>(null);
-  const [validationQuantities, setValidationQuantities] = useState<Record<string, number>>({});
-  const [validationNotes, setValidationNotes] = useState('');
 
   const currentAgencyId = currentTenant?.id || 't-001';
 
@@ -71,22 +67,11 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
     });
   }, [state.invoices, currentAgencyId]);
 
-  const unreadMarketplaceCount = useMemo(() => {
-    return allTenantOrders.filter(o => o.orderSource === 'MARKETPLACE' && (o.isReadByMerchant === false || o.status === 'PENDING')).length;
-  }, [allTenantOrders]);
-
-  const standardOrdersCount = useMemo(() => {
-    return allTenantOrders.filter(o => o.orderSource !== 'MARKETPLACE').length;
-  }, [allTenantOrders]);
-
-  const marketplaceOrdersCount = useMemo(() => {
-    return allTenantOrders.filter(o => o.orderSource === 'MARKETPLACE').length;
-  }, [allTenantOrders]);
-
   const filteredOrders = useMemo(() => {
     return allTenantOrders.filter(o => {
-      if (sourceFilter === 'STANDARD' && o.orderSource === 'MARKETPLACE') return false;
-      if (sourceFilter === 'MARKETPLACE' && o.orderSource !== 'MARKETPLACE') return false;
+      // Source filter
+      if (sourceFilter === 'PRESTATIONS' && o.orderSource === 'VENTE_ARTICLE') return false;
+      if (sourceFilter === 'ARTICLE_SALES' && o.orderSource !== 'VENTE_ARTICLE') return false;
 
       const matchSearch =
         o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -103,17 +88,14 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
 
       return matchSearch && matchStatus && matchPayment;
     });
-  }, [allTenantOrders, sourceFilter, search, statusFilter, paymentFilter]);
+  }, [allTenantOrders, search, statusFilter, paymentFilter, sourceFilter]);
 
   const handleSelectOrder = (order: Order) => {
     setSelectedOrder(order);
-    if (order.orderSource === 'MARKETPLACE' && order.isReadByMerchant === false) {
-      dbStore.markMarketplaceOrderAsRead(order.id);
-    }
   };
 
   const handleUpdateOrderStatus = (orderId: string, newStatus: OrderStatus, reason?: string) => {
-    const performedBy = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Commerçant';
+    const performedBy = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Gestionnaire';
     const result = dbStore.updateOrderStatus(orderId, newStatus, performedBy, reason);
     if (result.success && result.order) {
       showToast(
@@ -126,48 +108,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
       }
     } else {
       showToast('Erreur', result.error || 'Impossible de mettre à jour le statut.', 'DANGER');
-    }
-  };
-
-  const handleOpenMarketplaceValidation = (order: Order) => {
-    const initialVals: Record<string, number> = {};
-    const prods = state.products || [];
-    order.items.forEach(it => {
-      const prod = prods.find(p => p.id === it.productId);
-      const stock = prod ? (prod.currentStock || 0) : 999;
-      const requested = it.requestedQuantity !== undefined ? it.requestedQuantity : it.quantity;
-      initialVals[it.id] = Math.min(stock, requested);
-    });
-    setValidationQuantities(initialVals);
-    setValidationNotes('');
-    setMarketplaceOrderToValidate(order);
-  };
-
-  const handleConfirmMarketplaceValidation = () => {
-    if (!marketplaceOrderToValidate) return;
-    const validations = Object.entries(validationQuantities).map(([itemId, validatedQuantity]) => ({
-      itemId,
-      validatedQuantity: Number(validatedQuantity) || 0
-    }));
-
-    const performedBy = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Commerçant';
-    const result = dbStore.validateMarketplaceOrder({
-      orderId: marketplaceOrderToValidate.id,
-      itemValidations: validations,
-      performedByName: performedBy,
-      notes: validationNotes
-    });
-
-    if (result.success && result.order) {
-      showToast(
-        'Commande Marketplace Validée',
-        `La commande ${result.order.orderNumber} a été validée avec succès. ${result.movementsCount || 0} mouvement(s) de stock enregistré(s).`,
-        'SUCCESS'
-      );
-      setSelectedOrder(result.order);
-      setMarketplaceOrderToValidate(null);
-    } else {
-      showToast('Erreur validation', result.error || 'Impossible de valider la commande.', 'DANGER');
     }
   };
 
@@ -365,12 +305,19 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
             Commandes & Devis
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Module unifié de gestion des commandes atelier, ventes boutique et commandes de la marketplace.
+            Module unifié de gestion et suivi des commandes et devis de prestations.
           </p>
         </div>
-        <Button variant="primary" icon={Plus} onClick={onOpenQuickOrder} className="font-bold">
-          Nouvelle Commande
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button size="md" variant="primary" icon={Plus} onClick={onOpenQuickOrder} className="px-5 py-3 text-sm sm:text-base font-extrabold shadow-md hover:scale-[1.02] transition-all">
+            + Commande Prestation
+          </Button>
+          {onOpenQuickArticleSale && (
+            <Button size="md" variant="success" icon={ShoppingBag} onClick={onOpenQuickArticleSale} className="px-5 py-3 text-sm sm:text-base font-extrabold shadow-md bg-emerald-600 hover:bg-emerald-700 text-white border-none hover:scale-[1.02] transition-all">
+              + Vendre un article
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Origin / Source Tab Bar */}
@@ -386,43 +333,38 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
         >
           <span>Toutes</span>
           <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20">
-            {allTenantOrders.length}
+            {allTenantOrders.length + tenantQuotes.length}
           </span>
         </button>
 
         <button
           type="button"
-          onClick={() => setSourceFilter('STANDARD')}
+          onClick={() => setSourceFilter('PRESTATIONS')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            sourceFilter === 'STANDARD'
+            sourceFilter === 'PRESTATIONS'
               ? 'bg-brand-600 text-white shadow-md'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
           }`}
         >
-          <span>🛠️ Atelier & Standard</span>
+          <span>🛠️ Prestations</span>
           <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700">
-            {standardOrdersCount}
+            {allTenantOrders.filter(o => o.orderSource !== 'VENTE_ARTICLE').length}
           </span>
         </button>
 
         <button
           type="button"
-          onClick={() => setSourceFilter('MARKETPLACE')}
+          onClick={() => setSourceFilter('ARTICLE_SALES')}
           className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-            sourceFilter === 'MARKETPLACE'
-              ? 'bg-yellow-500 text-slate-950 font-black shadow-md shadow-yellow-500/20'
+            sourceFilter === 'ARTICLE_SALES'
+              ? 'bg-emerald-600 text-white shadow-md'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
           }`}
         >
-          <span>🛒 Commandes Marketplace</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-yellow-400/30 text-yellow-900 dark:text-yellow-200 font-bold">
-            {marketplaceOrdersCount}
+          <span>🛍️ Ventes Articles</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-200 dark:bg-slate-700">
+            {allTenantOrders.filter(o => o.orderSource === 'VENTE_ARTICLE').length}
           </span>
-          {unreadMarketplaceCount > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-rose-500 text-white font-black animate-pulse">
-              🔴 {unreadMarketplaceCount}
-            </span>
-          )}
         </button>
 
         <button
@@ -489,169 +431,197 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
 
       {/* QUOTES VIEW */}
       {sourceFilter === 'QUOTES' ? (
-        <Card className="overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Numéro & Date</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Désignation & Lignes</TableHead>
-                <TableHead>Montant Total</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tenantQuotes.length > 0 ? (
-                tenantQuotes.map((q) => (
-                  <TableRow key={q.id}>
-                    <TableCell>
-                      <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 block">
-                        {q.documentNumber}
+        <>
+          {/* Mobile Cards for Quotes */}
+          <div className="md:hidden space-y-3">
+            {tenantQuotes.length > 0 ? (
+              tenantQuotes.map((q) => (
+                <div
+                  key={q.id}
+                  className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                      {q.documentNumber}
+                    </span>
+                    <Badge variant="secondary" size="sm">
+                      {q.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <strong className="text-slate-900 dark:text-white block font-bold">
+                      {q.personName}
+                    </strong>
+                    {q.personPhone && (
+                      <span className="text-slate-400 font-mono text-[11px] block">
+                        📞 {q.personPhone}
                       </span>
-                      <span className="text-[11px] text-slate-400">
-                        {formatDate(q.issueDate)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <strong className="text-xs text-slate-900 dark:text-white block">
-                        {q.personName}
-                      </strong>
-                      {q.personPhone && (
-                        <span className="text-[11px] text-slate-400 block font-mono">
-                          {q.personPhone}
+                    )}
+                  </div>
+                  <div className="text-slate-600 dark:text-slate-400 text-[11px]">
+                    <span className="font-semibold">{q.items.length} ligne(s) : </span>
+                    <span className="truncate">{q.items.map(i => i.description).join(', ')}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-400 text-[11px]">{formatDate(q.issueDate)}</span>
+                    <span className="font-black text-slate-900 dark:text-white text-sm">
+                      {formatCurrency(q.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
+                Aucun devis enregistré.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table for Quotes */}
+          <Card className="hidden md:block overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Numéro & Date</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Désignation & Lignes</TableHead>
+                  <TableHead>Montant Total</TableHead>
+                  <TableHead>Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tenantQuotes.length > 0 ? (
+                  tenantQuotes.map((q) => (
+                    <TableRow key={q.id}>
+                      <TableCell>
+                        <span className="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 block">
+                          {q.documentNumber}
                         </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs text-slate-700 dark:text-slate-300 block">
-                        {q.items.length} ligne{q.items.length > 1 ? 's' : ''}
-                      </span>
-                      <span className="text-[11px] text-slate-400 block truncate max-w-xs">
-                        {q.items.map(i => i.description).join(', ')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-bold text-xs text-slate-900 dark:text-white">
-                        {formatCurrency(q.totalAmount)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" size="sm">
-                        {q.status}
-                      </Badge>
+                        <span className="text-[11px] text-slate-400">
+                          {formatDate(q.issueDate)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <strong className="text-xs text-slate-900 dark:text-white block">
+                          {q.personName}
+                        </strong>
+                        {q.personPhone && (
+                          <span className="text-[11px] text-slate-400 block font-mono">
+                            {q.personPhone}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-slate-700 dark:text-slate-300 block">
+                          {q.items.length} ligne{q.items.length > 1 ? 's' : ''}
+                        </span>
+                        <span className="text-[11px] text-slate-400 block truncate max-w-xs">
+                          {q.items.map(i => i.description).join(', ')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-bold text-xs text-slate-900 dark:text-white">
+                          {formatCurrency(q.totalAmount)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" size="sm">
+                          {q.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-400 text-xs">
+                      Aucun devis enregistré.
                     </TableCell>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-slate-400 text-xs">
-                    Aucun devis enregistré.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       ) : (
-        /* ORDERS TABLE (Desktop) */
-        <Card className="hidden md:block overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Numéro & Source</TableHead>
-                <TableHead>Client & Ville</TableHead>
-                <TableHead>Articles & Unités</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Montant Total</TableHead>
-                <TableHead>Règlement</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.length > 0 ? (
-                filteredOrders.map(o => {
-                  const due = o.dueAmount !== undefined ? o.dueAmount : Math.max(0, o.totalAmount - o.paidAmount);
-                  const isMarketplace = o.orderSource === 'MARKETPLACE';
-                  const isUnread = isMarketplace && (o.isReadByMerchant === false || o.status === 'PENDING');
+        <>
+          {/* Mobile Cards for Orders (md:hidden) */}
+          <div className="md:hidden space-y-3">
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map(o => {
+                const due = o.dueAmount !== undefined ? o.dueAmount : Math.max(0, o.totalAmount - o.paidAmount);
 
-                  return (
-                    <TableRow key={o.id} className={isUnread ? 'bg-yellow-500/5' : ''}>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`font-mono font-bold text-xs block ${isMarketplace ? 'text-yellow-600 dark:text-yellow-400' : 'text-brand-600 dark:text-brand-400'}`}>
-                            {o.orderNumber}
-                          </span>
-                          {isMarketplace && (
-                            <Badge variant="warning" size="sm" className="text-[9px] py-0 font-bold bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/30">
-                              🛒 Marketplace
-                            </Badge>
-                          )}
-                          {isUnread && (
-                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title="Nouvelle commande non lue" />
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-400 block mt-0.5">
-                          {formatDate(o.createdAt, 'dd/MM/yyyy HH:mm')}
+                return (
+                  <div
+                    key={o.id}
+                    className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 text-xs"
+                  >
+                    {/* Card Header: Ref & Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-extrabold text-sm text-brand-600 dark:text-brand-400">
+                          #{o.orderNumber}
                         </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <strong className="text-xs text-slate-900 dark:text-white block">
-                            {o.personName}
-                          </strong>
-                          {o.customerType === 'WALK_IN' && !isMarketplace && (
-                            <Badge variant="outline" size="sm" className="text-[9px] py-0 text-amber-600 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 font-bold">
-                              ⚡ Passage
-                            </Badge>
-                          )}
-                        </div>
-                        {o.personPhone && (
-                          <span className="text-[11px] text-slate-400 block font-mono">
-                            {o.personPhone}
-                          </span>
+                        {o.customerType === 'WALK_IN' && (
+                          <Badge variant="outline" size="sm" className="text-[9px] py-0 text-amber-600 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 font-bold">
+                            ⚡ Passage
+                          </Badge>
                         )}
-                        {o.clientCity && (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
-                            📍 {o.clientCity} {o.deliveryAddress ? `(${o.deliveryAddress})` : ''}
-                          </span>
-                        )}
-                      </TableCell>
+                      </div>
+                      <div>{getStatusBadge(o.status)}</div>
+                    </div>
 
-                      <TableCell>
-                        <div className="text-xs space-y-1">
-                          <strong className="text-slate-800 dark:text-slate-200">
-                            {o.items.length} article{o.items.length > 1 ? 's' : ''}
-                          </strong>
-                          <div className="space-y-0.5 max-w-xs">
-                            {o.items.map((it, idx) => (
-                              <div key={it.id || idx} className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 truncate">
-                                {it.productImageUrl && (
-                                  <img src={it.productImageUrl} alt="" className="w-4 h-4 rounded object-cover shrink-0" />
-                                )}
-                                <span>{it.quantity} {it.publicUnit || it.unit} • {it.productName || it.serviceName}</span>
-                              </div>
-                            ))}
+                    {/* Client & Date */}
+                    <div>
+                      <div className="font-bold text-sm text-slate-900 dark:text-white">
+                        {o.personName}
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-0.5">
+                        {o.personPhone && <span className="font-mono">📞 {o.personPhone}</span>}
+                        <span>{formatDate(o.createdAt, 'dd/MM/yyyy HH:mm')}</span>
+                      </div>
+                      {o.clientCity && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block mt-0.5">
+                          📍 {o.clientCity} {o.deliveryAddress ? `(${o.deliveryAddress})` : ''}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Prestations summary */}
+                    <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1">
+                      <span className="font-bold text-slate-700 dark:text-slate-300 block text-[11px]">
+                        {o.items.length} prestation{o.items.length > 1 ? 's' : ''} :
+                      </span>
+                      <div className="space-y-0.5">
+                        {o.items.map((it, idx) => (
+                          <div key={it.id || idx} className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                            <span className="truncate max-w-[200px]">
+                              {it.quantity} {it.publicUnit || it.unit} • {it.productName || it.serviceName}
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-300 shrink-0">
+                              {formatCurrency(it.totalPrice)}
+                            </span>
                           </div>
-                        </div>
-                      </TableCell>
+                        ))}
+                      </div>
+                    </div>
 
-                      <TableCell>{getStatusBadge(o.status)}</TableCell>
-
-                      <TableCell>
-                        <span className="font-bold text-xs text-slate-900 dark:text-white block">
+                    {/* Financial Summary & Payment status */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800">
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">Total</span>
+                        <span className="font-black text-slate-900 dark:text-white text-sm">
                           {formatCurrency(o.totalAmount)}
                         </span>
-                      </TableCell>
+                      </div>
 
-                      <TableCell>
+                      <div className="text-right">
                         {due === 0 ? (
-                          <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Soldé
+                          <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 justify-end">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Soldé (0 GNF)
                           </span>
                         ) : (
                           <div>
-                            <span className="text-xs font-bold text-rose-600 block">
+                            <span className="text-xs font-black text-rose-600 block">
                               Reste: {formatCurrency(due)}
                             </span>
                             <span className="text-[10px] text-slate-400">
@@ -659,102 +629,218 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
                             </span>
                           </div>
                         )}
-                      </TableCell>
+                      </div>
+                    </div>
 
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {/* Quick Workflow Transitions for Marketplace Orders */}
-                          {/* Quick Workflow Transitions */}
-                          {isMarketplace && o.status === 'PENDING' && (
-                            <Button
-                              size="sm"
-                              variant="primary"
-                              onClick={() => handleUpdateOrderStatus(o.id, 'CONFIRMED')}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold h-7 py-0"
-                            >
-                              Confirmer
-                            </Button>
+                    {/* Action Buttons for Mobile */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        icon={Eye}
+                        onClick={() => handleSelectOrder(o)}
+                        className="flex-1 text-xs font-bold min-h-[38px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200"
+                      >
+                        Voir détails
+                      </Button>
+
+                      {o.status === 'READY' && due === 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="primary"
+                          onClick={() => handleUpdateOrderStatus(o.id, 'DELIVERED')}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold min-h-[38px]"
+                        >
+                          ✓ Livrer
+                        </Button>
+                      )}
+
+                      {due > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          icon={DollarSign}
+                          onClick={() => setOrderForPayment(o)}
+                          className="flex-1 text-emerald-600 border-emerald-300 hover:bg-emerald-50 text-xs font-bold min-h-[38px]"
+                        >
+                          Encaisser
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
+                Aucune commande trouvée.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table for Orders (hidden md:block) */}
+          <Card className="hidden md:block overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Numéro & Source</TableHead>
+                  <TableHead>Client & Ville</TableHead>
+                  <TableHead>Articles & Unités</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Montant Total</TableHead>
+                  <TableHead>Règlement</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.length > 0 ? (
+                  filteredOrders.map(o => {
+                    const due = o.dueAmount !== undefined ? o.dueAmount : Math.max(0, o.totalAmount - o.paidAmount);
+
+                    return (
+                      <TableRow key={o.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono font-bold text-xs block text-brand-600 dark:text-brand-400">
+                              {o.orderNumber}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 block mt-0.5">
+                            {formatDate(o.createdAt, 'dd/MM/yyyy HH:mm')}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <strong className="text-xs text-slate-900 dark:text-white block">
+                              {o.personName}
+                            </strong>
+                            {o.customerType === 'WALK_IN' && (
+                              <Badge variant="outline" size="sm" className="text-[9px] py-0 text-amber-600 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 font-bold">
+                                ⚡ Passage
+                              </Badge>
+                            )}
+                          </div>
+                          {o.personPhone && (
+                            <span className="text-[11px] text-slate-400 block font-mono">
+                              {o.personPhone}
+                            </span>
                           )}
-                          {isMarketplace && o.status === 'CONFIRMED' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUpdateOrderStatus(o.id, 'IN_PRODUCTION')}
-                              className="text-indigo-600 border-indigo-300 hover:bg-indigo-50 text-xs font-bold h-7 py-0"
-                            >
-                              Préparer
-                            </Button>
+                          {o.clientCity && (
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold block">
+                              📍 {o.clientCity} {o.deliveryAddress ? `(${o.deliveryAddress})` : ''}
+                            </span>
                           )}
-                          {isMarketplace && o.status === 'IN_PRODUCTION' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUpdateOrderStatus(o.id, 'READY')}
-                              className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 text-xs font-bold h-7 py-0"
-                            >
-                              Prête
-                            </Button>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="text-xs space-y-1">
+                            <strong className="text-slate-800 dark:text-slate-200">
+                              {o.items.length} article{o.items.length > 1 ? 's' : ''}
+                            </strong>
+                            <div className="space-y-0.5 max-w-xs">
+                              {o.items.map((it, idx) => (
+                                <div key={it.id || idx} className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 truncate">
+                                  {it.productImageUrl && (
+                                    <img src={it.productImageUrl} alt="" className="w-4 h-4 rounded object-cover shrink-0" />
+                                  )}
+                                  <span>{it.quantity} {it.publicUnit || it.unit} • {it.productName || it.serviceName}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>{getStatusBadge(o.status)}</TableCell>
+
+                        <TableCell>
+                          <span className="font-bold text-xs text-slate-900 dark:text-white block">
+                            {formatCurrency(o.totalAmount)}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          {due === 0 ? (
+                            <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Soldé
+                            </span>
+                          ) : (
+                            <div>
+                              <span className="text-xs font-bold text-rose-600 block">
+                                Reste: {formatCurrency(due)}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                Payé: {formatCurrency(o.paidAmount)}
+                              </span>
+                            </div>
                           )}
-                          {o.status === 'READY' && (
-                            due === 0 ? (
-                              <Button
-                                size="sm"
-                                variant="primary"
-                                onClick={() => handleUpdateOrderStatus(o.id, 'DELIVERED')}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold h-7 py-0"
-                              >
-                                Livrée
-                              </Button>
-                            ) : (
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {o.status === 'READY' && (
+                              due === 0 ? (
+                                <Button
+                                  size="sm"
+                                  variant="primary"
+                                  onClick={() => handleUpdateOrderStatus(o.id, 'DELIVERED')}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold h-7 py-0"
+                                >
+                                  Livrée
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setOrderForPayment(o)}
+                                  title={`Paiement requis avant livraison (Solde restant : ${formatCurrency(due)})`}
+                                  className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs font-bold h-7 py-0 flex items-center gap-1"
+                                >
+                                  <DollarSign className="w-3.5 h-3.5" /> Encaisser ({formatCurrency(due)})
+                                </Button>
+                              )
+                            )}
+
+                            {due > 0 && o.status !== 'READY' && (
                               <Button
                                 size="sm"
                                 variant="outline"
+                                icon={DollarSign}
                                 onClick={() => setOrderForPayment(o)}
-                                title={`Paiement requis avant livraison (Solde restant : ${formatCurrency(due)})`}
-                                className="text-amber-600 border-amber-300 hover:bg-amber-50 text-xs font-bold h-7 py-0 flex items-center gap-1"
+                                title="Encaisser un versement"
+                                className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 text-xs font-bold h-7 py-0"
                               >
-                                <DollarSign className="w-3.5 h-3.5" /> Encaisser ({formatCurrency(due)})
+                                Encaisser
                               </Button>
-                            )
-                          )}
+                            )}
 
-                          {due > 0 && o.status !== 'READY' && (
                             <Button
                               size="sm"
-                              variant="outline"
-                              icon={DollarSign}
-                              onClick={() => setOrderForPayment(o)}
-                              title="Encaisser un versement"
-                              className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 text-xs font-bold h-7 py-0"
+                              variant="ghost"
+                              icon={Eye}
+                              onClick={() => handleSelectOrder(o)}
+                              className="text-xs font-bold h-7 py-0"
                             >
-                              Encaisser
+                              Détails
                             </Button>
-                          )}
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            icon={Eye}
-                            onClick={() => handleSelectOrder(o)}
-                            className="text-xs font-bold h-7 py-0"
-                          >
-                            Détails
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-400 text-xs">
-                    Aucune commande trouvée.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400 text-xs">
+                      Aucune commande trouvée.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </>
       )}
 
       {/* Order Detail Modal */}
@@ -773,12 +859,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
                     Client : {selectedOrder.personName}
                   </span>
-                  {selectedOrder.orderSource === 'MARKETPLACE' && (
-                    <Badge variant="warning" size="sm" className="text-[10px] font-bold bg-yellow-400/20 text-yellow-800 dark:text-yellow-300 border-yellow-500/30">
-                      🛒 Commande Marketplace
-                    </Badge>
-                  )}
-                  {selectedOrder.customerType === 'WALK_IN' && selectedOrder.orderSource !== 'MARKETPLACE' && (
+                  {selectedOrder.customerType === 'WALK_IN' && (
                     <Badge variant="outline" size="sm" className="text-[10px] text-amber-600 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 font-bold">
                       ⚡ Client de passage
                     </Badge>
@@ -855,22 +936,17 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
                                 <img src={item.productImageUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0" />
                               ) : (
                                 <Badge
-                                  variant={item.itemType === 'PRODUCT' ? 'warning' : 'primary'}
+                                  variant="primary"
                                   size="sm"
                                   className="text-[9px] font-bold"
                                 >
-                                  {item.itemType === 'PRODUCT' ? '🛒 Boutique' : '🛠️ Prestation'}
+                                  🛠️ Prestation
                                 </Badge>
                               )}
                               <div>
                                 <strong className="text-slate-900 dark:text-white block">
-                                  {item.productName || item.serviceName || item.description}
+                                  {item.serviceName || item.productName || item.description}
                                 </strong>
-                                {item.itemType === 'PRODUCT' && item.publicUnit && (
-                                  <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-semibold block">
-                                    Vendu par {item.publicUnit}
-                                  </span>
-                                )}
                               </div>
                             </div>
                             {item.discountReason && (
@@ -1060,75 +1136,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
                   Générer Facture
                 </Button>
 
-                {/* Marketplace Merchant Quick Actions */}
-                {selectedOrder.orderSource === 'MARKETPLACE' && (
-                  <>
-                    {selectedOrder.status === 'PENDING' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          icon={CheckCircle2}
-                          onClick={() => handleOpenMarketplaceValidation(selectedOrder)}
-                          className="bg-emerald-600 hover:bg-emerald-700 font-bold"
-                        >
-                          Vérifier Stock & Valider Commande
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon={XCircle}
-                          onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'CANCELLED', 'Refusée par le commerçant')}
-                          className="text-rose-600 hover:bg-rose-50 font-bold"
-                        >
-                          Refuser
-                        </Button>
-                      </>
-                    )}
-                    {selectedOrder.status === 'CONFIRMED' && (
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        icon={Clock}
-                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'IN_PRODUCTION')}
-                        className="bg-indigo-600 hover:bg-indigo-700 font-bold"
-                      >
-                        Mettre en Préparation
-                      </Button>
-                    )}
-                    {selectedOrder.status === 'IN_PRODUCTION' && (
-                      <Button
-                        size="sm"
-                        variant="primary"
-                        icon={CheckCircle2}
-                        onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'READY')}
-                        className="bg-emerald-600 hover:bg-emerald-700 font-bold"
-                      >
-                        Marquer Prête / Expédiée
-                      </Button>
-                    )}
-                    {selectedOrder.status === 'READY' && (
-                      selectedOrder.dueAmount === 0 ? (
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          icon={Truck}
-                          onClick={() => handleUpdateOrderStatus(selectedOrder.id, 'DELIVERED')}
-                          className="bg-emerald-600 hover:bg-emerald-700 font-bold"
-                        >
-                          Marquer Livrée
-                        </Button>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700/50 flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-amber-500" /> Paiement requis avant livraison
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </>
-                )}
-
                 {selectedOrder.dueAmount > 0 && (
                   <Button
                     size="sm"
@@ -1143,7 +1150,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
               </div>
 
               <div className="flex items-center gap-2">
-                {selectedOrder.orderSource !== 'MARKETPLACE' && selectedOrder.status !== 'DELIVERED' && selectedOrder.status !== 'CANCELLED' && (
+                {selectedOrder.status !== 'DELIVERED' && selectedOrder.status !== 'CANCELLED' && (
                   <Button
                     size="sm"
                     variant="primary"
@@ -1233,229 +1240,6 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder }) => {
         />
       )}
 
-      {/* Marketplace Order Validation & Stock Deduction Modal */}
-      {marketplaceOrderToValidate && (
-        <Modal
-          isOpen={!!marketplaceOrderToValidate}
-          onClose={() => setMarketplaceOrderToValidate(null)}
-          title={`Validation Commande Marketplace — ${marketplaceOrderToValidate.orderNumber}`}
-          maxWidth="lg"
-        >
-          <div className="space-y-5 pt-2">
-            {/* Header info */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div>
-                <span className="text-slate-400 font-semibold block">Client</span>
-                <strong className="text-slate-900 dark:text-white text-sm">
-                  {marketplaceOrderToValidate.personName}
-                </strong>
-                {marketplaceOrderToValidate.personPhone && (
-                  <span className="text-slate-500 block">📞 {marketplaceOrderToValidate.personPhone}</span>
-                )}
-              </div>
-              <div>
-                <span className="text-slate-400 font-semibold block">Destination</span>
-                <strong className="text-emerald-600 dark:text-emerald-400">
-                  📍 {marketplaceOrderToValidate.clientCity || 'Conakry'}
-                </strong>
-                {marketplaceOrderToValidate.deliveryAddress && (
-                  <span className="text-slate-500 block text-[11px]">{marketplaceOrderToValidate.deliveryAddress}</span>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="text-slate-400 font-semibold block">Date de commande</span>
-                <strong className="text-slate-700 dark:text-slate-300">
-                  {formatDate(marketplaceOrderToValidate.createdAt, 'dd/MM/yyyy HH:mm')}
-                </strong>
-              </div>
-            </div>
-
-            {/* Note from client if any */}
-            {marketplaceOrderToValidate.deliveryNotes && (
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
-                <strong>Note du client :</strong> « {marketplaceOrderToValidate.deliveryNotes} »
-              </div>
-            )}
-
-            {/* Items Validation Table */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Contrôle du Stock Réel & Validation des Quantités
-                </h4>
-                <span className="text-[11px] text-slate-500">
-                  La déduction de stock est appliquée immédiatement après confirmation.
-                </span>
-              </div>
-
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-                {marketplaceOrderToValidate.items.map((item) => {
-                  const prod = (state.products || []).find(p => p.id === item.productId);
-                  const realStock = prod?.currentStock || 0;
-                  const requestedQty = item.requestedQuantity !== undefined ? item.requestedQuantity : item.quantity;
-                  const currentValidated = validationQuantities[item.id] !== undefined ? validationQuantities[item.id] : requestedQty;
-                  const isExceedingStock = currentValidated > realStock && !prod?.allowNegativeStock;
-                  const isPartial = currentValidated < requestedQty;
-
-                  return (
-                    <div key={item.id} className="p-4 bg-white dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0 flex items-center justify-center">
-                          {item.productImageUrl ? (
-                            <img src={item.productImageUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <Package className="w-6 h-6 text-slate-500" />
-                          )}
-                        </div>
-                        <div>
-                          <strong className="text-xs font-bold text-slate-900 dark:text-white block">
-                            {item.productName}
-                          </strong>
-                          <span className="text-[11px] text-slate-500 block">
-                            Prix unitaire : {formatCurrency(item.unitPrice)} / {item.publicUnit || item.unit}
-                          </span>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md font-semibold">
-                              Demandé : <strong>{requestedQty}</strong> {item.publicUnit || item.unit}
-                            </span>
-                            <span className={`text-[11px] px-2 py-0.5 rounded-md font-bold ${
-                              realStock >= requestedQty
-                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
-                                : realStock > 0
-                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                                : 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300'
-                            }`}>
-                              Stock réel magasin : <strong>{realStock}</strong> {prod?.baseUnit || item.unit}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Quantity Input & Actions */}
-                      <div className="flex items-center gap-3 self-end sm:self-center">
-                        <div className="text-right">
-                          <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
-                            Quantité validée
-                          </label>
-                          <div className="flex items-center border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-xl overflow-hidden shadow-sm">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setValidationQuantities(prev => ({
-                                  ...prev,
-                                  [item.id]: Math.max(0, (prev[item.id] !== undefined ? prev[item.id] : requestedQty) - 1)
-                                }));
-                              }}
-                              className="px-2.5 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min={0}
-                              value={currentValidated}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                setValidationQuantities(prev => ({
-                                  ...prev,
-                                  [item.id]: isNaN(val) || val < 0 ? 0 : val
-                                }));
-                              }}
-                              className={`w-14 py-1 text-xs font-black text-center focus:outline-none bg-transparent ${
-                                isExceedingStock ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'
-                              }`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setValidationQuantities(prev => ({
-                                  ...prev,
-                                  [item.id]: (prev[item.id] !== undefined ? prev[item.id] : requestedQty) + 1
-                                }));
-                              }}
-                              className="px-2.5 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="text-right min-w-24">
-                          <span className="text-[10px] text-slate-400 block font-semibold">Sous-total net</span>
-                          <span className="text-xs font-black text-brand-600 dark:text-brand-400 block">
-                            {formatCurrency(item.unitPrice * currentValidated)}
-                          </span>
-                          {isPartial && currentValidated > 0 && (
-                            <span className="text-[9px] text-amber-600 dark:text-amber-400 font-bold block">
-                              Validation partielle
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Summary & Note Input */}
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-500 font-semibold">Nouveau Total Commande Validé :</span>
-                <span className="text-base font-black text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(
-                    marketplaceOrderToValidate.items.reduce((sum, it) => {
-                      const q = validationQuantities[it.id] !== undefined ? validationQuantities[it.id] : (it.requestedQuantity || it.quantity);
-                      return sum + it.unitPrice * q;
-                    }, 0)
-                  )}
-                </span>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">
-                  Note ou instruction de validation (visible par le client) :
-                </label>
-                <input
-                  type="text"
-                  value={validationNotes}
-                  onChange={(e) => setValidationNotes(e.target.value)}
-                  placeholder="Ex: Commande validée selon le stock disponible en magasin."
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white"
-                />
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex items-center justify-between gap-3 pt-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setMarketplaceOrderToValidate(null);
-                  handleUpdateOrderStatus(marketplaceOrderToValidate.id, 'CANCELLED', 'Refusée par le vendeur pour rupture');
-                }}
-                className="text-rose-600 hover:bg-rose-50 font-bold text-xs"
-              >
-                Refuser la commande
-              </Button>
-
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setMarketplaceOrderToValidate(null)}>
-                  Annuler
-                </Button>
-                <Button
-                  variant="primary"
-                  icon={CheckCircle2}
-                  onClick={handleConfirmMarketplaceValidation}
-                  className="bg-emerald-600 hover:bg-emerald-700 font-black shadow-md text-xs"
-                >
-                  Confirmer la Validation & Déduire le Stock
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };

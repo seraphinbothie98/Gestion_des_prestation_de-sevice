@@ -566,15 +566,9 @@ export function evaluateOrderStock(
   return requirements.map(req => {
     const prod = products.find(p => p.id === req.productId);
     const baseUnit = prod?.baseUnit || prod?.unit || 'unité';
-    const isServiceConsumable = req.sourceTypes.includes('INTERNAL_CONSUMPTION') && !req.sourceTypes.includes('BOUTIQUE_SALE');
-    
-    // Evaluate against Stock Prestation for service consumables, and against Stock Magasin for direct boutique sales
-    const currentStock = isServiceConsumable
-      ? (prod?.prestationStock !== undefined ? prod.prestationStock : (prod?.stockByLocation?.['PRESTATION'] ?? prod?.currentStock ?? 0))
-      : (prod?.currentStock || 0);
-    const minStockAlert = isServiceConsumable
-      ? (prod?.prestationMinStockAlert || prod?.minStockAlert || 0)
-      : (prod?.minStockAlert || 0);
+    // SINGLE CENTRAL STOCK: Both boutique sales and prestation consumables evaluate against prod.currentStock
+    const currentStock = prod?.currentStock || 0;
+    const minStockAlert = prod?.minStockAlert || 0;
 
     const allUnits = prod ? getAvailableProductUnits(prod) : [];
     // Default purchase packaging or highest level packaging
@@ -941,15 +935,8 @@ export function checkOrderConsumablesAvailability(
     let availableQty = 0;
 
     if (prod) {
-      if (storeId && prod.stockByStore && prod.stockByStore[storeId] !== undefined) {
-        availableQty = prod.stockByStore[storeId];
-      } else if (prod.prestationStock !== undefined) {
-        availableQty = prod.prestationStock;
-      } else if (prod.stockByLocation && prod.stockByLocation['PRESTATION'] !== undefined) {
-        availableQty = prod.stockByLocation['PRESTATION'];
-      } else {
-        availableQty = prod.currentStock || 0;
-      }
+      // SINGLE CENTRAL STOCK: available quantity is always prod.currentStock
+      availableQty = prod.currentStock || 0;
     }
 
     if (availableQty < info.totalRequired) {

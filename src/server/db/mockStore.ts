@@ -3,7 +3,7 @@ import {
   Order, OrderItem, OrderStatus, ProductionJob, TrainingCategory, Training, Classroom, TrainingSession,
   Enrollment, AttendanceSheet, Assessment, Certificate, CashRegister,
   CashSession, Payment, Expense, ExpenseCategory, Product, ProductCategory, ProductPackaging, StockMovement, StockMovementType, Supplier, PurchaseOrder, PurchaseOrderItem, RequestingDepartment,
-  BoutiqueSale, BoutiqueSaleReturn, UnitOfMeasure,
+  UnitOfMeasure,
   Invoice, AppNotification, AuditLog, Equipment, EquipmentMaintenance,
   ServicePriceHistory, DiscountAudit, DiscountRoleLimit,
   ActivityType, AgencyStatus, LicensePlan, Currency,
@@ -11,12 +11,9 @@ import {
   FinancialYear, FinancialYearStatus, FinancialPeriod, FinancialPeriodStatus,
   SupplierPayment, SupplierDebt, SupplierDebtStatus, PurchaseOrderStatus, PurchaseOrderPaymentStatus, PaymentMethod, AccountResetRecord,
   Store, StoreType, ConsumableMode, ServiceConsumableConfig, UserProfileUpdateData,
-  ResetLevel, ResetSummaryData, OperationalResetOptions, ResetExecutionResult,
-  MarketplaceConversation, MarketplaceMessage, MarketplaceCategoryItem,
-  StoreVerification, StoreVerificationStatus, StoreCommercialStatus, StoreBusinessType, StoreRejectionReason
+  ResetLevel, ResetSummaryData, OperationalResetOptions, ResetExecutionResult
 } from '../../types';
 import { generateDocNumber, formatCurrency } from '../../lib/utils';
-import type { MarketplaceCartItem } from '../../modules/marketplace/types';
 import {
   resolveProductPurchasePrice,
   calculateServiceStockConsumption,
@@ -85,17 +82,11 @@ export interface DatabaseState {
   suppliers: Supplier[];
   requestingDepartments: RequestingDepartment[];
   purchaseOrders: PurchaseOrder[];
-  boutiqueSales: BoutiqueSale[];
-  boutiqueSaleReturns?: BoutiqueSaleReturn[];
   invoices: Invoice[];
   equipment: Equipment[];
   equipmentMaintenances: EquipmentMaintenance[];
   notifications: AppNotification[];
   auditLogs: AuditLog[];
-  marketplaceConversations?: MarketplaceConversation[];
-  marketplaceMessages?: MarketplaceMessage[];
-  storeVerifications?: StoreVerification[];
-  clientStoreRelations?: ClientStoreRelation[];
   currentTenantId: string;
   currentUserId: string;
 }
@@ -234,10 +225,6 @@ export const INITIAL_STATE: DatabaseState = {
       currency: "GNF",
       taxRate: 0,
       isActive: true,
-      verificationStatus: 'APPROUVE',
-      commercialStatus: 'ACTIVE',
-      isPhoneVerified: true,
-      isVerifiedStore: true,
       subscriptionStatus: "TRIAL",
       trialStartedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(), // 13 jours écoulés, reste 32 jours
       trialEndsAt: new Date(Date.now() + 32 * 24 * 60 * 60 * 1000).toISOString(),
@@ -398,11 +385,6 @@ export const INITIAL_STATE: DatabaseState = {
       currency: "GNF",
       taxRate: 0,
       isActive: true,
-      isLiveStreaming: true,
-      verificationStatus: 'APPROUVE',
-      commercialStatus: 'ACTIVE',
-      isPhoneVerified: true,
-      isVerifiedStore: true,
       subscriptionStatus: "ACTIVE",
       trialStartedAt: "2026-01-01T00:00:00Z",
       trialEndsAt: "2027-01-01T00:00:00Z",
@@ -1754,17 +1736,6 @@ export const INITIAL_STATE: DatabaseState = {
       location: 'Magasin Principal - Étagère A1',
       stockByLocation: { 'MAIN_STORE': 15000, 'BOUTIQUE': 7500, 'PRESTATION': 2500 },
       stockByStore: { 'store-cpep-main': 15000, 'store-cpep-boutique': 7500, 'store-cpep-workshop': 2500 },
-      // Marketplace Extensions
-      publicUnit: 'Carton (5 ramettes)',
-      publicPrice: 330000,
-      conversionFactorToStockUnit: 2500,
-      images: [
-        'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&auto=format&fit=crop&q=80'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -1982,15 +1953,6 @@ export const INITIAL_STATE: DatabaseState = {
       location: 'Atelier Façonnage - Tiroir R1',
       stockByLocation: { 'MAIN_STORE': 1000, 'PRODUCTION': 800 },
       stockByStore: { 'store-cpep-main': 1000, 'store-cpep-workshop': 800 },
-      // Marketplace Extensions
-      publicUnit: 'Paquet (100 spirales)',
-      publicPrice: 85000,
-      conversionFactorToStockUnit: 100,
-      images: [
-        'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600&auto=format&fit=crop&q=80'
-      ],
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -2131,16 +2093,6 @@ export const INITIAL_STATE: DatabaseState = {
       location: 'Dépôt Matériaux - Quai A',
       stockByLocation: { 'MAIN_STORE': 350, 'BOUTIQUE': 50 },
       stockByStore: { 'store-horizon-main': 350, 'store-horizon-shop': 50 },
-      // Marketplace Extensions
-      publicUnit: 'Sac (50kg)',
-      publicPrice: 85000,
-      conversionFactorToStockUnit: 1,
-      images: [
-        'https://images.unsplash.com/photo-1581783898377-1c85bf937427?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1590496793929-36417d3117de?w=600&auto=format&fit=crop&q=80'
-      ],
-      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       isConsumable: false,
       isSellable: true,
       isActive: true,
@@ -2300,7 +2252,6 @@ export const INITIAL_STATE: DatabaseState = {
     { id: 'dept-07', tenantId: INITIAL_TENANT_ID, code: 'FORMATION', name: 'Pédagogie & Formation', managerName: 'M. Mamadou Lamarana', description: 'Formations professionnelles, supports de cours et certification', isActive: true, isArchived: false, createdAt: '2026-01-01T00:00:00Z' }
   ],
   purchaseOrders: [],
-  boutiqueSales: [],
   invoices: [],
   notifications: [
     {
@@ -2572,42 +2523,7 @@ export const INITIAL_STATE: DatabaseState = {
       notes: 'Test de conformité 100 pages réussi.',
       createdAt: '2026-01-10T11:00:00Z'
     }
-  ],
-  storeVerifications: [
-    {
-      id: 'sv-001',
-      storeId: INITIAL_TENANT_ID,
-      storeName: "Centre Polyvalent d'Excellence & Prestations (CPEP)",
-      submittedBy: 'u-admin-01',
-      submittedByName: 'Dr. Alpha Mamadou Diallo',
-      submittedByPhone: '+224 620 00 11 22',
-      submittedByEmail: 'contact@cpep-guinee.com',
-      status: 'APPROUVE',
-      commercialStatus: 'ACTIVE',
-      reviewedBy: 'u-superadmin',
-      reviewedByName: 'Super Administrateur',
-      reviewedAt: '2026-01-01T00:00:00Z',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
-    },
-    {
-      id: 'sv-002',
-      storeId: 't-002',
-      storeName: 'Boutique Quincaillerie & Matériaux Horizon',
-      submittedBy: 'u-admin-b',
-      submittedByName: 'Elhadj Boubacar Diallo',
-      submittedByPhone: '+224 628 44 55 66',
-      submittedByEmail: 'direction@horizon-quincaillerie.com',
-      status: 'APPROUVE',
-      commercialStatus: 'ACTIVE',
-      reviewedBy: 'u-superadmin',
-      reviewedByName: 'Super Administrateur',
-      reviewedAt: '2026-01-01T00:00:00Z',
-      createdAt: '2026-01-01T00:00:00Z',
-      updatedAt: '2026-01-01T00:00:00Z'
-    }
-  ],
-  clientStoreRelations: []
+  ]
 };
 
 export function calculateItemStockDeduction(
@@ -2637,15 +2553,8 @@ export function calculateItemStockDeduction(
     }
   }
 
-  // 3. Check publicUnit
-  const prodPublicUnit = (prod.publicUnit || '').trim().toLowerCase();
-  if (unit && prodPublicUnit && (unit === prodPublicUnit || unit.includes(prodPublicUnit) || prodPublicUnit.includes(unit))) {
-    const factor = prod.conversionFactorToStockUnit || prod.conversionFactor || 1;
-    return qty * factor;
-  }
-
-  // 4. Fallback conversion factor
-  const factor = prod.conversionFactorToStockUnit || prod.conversionFactor || 1;
+  // 3. Fallback conversion factor
+  const factor = prod.conversionFactor || 1;
   return qty * factor;
 }
 
@@ -2779,11 +2688,6 @@ class StoreManager {
           parsed.discountAudits = JSON.parse(JSON.stringify(INITIAL_STATE.discountAudits));
         }
 
-        // Ensure boutiqueSales is hydrated
-        if (!parsed.boutiqueSales) {
-          parsed.boutiqueSales = JSON.parse(JSON.stringify(INITIAL_STATE.boutiqueSales));
-        }
-
         // Ensure productCategories are properly hydrated
         if (!parsed.productCategories || parsed.productCategories.length === 0) {
           parsed.productCategories = JSON.parse(JSON.stringify(INITIAL_STATE.productCategories));
@@ -2835,6 +2739,9 @@ class StoreManager {
                 p.categoryId = parsed.productCategories?.[0]?.id || 'cat-prod-01';
               }
             }
+            p.prestationStock = p.currentStock;
+            p.stockByLocation = { CENTRAL: p.currentStock, MAIN_STORE: p.currentStock, PRESTATION: p.currentStock };
+            p.stockByStore = { CENTRAL: p.currentStock };
           });
         }
 
@@ -2855,18 +2762,6 @@ class StoreManager {
             }
             if (!t.status) {
               t.status = 'ACTIVE';
-            }
-            if (!t.verificationStatus) {
-              t.verificationStatus = 'APPROUVE';
-            }
-            if (!t.commercialStatus) {
-              t.commercialStatus = 'ACTIVE';
-            }
-            if (t.isPhoneVerified === undefined) {
-              t.isPhoneVerified = true;
-            }
-            if (t.isVerifiedStore === undefined) {
-              t.isVerifiedStore = t.verificationStatus === 'APPROUVE';
             }
             if (!t.subscriptionStatus) {
               t.subscriptionStatus = 'TRIAL';
@@ -2894,11 +2789,6 @@ class StoreManager {
             const agb = INITIAL_STATE.tenants.find(t => t.id === 't-002');
             if (agb) parsed.tenants.push(JSON.parse(JSON.stringify(agb)));
           }
-        }
-
-        // Ensure storeVerifications is initialized
-        if (!parsed.storeVerifications || parsed.storeVerifications.length === 0) {
-          parsed.storeVerifications = JSON.parse(JSON.stringify(INITIAL_STATE.storeVerifications || []));
         }
 
         // Ensure users have Super Admin (u-superadmin) and Admin Agence B (u-admin-b)
@@ -3159,11 +3049,6 @@ class StoreManager {
     if (this.state.enrollments) {
       this.state.enrollments.forEach(e => {
         if (e.learnerPhone) e.learnerPhone = clean(e.learnerPhone)!;
-      });
-    }
-    if (this.state.boutiqueSales) {
-      this.state.boutiqueSales.forEach(b => {
-        if (b.personPhone) b.personPhone = clean(b.personPhone)!;
       });
     }
   }
@@ -3656,29 +3541,20 @@ class StoreManager {
       productsCount: number;
       stockMovementsCount: number;
       ordersCount: number;
-      boutiqueSalesCount: number;
       servicesCount: number;
     };
   } {
     const productsCount = (this.state.products || []).filter(p => p.tenantId === agencyId).length;
     const stockMovementsCount = (this.state.stockMovements || []).filter(s => s.tenantId === agencyId).length;
     const ordersCount = (this.state.orders || []).filter(o => o.tenantId === agencyId).length;
-    const boutiqueSalesCount = (this.state.boutiqueSales || []).filter(s => s.tenantId === agencyId).length;
     const servicesCount = (this.state.services || []).filter(s => s.tenantId === agencyId).length;
 
-    const hasExtensiveData = (ordersCount > 0 && targetActivity === 'RETAIL_STORE') ||
-                             (boutiqueSalesCount > 0 && targetActivity === 'SERVICE_CENTER');
-
     return {
-      canChangeDirectly: !hasExtensiveData,
-      reason: hasExtensiveData
-        ? `L'agence possède des données actives incompatibles (${ordersCount} commande(s) prestation, ${boutiqueSalesCount} vente(s) boutique). Une conversion automatique directe risquerait d'altérer la cohérence des rapports. Une procédure d'assistance contrôlée est recommandée.`
-        : undefined,
+      canChangeDirectly: true,
       stats: {
         productsCount,
         stockMovementsCount,
         ordersCount,
-        boutiqueSalesCount,
         servicesCount
       }
     };
@@ -3756,8 +3632,6 @@ class StoreManager {
       stockMovements: (this.state.stockMovements || []).filter(s => s.tenantId === agencyId),
       suppliers: (this.state.suppliers || []).filter(s => s.tenantId === agencyId),
       purchaseOrders: (this.state.purchaseOrders || []).filter(po => po.tenantId === agencyId),
-      boutiqueSales: (this.state.boutiqueSales || []).filter(s => s.tenantId === agencyId),
-      boutiqueSaleReturns: (this.state.boutiqueSaleReturns || []).filter(r => r.tenantId === agencyId),
       services: (this.state.services || []).filter(s => s.tenantId === agencyId),
       serviceCategories: (this.state.serviceCategories || []).filter(sc => sc.tenantId === agencyId),
       orders: (this.state.orders || []).filter(o => o.tenantId === agencyId),
@@ -3857,10 +3731,6 @@ class StoreManager {
       draft.suppliers = countFilter(draft.suppliers);
       draft.requestingDepartments = countFilter(draft.requestingDepartments);
       draft.purchaseOrders = countFilter(draft.purchaseOrders);
-      draft.boutiqueSales = countFilter(draft.boutiqueSales);
-      if (draft.boutiqueSaleReturns) {
-        draft.boutiqueSaleReturns = countFilter(draft.boutiqueSaleReturns);
-      }
       draft.invoices = countFilter(draft.invoices);
       draft.equipment = countFilter(draft.equipment);
       draft.equipmentMaintenances = countFilter(draft.equipmentMaintenances);
@@ -4625,47 +4495,41 @@ class StoreManager {
       : ((this.state.stores || []).find(s => s.tenantId === tenantId && (s.type === 'POINT_OF_SALE' || s.isDefault))
          || (this.state.stores || []).find(s => s.tenantId === tenantId));
 
-    // 4. Pre-validation: Check Availability of Prestation Consumables strictly in Stock Prestation
+    // 4. Pre-validation: Check Availability of Prestation Consumables in Stock Central
     for (const req of prestationRequirements) {
       const prod = products.find(p => p.id === req.productId);
-      const curPrestStock = prod?.prestationStock !== undefined
-        ? prod.prestationStock
-        : (workshopStore && prod?.stockByStore?.[workshopStore.id] !== undefined 
-            ? prod.stockByStore[workshopStore.id] 
-            : (prod?.stockByLocation?.['PRESTATION'] !== undefined 
-                ? prod.stockByLocation['PRESTATION'] 
-                : (prod?.currentStock || 0)));
+      const curCentralStock = prod?.currentStock || 0;
       
-      if (curPrestStock < req.quantityRequired && !prod?.allowNegativeStock) {
+      if (curCentralStock < req.quantityRequired && !prod?.allowNegativeStock) {
         return {
           success: false,
           movementsCount: 0,
-          message: `Stock Prestation insuffisant pour « ${req.productName} » (${req.serviceName}). Disponible atelier : ${curPrestStock} ${req.unit}, Requis : ${req.quantityRequired} ${req.unit}.`,
+          message: `Stock Central insuffisant pour « ${req.productName} » (${req.serviceName}). Disponible : ${curCentralStock} ${req.unit}, Requis : ${req.quantityRequired} ${req.unit}.`,
           missingConsumables: [{
             productId: req.productId,
             productName: req.productName,
             serviceName: req.serviceName,
             requiredQty: req.quantityRequired,
-            availableQty: curPrestStock,
-            missingQty: req.quantityRequired - curPrestStock,
+            availableQty: curCentralStock,
+            missingQty: req.quantityRequired - curCentralStock,
             unit: req.unit
           }]
         };
       }
     }
 
-    // 5. Pre-validation: Check Availability of Boutique Products strictly in Stock Magasin (with unit conversion)
+    // 5. Pre-validation: Check Availability of Boutique/Marketplace Products in Stock Central
     for (const item of productItems) {
       if (!item.productId) continue;
       const prod = products.find(p => p.id === item.productId);
       if (!prod) continue;
       const deduction = calculateItemStockDeduction(item, prod);
-      const curMagasinStock = prod.currentStock || 0;
-      if (curMagasinStock < deduction && !prod.allowNegativeStock) {
+      const curCentralStock = prod.currentStock || 0;
+      if (curCentralStock < deduction && !prod.allowNegativeStock) {
         return {
           success: false,
           movementsCount: 0,
-          message: `Stock Magasin insuffisant pour « ${item.productName || prod.name} ». Disponible magasin : ${curMagasinStock} ${prod.baseUnit || item.unit}, Requis : ${deduction} ${prod.baseUnit || item.unit}.`
+          message: `Stock Central insuffisant pour « ${item.productName || prod.name} ». Disponible : ${curCentralStock} ${prod.baseUnit || item.unit}, Requis : ${deduction} ${prod.baseUnit || item.unit}.`
         };
       }
     }
@@ -4675,47 +4539,39 @@ class StoreManager {
     this.updateState(draft => {
       if (!draft.stockMovements) draft.stockMovements = [];
 
-      // A. DEDUCT PRESTATIONS STRICTLY FROM STOCK PRESTATION (Never touch prod.currentStock!)
+      // A. DEDUCT PRESTATION CONSUMABLES FROM STOCK CENTRAL
       for (const req of prestationRequirements) {
         const prod = draft.products.find(p => p.id === req.productId);
         if (!prod) continue;
 
-        const oldPrestStock = prod.prestationStock !== undefined
-          ? prod.prestationStock
-          : (workshopStore && prod.stockByStore?.[workshopStore.id] !== undefined 
-              ? prod.stockByStore[workshopStore.id] 
-              : (prod.stockByLocation?.['PRESTATION'] !== undefined 
-                  ? prod.stockByLocation['PRESTATION'] 
-                  : (prod.currentStock || 0)));
-        
-        const newPrestStock = Math.max(0, oldPrestStock - req.quantityRequired);
+        const oldCentralStock = prod.currentStock || 0;
+        const newCentralStock = Math.max(0, oldCentralStock - req.quantityRequired);
 
-        // Update Prestation Stock only
-        prod.prestationStock = newPrestStock;
+        // Update Single Central Stock
+        prod.currentStock = newCentralStock;
+        prod.prestationStock = newCentralStock;
         if (!prod.stockByLocation) prod.stockByLocation = {};
-        prod.stockByLocation['PRESTATION'] = newPrestStock;
-        if (workshopStore) {
-          if (!prod.stockByStore) prod.stockByStore = {};
-          prod.stockByStore[workshopStore.id] = newPrestStock;
-        }
+        prod.stockByLocation['CENTRAL'] = newCentralStock;
+        prod.stockByLocation['PRESTATION'] = newCentralStock;
+        prod.stockByLocation['MAIN_STORE'] = newCentralStock;
         prod.updatedAt = new Date().toISOString();
 
-        // Create traceable StockMovement
+        // Create traceable StockMovement for Prestation Consumable
         draft.stockMovements.unshift({
           id: `mov-cons-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
           tenantId: prod.tenantId,
           productId: prod.id,
           productName: prod.name,
-          movementType: 'INTERNAL_CONSUMPTION',
+          movementType: 'CONSOMMATION_PRESTATION',
           quantity: -req.quantityRequired,
-          oldStock: oldPrestStock,
-          newStock: newPrestStock,
+          oldStock: oldCentralStock,
+          newStock: newCentralStock,
           unitUsed: req.unit,
           unitCost: prod.costPrice || 0,
           totalCost: (prod.costPrice || 0) * req.quantityRequired,
-          storeId: workshopStore?.id,
-          storeName: workshopStore?.name || 'Atelier Reprographie & Prestations',
-          sourceLocation: workshopStore?.name || 'Stock Prestation / Atelier',
+          storeId: workshopStore?.id || posStore?.id,
+          storeName: 'Stock Central',
+          sourceLocation: 'Stock Central',
           destinationLocation: `Prestation : ${req.serviceName}`,
           relatedOrderId: order.id,
           relatedOrderItemId: req.orderItemId,
@@ -4728,46 +4584,47 @@ class StoreManager {
         movementsCreated++;
       }
 
-      // B. DEDUCT BOUTIQUE PRODUCTS STRICTLY FROM STOCK MAGASIN (Never touch prod.prestationStock!)
+      // B. DEDUCT BOUTIQUE & MARKETPLACE PRODUCTS FROM STOCK CENTRAL
       for (const item of productItems) {
         if (!item.productId) continue;
         const prod = draft.products.find(p => p.id === item.productId);
         if (!prod) continue;
 
         const deduction = calculateItemStockDeduction(item, prod);
-        const oldMagStock = prod.currentStock || 0;
-        const newMagStock = Math.max(0, oldMagStock - deduction);
+        const oldCentralStock = prod.currentStock || 0;
+        const newCentralStock = Math.max(0, oldCentralStock - deduction);
 
-        // Update Magasin Stock only - NEVER TOUCH prod.prestationStock (Stock Prestation)!
-        prod.currentStock = newMagStock;
+        // Update Single Central Stock
+        prod.currentStock = newCentralStock;
+        prod.prestationStock = newCentralStock;
         if (!prod.stockByLocation) prod.stockByLocation = {};
-        prod.stockByLocation['MAIN_STORE'] = newMagStock;
-        if (posStore) {
-          if (!prod.stockByStore) prod.stockByStore = {};
-          prod.stockByStore[posStore.id] = Math.max(0, (prod.stockByStore[posStore.id] || 0) - deduction);
-        }
+        prod.stockByLocation['CENTRAL'] = newCentralStock;
+        prod.stockByLocation['MAIN_STORE'] = newCentralStock;
+        prod.stockByLocation['PRESTATION'] = newCentralStock;
         prod.updatedAt = new Date().toISOString();
 
-        // Create traceable StockMovement for Boutique Sale
+        const mvtType: StockMovementType = order.orderSource === 'MARKETPLACE' ? 'VENTE_MARKETPLACE' : 'VENTE_BOUTIQUE';
+
+        // Create traceable StockMovement for Boutique / Marketplace Sale
         draft.stockMovements.unshift({
           id: `mov-sale-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
           tenantId: prod.tenantId,
           productId: prod.id,
           productName: prod.name,
-          movementType: 'BOUTIQUE_SALE',
+          movementType: mvtType,
           quantity: -deduction,
-          oldStock: oldMagStock,
-          newStock: newMagStock,
+          oldStock: oldCentralStock,
+          newStock: newCentralStock,
           unitUsed: prod.baseUnit || item.unit,
           unitCost: prod.costPrice || 0,
           totalCost: (prod.costPrice || 0) * deduction,
           storeId: posStore?.id,
-          storeName: posStore?.name || 'Magasin / Boutique',
-          sourceLocation: posStore?.name || 'Stock Magasin / Boutique',
+          storeName: 'Stock Central',
+          sourceLocation: 'Stock Central',
           destinationLocation: order.personName ? `Client (${order.personName})` : 'Client',
           relatedOrderId: order.id,
           relatedOrderItemId: item.id,
-          reason: `Vente ${order.orderSource === 'MARKETPLACE' ? 'Marketplace' : 'directe'} commande ${order.orderNumber} - ${item.productName || prod.name}`,
+          reason: `Vente ${order.orderSource === 'MARKETPLACE' ? 'Marketplace' : 'Boutique'} commande ${order.orderNumber} - ${item.productName || prod.name}`,
           performedByUserName: userName,
           createdAt: new Date().toISOString()
         });
@@ -4894,7 +4751,13 @@ class StoreManager {
 
     // Find all deduction movements associated with this order
     const relatedMovements = (this.state.stockMovements || []).filter(
-      m => m.relatedOrderId === orderId && (m.movementType === 'INTERNAL_CONSUMPTION' || m.movementType === 'CONSUMPTION' || m.movementType === 'BOUTIQUE_SALE') && m.quantity < 0
+      m => m.relatedOrderId === orderId && m.quantity < 0 && (
+        m.movementType === 'CONSOMMATION_PRESTATION' ||
+        m.movementType === 'VENTE_BOUTIQUE' ||
+        m.movementType === 'VENTE_MARKETPLACE' ||
+        m.movementType === 'INTERNAL_CONSUMPTION' ||
+        m.movementType === 'CONSUMPTION'
+      )
     );
 
     if (relatedMovements.length === 0) {
@@ -4910,26 +4773,16 @@ class StoreManager {
         if (!prod) continue;
 
         const qtyToRestore = Math.abs(mvt.quantity);
+        const oldStock = prod.currentStock || 0;
+        const newStock = oldStock + qtyToRestore;
 
-        if (mvt.movementType === 'INTERNAL_CONSUMPTION' || mvt.movementType === 'CONSUMPTION') {
-          // Restore to Stock Prestation
-          const curPrest = prod.prestationStock || 0;
-          prod.prestationStock = curPrest + qtyToRestore;
-          if (!prod.stockByLocation) prod.stockByLocation = {};
-          prod.stockByLocation['PRESTATION'] = prod.prestationStock;
-          if (mvt.storeId && prod.stockByStore) {
-            prod.stockByStore[mvt.storeId] = (prod.stockByStore[mvt.storeId] || 0) + qtyToRestore;
-          }
-        } else {
-          // Restore to Stock Magasin
-          const curMag = prod.currentStock || 0;
-          prod.currentStock = curMag + qtyToRestore;
-          if (!prod.stockByLocation) prod.stockByLocation = {};
-          prod.stockByLocation['MAIN_STORE'] = prod.currentStock;
-          if (mvt.storeId && prod.stockByStore) {
-            prod.stockByStore[mvt.storeId] = (prod.stockByStore[mvt.storeId] || 0) + qtyToRestore;
-          }
-        }
+        // Restore to Single Central Stock
+        prod.currentStock = newStock;
+        prod.prestationStock = newStock;
+        if (!prod.stockByLocation) prod.stockByLocation = {};
+        prod.stockByLocation['CENTRAL'] = newStock;
+        prod.stockByLocation['MAIN_STORE'] = newStock;
+        prod.stockByLocation['PRESTATION'] = newStock;
         prod.updatedAt = new Date().toISOString();
 
         // Create return / cancellation movement
@@ -4938,21 +4791,21 @@ class StoreManager {
           tenantId: prod.tenantId,
           productId: prod.id,
           productName: prod.name,
-          movementType: 'RETURN',
+          movementType: 'RETOUR',
           quantity: qtyToRestore,
-          oldStock: mvt.newStock,
-          newStock: mvt.oldStock,
+          oldStock,
+          newStock,
           unitUsed: mvt.unitUsed,
           unitCost: mvt.unitCost,
           totalCost: (mvt.unitCost || 0) * qtyToRestore,
           storeId: mvt.storeId,
-          storeName: mvt.storeName,
-          sourceLocation: `Annulation : ${order.orderNumber}`,
-          destinationLocation: mvt.storeName || (mvt.movementType === 'BOUTIQUE_SALE' ? 'Stock Magasin' : 'Stock Prestation'),
+          storeName: 'Stock Central',
+          sourceLocation: `Annulation commande : ${order.orderNumber}`,
+          destinationLocation: 'Stock Central',
           relatedOrderId: order.id,
           relatedOrderItemId: mvt.relatedOrderItemId,
           relatedServiceId: mvt.relatedServiceId,
-          reason: `Réintégration suite à annulation : ${reason} (${order.orderNumber})`,
+          reason: `Réintégration en Stock Central suite à annulation : ${reason} (${order.orderNumber})`,
           performedByUserName: userName,
           createdAt: new Date().toISOString()
         });
@@ -5078,15 +4931,9 @@ class StoreManager {
     const costP = Number(data.costPrice) || 0;
     const saleP = Number(data.salePrice) || 0;
 
-    const cleanedImages = Array.isArray(data.images)
-      ? data.images.filter(img => typeof img === 'string' && img.trim().length > 0).slice(0, 4)
-      : (data.imageUrl?.trim() ? [data.imageUrl.trim()] : []);
-
-    const primaryImage = cleanedImages.length > 0 ? cleanedImages[0] : (data.imageUrl?.trim() || undefined);
-
     const newProduct: Product = {
       id: newProductId,
-      tenantId: requestingTenantId, // Strictly forced to the connected agency
+      tenantId: requestingTenantId,
       code: trimmedCode,
       barcode: data.barcode?.trim() || undefined,
       name: (data.name || '').trim(),
@@ -5109,18 +4956,7 @@ class StoreManager {
       supplierName: data.supplierName || undefined,
       location: data.location?.trim() || 'Magasin Principal',
       stockByLocation: data.stockByLocation || { 'MAIN_STORE': initialQty },
-      imageUrl: primaryImage,
-      images: cleanedImages,
-      videoUrl: data.videoUrl?.trim() || undefined,
-      publicUnit: data.publicUnit || data.defaultSaleUnit || data.baseUnit || 'unité',
-      publicPrice: data.publicPrice !== undefined ? Number(data.publicPrice) : saleP,
-      conversionFactorToStockUnit: data.conversionFactorToStockUnit ? Number(data.conversionFactorToStockUnit) : 1,
-      publicationStatus: data.publicationStatus || 'DRAFT',
-      isMarketplacePublished: data.publicationStatus === 'PUBLISHED',
-      publishedAt: data.publicationStatus === 'PUBLISHED' ? (data.publishedAt || new Date().toISOString()) : undefined,
-      unpublishedAt: data.publicationStatus === 'UNPUBLISHED' ? (data.unpublishedAt || new Date().toISOString()) : undefined,
-      subcategory: data.subcategory?.trim() || undefined,
-      featuredBadge: data.featuredBadge || undefined,
+      imageUrl: data.imageUrl?.trim() || undefined,
       isActive: data.isActive !== undefined ? data.isActive : true,
       isArchived: false,
       createdAt: new Date().toISOString()
@@ -5196,26 +5032,7 @@ class StoreManager {
         if (data.category !== undefined) p.category = data.category;
         if ('description' in data) p.description = data.description?.trim() || '';
         
-        if (data.images !== undefined) {
-          const validImgs = Array.isArray(data.images)
-            ? data.images.filter(img => typeof img === 'string' && img.trim().length > 0).slice(0, 4)
-            : [];
-          p.images = validImgs;
-          p.imageUrl = validImgs.length > 0 ? validImgs[0] : undefined;
-        } else if ('imageUrl' in data) {
-          p.imageUrl = data.imageUrl?.trim() || undefined;
-          if (p.imageUrl && (!p.images || p.images.length === 0)) {
-            p.images = [p.imageUrl];
-          }
-        }
-
-        if ('videoUrl' in data) p.videoUrl = data.videoUrl?.trim() || undefined;
-        if (data.publicUnit !== undefined) p.publicUnit = data.publicUnit;
-        if (data.publicPrice !== undefined) p.publicPrice = Number(data.publicPrice);
-        if (data.conversionFactorToStockUnit !== undefined) p.conversionFactorToStockUnit = Number(data.conversionFactorToStockUnit);
-        if (data.isMarketplacePublished !== undefined) p.isMarketplacePublished = data.isMarketplacePublished;
-        if (data.subcategory !== undefined) p.subcategory = data.subcategory?.trim() || undefined;
-        if (data.featuredBadge !== undefined) p.featuredBadge = data.featuredBadge;
+        if ('imageUrl' in data) p.imageUrl = data.imageUrl?.trim() || undefined;
 
         if (data.baseUnit !== undefined) {
           p.baseUnit = data.baseUnit;
@@ -5263,159 +5080,24 @@ class StoreManager {
     };
   }
 
-  public publishProduct(productId: string, requestingTenantId: string, isSuperAdmin?: boolean): { success: boolean; product?: Product; message: string; statusCode: number } {
-    const product = (this.state.products || []).find(p => p.id === productId);
-    if (!product || product.isArchived) {
-      return { success: false, statusCode: 404, message: "Produit introuvable." };
-    }
-
-    // 1. Authorization: check product belongs to requesting tenant (unless super admin)
-    if (!isSuperAdmin && requestingTenantId !== 'global' && product.tenantId !== requestingTenantId) {
-      this.logAudit('PRODUCT_CROSS_TENANT_PUBLISH_DENIED', 'PRODUCT', productId, null, {
-        productTenant: product.tenantId,
-        requestingTenant: requestingTenantId
-      });
-      return { success: false, statusCode: 403, message: "403 Accès Refusé : Vous ne pouvez pas publier un produit appartenant à une autre boutique." };
-    }
-
-    // 2. Tenant existence and validation check
-    const tenant = (this.state.tenants || []).find(t => t.id === product.tenantId);
-    if (!tenant) {
-      return { success: false, statusCode: 400, message: "Boutique introuvable pour ce produit." };
-    }
-
-    // Must be verified (verificationStatus === 'APPROUVE')
-    if (tenant.verificationStatus && tenant.verificationStatus !== 'APPROUVE') {
-      return {
-        success: false,
-        statusCode: 400,
-        message: "Votre boutique n'est pas encore validée par nos administrateurs. Vous ne pouvez pas publier ce produit pour le moment."
-      };
-    }
-
-    // Commercial status must be authorized (ESSAI_GRATUIT, ACTIVE, VALIDEE) and not suspended/expired/closed
-    const isCommercialValid = tenant.commercialStatus === 'ESSAI_GRATUIT' || tenant.commercialStatus === 'ACTIVE' || tenant.commercialStatus === 'VALIDEE' || (!tenant.commercialStatus && tenant.subscriptionStatus !== 'SUSPENDED' && tenant.subscriptionStatus !== 'EXPIRED');
-    const isNotBlocked = tenant.status !== 'SUSPENDED' && tenant.status !== 'EXPIRED' && tenant.status !== 'CLOSED' && tenant.subscriptionStatus !== 'SUSPENDED' && tenant.subscriptionStatus !== 'EXPIRED';
-
-    if (!isCommercialValid || !isNotBlocked || tenant.isActive === false) {
-      return {
-        success: false,
-        statusCode: 400,
-        message: "Votre boutique est suspendue ou son abonnement/période d'essai a expiré. Publication impossible."
-      };
-    }
-
-    // 3. Product completeness validation
-    if (!product.name || !product.name.trim()) {
-      return { success: false, statusCode: 400, message: "Le produit doit avoir un nom valide." };
-    }
-
-    const price = product.publicPrice !== undefined ? product.publicPrice : product.salePrice;
-    if (!price || price <= 0) {
-      return { success: false, statusCode: 400, message: "Le produit doit avoir un prix de vente valide supérieur à 0 GNF." };
-    }
-
-    if (!product.category || !product.category.trim()) {
-      return { success: false, statusCode: 400, message: "Le produit doit être rattaché à une catégorie valide." };
-    }
-
-    const hasImages = (product.images && product.images.filter(img => typeof img === 'string' && img.trim().length > 0).length > 0) || Boolean(product.imageUrl && product.imageUrl.trim());
-    if (!hasImages) {
-      return { success: false, statusCode: 400, message: "Le produit doit comporter au moins une photo pour être publié sur le marketplace." };
-    }
-
-    // 4. Update status
-    const now = new Date().toISOString();
-    let publishedProd: Product | undefined;
-    this.updateState(draft => {
-      const p = draft.products.find(item => item.id === productId);
-      if (p) {
-        p.publicationStatus = 'PUBLISHED';
-        p.isMarketplacePublished = true;
-        p.publishedAt = now;
-        p.updatedAt = now;
-        publishedProd = { ...p };
-      }
-    });
-
-    this.logAudit('PRODUCT_PUBLISHED', 'PRODUCT', productId, null, {
-      name: product.name,
-      tenantId: product.tenantId,
-      publishedAt: now
-    });
-
-    return {
-      success: true,
-      statusCode: 200,
-      product: publishedProd,
-      message: `Le produit "${product.name}" est désormais publié et visible sur le marketplace !`
-    };
-  }
-
-  public unpublishProduct(productId: string, requestingTenantId: string, isSuperAdmin?: boolean): { success: boolean; product?: Product; message: string; statusCode: number } {
-    const product = (this.state.products || []).find(p => p.id === productId);
-    if (!product || product.isArchived) {
-      return { success: false, statusCode: 404, message: "Produit introuvable." };
-    }
-
-    if (!isSuperAdmin && requestingTenantId !== 'global' && product.tenantId !== requestingTenantId) {
-      return { success: false, statusCode: 403, message: "403 Accès Refusé : Vous ne pouvez pas dépublier un produit d'une autre boutique." };
-    }
-
-    const now = new Date().toISOString();
-    let unpublishedProd: Product | undefined;
-    this.updateState(draft => {
-      const p = draft.products.find(item => item.id === productId);
-      if (p) {
-        p.publicationStatus = 'UNPUBLISHED';
-        p.isMarketplacePublished = false;
-        p.unpublishedAt = now;
-        p.updatedAt = now;
-        unpublishedProd = { ...p };
-      }
-    });
-
-    this.logAudit('PRODUCT_UNPUBLISHED', 'PRODUCT', productId, null, {
-      name: product.name,
-      tenantId: product.tenantId,
-      unpublishedAt: now
-    });
-
-    return {
-      success: true,
-      statusCode: 200,
-      product: unpublishedProd,
-      message: `Le produit "${product.name}" a été retiré de la publication (dépublié).`
-    };
-  }
-
   public checkProductDeletability(productId: string, requestingTenantId: string, isSuperAdmin?: boolean): {
     canDelete: boolean;
     reason?: string;
-    linkedDataSummary: {
+    linkedDataSummary?: {
       movementsCount: number;
-      salesCount: number;
       ordersCount: number;
       purchaseOrdersCount: number;
       servicesCount: number;
     };
   } {
-    const existing = (this.state.products || []).find(p => p.id === productId);
-    if (!existing) {
-      return {
-        canDelete: false,
-        reason: "Produit introuvable.",
-        linkedDataSummary: { movementsCount: 0, salesCount: 0, ordersCount: 0, purchaseOrdersCount: 0, servicesCount: 0 }
-      };
+    const product = (this.state.products || []).find(p => p.id === productId);
+    if (!product || product.isArchived) {
+      return { canDelete: false, reason: "Produit introuvable." };
     }
 
-    // Check stock movements (filter out initial zero creation movement if needed, but any real transaction counts)
+    // Check stock movements
     const movements = (this.state.stockMovements || []).filter(m => m.productId === productId);
     const movementsCount = movements.length;
-
-    // Check boutique sales
-    const sales = (this.state.boutiqueSales || []).filter(s => s.items?.some(it => it.productId === productId));
-    const salesCount = sales.length;
 
     // Check customer orders
     const orders = (this.state.orders || []).filter(o => o.items?.some(it => it.productId === productId));
@@ -5432,13 +5114,12 @@ class StoreManager {
     );
     const servicesCount = services.length;
 
-    const hasLinkedData = movementsCount > 0 || salesCount > 0 || ordersCount > 0 || purchaseOrdersCount > 0 || servicesCount > 0;
+    const hasLinkedData = movementsCount > 0 || ordersCount > 0 || purchaseOrdersCount > 0 || servicesCount > 0;
 
     let reason = '';
     if (hasLinkedData) {
       const details: string[] = [];
       if (movementsCount > 0) details.push(`${movementsCount} mouvement(s) de stock`);
-      if (salesCount > 0) details.push(`${salesCount} vente(s) boutique`);
       if (ordersCount > 0) details.push(`${ordersCount} commande(s) client`);
       if (purchaseOrdersCount > 0) details.push(`${purchaseOrdersCount} bon(s) de commande fournisseur`);
       if (servicesCount > 0) details.push(`${servicesCount} prestation(s) liée(s)`);
@@ -5450,7 +5131,6 @@ class StoreManager {
       reason: hasLinkedData ? reason : undefined,
       linkedDataSummary: {
         movementsCount,
-        salesCount,
         ordersCount,
         purchaseOrdersCount,
         servicesCount
@@ -5624,13 +5304,13 @@ class StoreManager {
     const baseUnit = calculation.baseUnitName;
     const transferUnit = calculation.transferUnitName;
 
-    if (existing.currentStock < qtyInBase) {
+    if (existing.currentStock < qtyInBase && !existing.allowNegativeStock) {
       const missingBase = qtyInBase - existing.currentStock;
       const missingUnit = calculation.factorToBase > 1 ? ` (soit ${Math.ceil(missingBase / calculation.factorToBase)} ${transferUnit}s)` : '';
       return {
         success: false,
         statusCode: 400,
-        message: `Quantité insuffisante. Vous disposez actuellement de ${existing.currentStock.toLocaleString('fr-FR')} ${baseUnit}s (${calculation.currentStockPrestationCapacity.toLocaleString('fr-FR')} ${calculation.prestationUnitName}). Demandé : ${qtyInBase.toLocaleString('fr-FR')} ${baseUnit}s${missingUnit}.`
+        message: `Quantité insuffisante. Stock central insuffisant pour « ${existing.name} ». Disponible : ${existing.currentStock.toLocaleString('fr-FR')} ${baseUnit}s (${calculation.currentStockPrestationCapacity.toLocaleString('fr-FR')} ${calculation.prestationUnitName}). Demandé : ${qtyInBase.toLocaleString('fr-FR')} ${baseUnit}s${missingUnit}.`
       };
     }
 
@@ -5641,10 +5321,11 @@ class StoreManager {
       const p = draft.products.find(item => item.id === productId);
       if (p) {
         p.currentStock = newStock;
-        p.prestationStock = (p.prestationStock || 0) + qtyInBase;
+        p.prestationStock = newStock;
         if (!p.stockByLocation) p.stockByLocation = {};
+        p.stockByLocation['CENTRAL'] = newStock;
         p.stockByLocation['MAIN_STORE'] = newStock;
-        p.stockByLocation['PRESTATION'] = p.prestationStock;
+        p.stockByLocation['PRESTATION'] = newStock;
         p.updatedAt = new Date().toISOString();
       }
 
@@ -5654,7 +5335,7 @@ class StoreManager {
         tenantId: existing.tenantId,
         productId: existing.id,
         productName: existing.name,
-        movementType: 'INTERNAL_CONSUMPTION',
+        movementType: 'CONSOMMATION_PRESTATION',
         quantity: -qtyInBase,
         oldStock,
         newStock,
@@ -5663,11 +5344,11 @@ class StoreManager {
         quantityInStockUnit: -qtyInBase,
         unitCost: existing.costPrice,
         totalCost: existing.costPrice * qtyInBase,
-        sourceLocation: 'MAIN_STORE',
-        destinationLocation: 'PRESTATION',
+        sourceLocation: 'Stock Central',
+        destinationLocation: `Prestation : ${service}`,
         serviceOrDepartment: service,
         relatedOrderId: orderNumber.trim() || undefined,
-        reason: `Transfert vers Stock Prestation : ${qty} ${transferUnit}(s) = ${qtyInBase} ${baseUnit}s (${calculation.prestationCapacity} ${calculation.prestationUnitName}) pour ${service}${reason ? ` - ${reason}` : ''}`,
+        reason: `Consommation prestation : ${qty} ${transferUnit}(s) = ${qtyInBase} ${baseUnit}s (${calculation.prestationCapacity} ${calculation.prestationUnitName}) pour ${service}${reason ? ` - ${reason}` : ''}`,
         performedByUserName: userName,
         createdAt: new Date().toISOString()
       });
@@ -5689,7 +5370,7 @@ class StoreManager {
       deductedBaseQty: qtyInBase,
       remainingStock: newStock,
       prestationCapacity: calculation.prestationCapacity,
-      message: `Transfert validé : ${qty} ${transferUnit}(s) transféré(s) vers Stock Prestation (${calculation.prestationCapacity.toLocaleString('fr-FR')} ${calculation.prestationUnitName}, stock magasin restant : ${newStock.toLocaleString('fr-FR')} ${baseUnit}s).`
+      message: `Consommation validée : ${qty} ${transferUnit}(s) déduit(s) du Stock Central (${calculation.prestationCapacity.toLocaleString('fr-FR')} ${calculation.prestationUnitName}, stock central restant : ${newStock.toLocaleString('fr-FR')} ${baseUnit}s).`
     };
   }
 
@@ -5712,40 +5393,32 @@ class StoreManager {
       return { success: false, statusCode: 403, message: "403 Accès Refusé : Produit appartenant à une autre agence." };
     }
 
-    // Agency Activity Model Security Check
-    const effectiveTenantId = requestingTenantId && requestingTenantId !== 'global' ? requestingTenantId : existing.tenantId;
-    const agency = (this.state.tenants || []).find(t => t.id === effectiveTenantId);
-    if (agency && agency.activityType !== 'SERVICE_CENTER' && !isSuperAdmin) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: "403 Accès Refusé : La consommation depuis le Stock Prestation est réservée aux centres de prestations."
-      };
-    }
-
     if (qtyInBase <= 0) {
       return { success: false, statusCode: 400, message: "La quantité consommée doit être strictement supérieure à 0." };
     }
 
-    const currentPrestationStock = existing.prestationStock || 0;
-    if (currentPrestationStock < qtyInBase) {
-      const missing = qtyInBase - currentPrestationStock;
+    const currentStock = existing.currentStock || 0;
+    if (currentStock < qtyInBase) {
+      const missing = qtyInBase - currentStock;
       return {
         success: false,
         statusCode: 400,
-        message: `Stock prestation insuffisant pour « ${existing.name} ». Disponible : ${currentPrestationStock} ${existing.unit || existing.baseUnit}s, Nécessaire : ${qtyInBase} ${existing.unit || existing.baseUnit}s, Manquant : ${missing} ${existing.unit || existing.baseUnit}s.`
+        message: `Stock central insuffisant pour « ${existing.name} ». Disponible : ${currentStock} ${existing.unit || existing.baseUnit}s, Nécessaire : ${qtyInBase} ${existing.unit || existing.baseUnit}s, Manquant : ${missing} ${existing.unit || existing.baseUnit}s.`
       };
     }
 
-    const oldPrestationStock = currentPrestationStock;
-    const newPrestationStock = oldPrestationStock - qtyInBase;
+    const oldStock = currentStock;
+    const newStock = Math.max(0, oldStock - qtyInBase);
 
     this.updateState(draft => {
       const p = draft.products.find(item => item.id === productId);
       if (p) {
-        p.prestationStock = newPrestationStock;
+        p.currentStock = newStock;
+        p.prestationStock = newStock;
         if (!p.stockByLocation) p.stockByLocation = {};
-        p.stockByLocation['PRESTATION'] = newPrestationStock;
+        p.stockByLocation['CENTRAL'] = newStock;
+        p.stockByLocation['PRESTATION'] = newStock;
+        p.stockByLocation['MAIN_STORE'] = newStock;
         p.updatedAt = new Date().toISOString();
       }
 
@@ -5755,16 +5428,16 @@ class StoreManager {
         tenantId: existing.tenantId,
         productId: existing.id,
         productName: existing.name,
-        movementType: 'CONSUMPTION',
+        movementType: 'CONSOMMATION_PRESTATION',
         quantity: -qtyInBase,
-        oldStock: oldPrestationStock,
-        newStock: newPrestationStock,
+        oldStock,
+        newStock,
         unitUsed: existing.unit || existing.baseUnit,
         quantityInStockUnit: -qtyInBase,
         unitCost: existing.costPrice,
         totalCost: existing.costPrice * qtyInBase,
         serviceOrDepartment: serviceName,
-        sourceLocation: 'PRESTATION',
+        sourceLocation: 'Stock Central',
         relatedOrderId: orderNumber.trim() || undefined,
         reason: reason || `Consommation prestation ${serviceName} (${qtyInBase} ${existing.unit || existing.baseUnit}s)`,
         performedByUserName: userName,
@@ -5775,7 +5448,7 @@ class StoreManager {
     this.logAudit('PRESTATION_STOCK_CONSUMED', 'PRODUCT', productId, null, {
       product: existing.name,
       consumedQty: qtyInBase,
-      remainingPrestationStock: newPrestationStock,
+      remainingStock: newStock,
       service: serviceName,
       orderNumber,
       tenantId: existing.tenantId
@@ -5784,8 +5457,8 @@ class StoreManager {
     return {
       success: true,
       statusCode: 200,
-      remainingPrestationStock: newPrestationStock,
-      message: `Consommation validée : ${qtyInBase} ${existing.unit || existing.baseUnit}s déduits du Stock Prestation (reste : ${newPrestationStock} ${existing.unit || existing.baseUnit}s).`
+      remainingPrestationStock: newStock,
+      message: `Consommation validée : ${qtyInBase} ${existing.unit || existing.baseUnit}s déduits du Stock Central (reste : ${newStock} ${existing.unit || existing.baseUnit}s).`
     };
   }
 
@@ -5806,29 +5479,21 @@ class StoreManager {
       return { success: false, statusCode: 403, message: "403 Accès Refusé : Produit appartenant à une autre agence." };
     }
 
-    // Agency Activity Model Security Check
-    const effectiveTenantId = requestingTenantId && requestingTenantId !== 'global' ? requestingTenantId : existing.tenantId;
-    const agency = (this.state.tenants || []).find(t => t.id === effectiveTenantId);
-    if (agency && agency.activityType !== 'SERVICE_CENTER' && !isSuperAdmin) {
-      return {
-        success: false,
-        statusCode: 403,
-        message: "403 Accès Refusé : L'ajustement du Stock Prestation est réservé aux centres de prestations."
-      };
-    }
-
     if (newQty < 0) {
-      return { success: false, statusCode: 400, message: "Le stock prestation ne peut pas être négatif." };
+      return { success: false, statusCode: 400, message: "Le stock central ne peut pas être négatif." };
     }
 
-    const oldPrestationStock = existing.prestationStock || 0;
-    const diff = newQty - oldPrestationStock;
+    const oldStock = existing.currentStock || 0;
+    const diff = newQty - oldStock;
 
     this.updateState(draft => {
       const p = draft.products.find(item => item.id === productId);
       if (p) {
+        p.currentStock = newQty;
         p.prestationStock = newQty;
         if (!p.stockByLocation) p.stockByLocation = {};
+        p.stockByLocation['CENTRAL'] = newQty;
+        p.stockByLocation['MAIN_STORE'] = newQty;
         p.stockByLocation['PRESTATION'] = newQty;
         p.updatedAt = new Date().toISOString();
       }
@@ -5841,15 +5506,15 @@ class StoreManager {
         productName: existing.name,
         movementType: 'INVENTORY_ADJUSTMENT',
         quantity: diff,
-        oldStock: oldPrestationStock,
+        oldStock,
         newStock: newQty,
         unitUsed: existing.unit || existing.baseUnit,
         quantityInStockUnit: diff,
         unitCost: existing.costPrice,
         totalCost: Math.abs(existing.costPrice * diff),
-        sourceLocation: 'PRESTATION',
-        destinationLocation: 'PRESTATION',
-        reason: `Ajustement inventaire Stock Prestation (${oldPrestationStock} -> ${newQty}) : ${reason}`,
+        sourceLocation: 'Stock Central',
+        destinationLocation: 'Stock Central',
+        reason: `Ajustement inventaire Stock Central (${oldStock} -> ${newQty}) : ${reason}`,
         performedByUserName: userName,
         createdAt: new Date().toISOString()
       });
@@ -5858,7 +5523,7 @@ class StoreManager {
     return {
       success: true,
       statusCode: 200,
-      message: `Stock Prestation ajusté avec succès : ${newQty} ${existing.unit || existing.baseUnit}s.`
+      message: `Stock Central ajusté avec succès : ${newQty} ${existing.unit || existing.baseUnit}s.`
     };
   }
 
@@ -9613,7 +9278,6 @@ class StoreManager {
         type: type || 'INFO',
         link,
         tenantId: tenantId || this.state.currentTenantId,
-        boutiqueId: tenantId || this.state.currentTenantId,
         userId
       };
     }
@@ -10472,7 +10136,6 @@ class StoreManager {
     const tenantExpenses = (s.expenses || []).filter(e => e.tenantId === tid);
     const tenantEnrollments = (s.enrollments || []).filter(en => en.tenantId === tid);
     const tenantCertificates = (s.certificates || []).filter(c => c.tenantId === tid);
-    const tenantBoutiqueSales = (s.boutiqueSales || []).filter(b => b.tenantId === tid);
     const tenantPersons = (s.persons || []).filter(p => p.tenantId === tid);
     const tenantCustomers = tenantPersons.filter(p => !p.types.includes('STAFF') && !p.types.includes('TRAINER'));
     const tenantSessions = (s.trainingSessions || []).filter(ts => ts.tenantId === tid);
@@ -10491,14 +10154,12 @@ class StoreManager {
         financialMovements: tenantMovements.length,
         expenses: tenantExpenses.length,
         enrollments: tenantEnrollments.length,
-        certificates: tenantCertificates.length,
-        boutiqueSales: tenantBoutiqueSales.length
+        certificates: tenantCertificates.length
       },
       commercial: {
         orders: tenantOrders.length,
         invoices: tenantInvoices.length,
         payments: tenantPayments.filter(p => p.targetType === 'ORDER').length || tenantPayments.length,
-        boutiqueSales: tenantBoutiqueSales.length,
         customers: tenantCustomers.length
       },
       financial: {
@@ -10512,7 +10173,6 @@ class StoreManager {
         orders: tenantOrders.length,
         invoices: tenantInvoices.length,
         payments: tenantPayments.length,
-        boutiqueSales: tenantBoutiqueSales.length,
         customers: tenantCustomers.length,
         trainingSessions: tenantSessions.length,
         enrollments: tenantEnrollments.length,
@@ -10570,7 +10230,6 @@ class StoreManager {
     const expCount = (this.state.expenses || []).filter(e => e.tenantId === tid).length;
     const enrCount = (this.state.enrollments || []).filter(e => e.tenantId === tid).length;
     const cerCount = (this.state.certificates || []).filter(c => c.tenantId === tid).length;
-    const vntCount = (this.state.boutiqueSales || []).filter(b => b.tenantId === tid).length;
 
     this.updateState(draft => {
       draft.invoices = (draft.invoices || []).filter(i => i.tenantId !== tid);
@@ -10581,8 +10240,6 @@ class StoreManager {
       draft.expenses = (draft.expenses || []).filter(e => e.tenantId !== tid);
       draft.enrollments = (draft.enrollments || []).filter(e => e.tenantId !== tid);
       draft.certificates = (draft.certificates || []).filter(c => c.tenantId !== tid);
-      draft.boutiqueSales = (draft.boutiqueSales || []).filter(b => b.tenantId !== tid);
-      draft.boutiqueSaleReturns = (draft.boutiqueSaleReturns || []).filter(b => b.tenantId !== tid);
       draft.discountAudits = (draft.discountAudits || []).filter(d => d.tenantId !== tid);
 
       const tenantSessions = (draft.trainingSessions || []).filter(ts => ts.tenantId === tid);
@@ -10612,7 +10269,7 @@ class StoreManager {
       });
     });
 
-    const totalRecords = invCount + ordCount + payCount + mvtCount + expCount + enrCount + cerCount + vntCount;
+    const totalRecords = invCount + ordCount + payCount + mvtCount + expCount + enrCount + cerCount;
     const usersAfter = (this.state.users || []).filter(u => u.tenantId === tid).length;
 
     this.logAudit('TEST_DATA_CLEANED', 'AGENCY', tid, null, {
@@ -10626,7 +10283,6 @@ class StoreManager {
         expenses: expCount,
         enrollments: enrCount,
         certificates: cerCount,
-        boutiqueSales: vntCount,
         totalRecords
       }
     });
@@ -10643,7 +10299,6 @@ class StoreManager {
         expenses: expCount,
         enrollments: enrCount,
         certificates: cerCount,
-        boutiqueSales: vntCount,
         totalRecords
       },
       integrityVerification: {
@@ -10687,7 +10342,6 @@ class StoreManager {
     const ordCount = (this.state.orders || []).filter(o => o.tenantId === tid).length;
     const invCount = (this.state.invoices || []).filter(i => i.tenantId === tid).length;
     const payCount = (this.state.payments || []).filter(p => p.tenantId === tid && (p.targetType === 'ORDER' || !p.targetType)).length;
-    const vntCount = (this.state.boutiqueSales || []).filter(b => b.tenantId === tid).length;
     let personsCount = 0;
 
     this.updateState(draft => {
@@ -10695,8 +10349,6 @@ class StoreManager {
       draft.productionJobs = (draft.productionJobs || []).filter(j => j.tenantId !== tid);
       draft.invoices = (draft.invoices || []).filter(i => i.tenantId !== tid);
       draft.payments = (draft.payments || []).filter(p => !(p.tenantId === tid && (p.targetType === 'ORDER' || !p.targetType)));
-      draft.boutiqueSales = (draft.boutiqueSales || []).filter(b => b.tenantId !== tid);
-      draft.boutiqueSaleReturns = (draft.boutiqueSaleReturns || []).filter(b => b.tenantId !== tid);
       draft.discountAudits = (draft.discountAudits || []).filter(d => d.tenantId !== tid);
 
       // Clean order-related financial movements
@@ -10718,7 +10370,7 @@ class StoreManager {
       });
     });
 
-    const totalRecords = ordCount + invCount + payCount + vntCount + personsCount;
+    const totalRecords = ordCount + invCount + payCount + personsCount;
     const usersAfter = (this.state.users || []).filter(u => u.tenantId === tid).length;
 
     this.logAudit('COMMERCIAL_DATA_RESET', 'AGENCY', tid, null, {
@@ -10728,7 +10380,6 @@ class StoreManager {
         orders: ordCount,
         invoices: invCount,
         payments: payCount,
-        boutiqueSales: vntCount,
         persons: personsCount,
         totalRecords
       }
@@ -10742,7 +10393,6 @@ class StoreManager {
         orders: ordCount,
         invoices: invCount,
         payments: payCount,
-        boutiqueSales: vntCount,
         persons: personsCount,
         totalRecords
       },
@@ -10912,17 +10562,7 @@ class StoreManager {
         draft.payments = (draft.payments || []).filter(p => !(p.tenantId === tid && p.targetType === 'ENROLLMENT'));
       }
 
-      // 3. Boutique
-      if (options.resetBoutique) {
-        const vntCount = (draft.boutiqueSales || []).filter(b => b.tenantId === tid).length;
-        deletedCounts.boutiqueSales = vntCount;
-        deletedCounts.totalRecords += vntCount;
-
-        draft.boutiqueSales = (draft.boutiqueSales || []).filter(b => b.tenantId !== tid);
-        draft.boutiqueSaleReturns = (draft.boutiqueSaleReturns || []).filter(b => b.tenantId !== tid);
-      }
-
-      // 4. Clients
+      // 3. Clients
       if (options.resetClients) {
         const toDelete = (draft.persons || []).filter(p => p.tenantId === tid && !p.types.includes('STAFF') && !p.types.includes('TRAINER'));
         deletedCounts.persons = toDelete.length;
@@ -11030,7 +10670,6 @@ class StoreManager {
       {
         resetServices: true,
         resetTraining: true,
-        resetBoutique: true,
         resetClients: false,
         stockOption: 'PRESERVE',
         resetFinancialTreasury: true,
@@ -11042,299 +10681,20 @@ class StoreManager {
     );
   }
 
-  // =========================================================================
-  // MARKETPLACE EXTENSIONS: CATEGORIES & MESSAGING
-  // =========================================================================
-
-  public updateBoutiqueCategories(boutiqueId: string, categories: string[]): { success: boolean; message: string; tenant?: Tenant } {
-    const tenant = this.state.tenants.find(t => t.id === boutiqueId);
-    if (!tenant) {
-      return { success: false, message: 'Boutique introuvable.' };
-    }
-
-    tenant.selectedCategories = Array.from(new Set(categories.filter(c => typeof c === 'string' && c.trim().length > 0)));
-    tenant.updatedAt = new Date().toISOString();
-    this.saveState();
-    return { success: true, message: 'Catégories de la boutique mises à jour avec succès.', tenant };
-  }
-
-  public getMarketplaceConversations(
-    boutiqueId?: string, 
-    customerId?: string,
-    options?: {
-      search?: string;
-      unreadOnly?: boolean;
-      orderId?: string;
-      productId?: string;
-      isSuperAdmin?: boolean;
-    }
-  ): MarketplaceConversation[] {
-    if (!this.state.marketplaceConversations) {
-      this.state.marketplaceConversations = [];
-    }
-    let list: MarketplaceConversation[] = [...this.state.marketplaceConversations];
-    if (boutiqueId && !options?.isSuperAdmin) {
-      list = list.filter(c => c.boutiqueId === boutiqueId);
-    }
-    if (customerId) {
-      list = list.filter(c => c.customerId === customerId);
-    }
-    if (options?.orderId) {
-      list = list.filter(c => c.orderId === options.orderId);
-    }
-    if (options?.productId) {
-      list = list.filter(c => c.productId === options.productId);
-    }
-    if (options?.unreadOnly) {
-      if (boutiqueId) {
-        list = list.filter(c => (c.unreadByBoutique || 0) > 0);
-      } else if (customerId) {
-        list = list.filter(c => (c.unreadByCustomer || 0) > 0);
-      }
-    }
-    if (options?.search && options.search.trim()) {
-      const q = options.search.toLowerCase().trim();
-      list = list.filter(c => 
-        (c.customerName && c.customerName.toLowerCase().includes(q)) ||
-        (c.boutiqueName && c.boutiqueName.toLowerCase().includes(q)) ||
-        (c.productName && c.productName.toLowerCase().includes(q)) ||
-        (c.orderCode && c.orderCode.toLowerCase().includes(q)) ||
-        (c.lastMessageContent && c.lastMessageContent.toLowerCase().includes(q))
-      );
-    }
-    return list.sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-  }
-
-  public getMarketplaceConversationById(id: string): MarketplaceConversation | null {
-    if (!this.state.marketplaceConversations) this.state.marketplaceConversations = [];
-    if (!this.state.marketplaceMessages) this.state.marketplaceMessages = [];
-
-    const conv = this.state.marketplaceConversations.find(c => c.id === id);
-    if (!conv) return null;
-
-    const messages = this.state.marketplaceMessages.filter(m => m.conversationId === id);
-    return {
-      ...conv,
-      messages: messages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    };
-  }
-
-  public findOrCreateMarketplaceConversation(params: {
-    customerId: string;
-    customerName: string;
-    customerPhone?: string;
-    boutiqueId: string;
-    boutiqueName?: string;
-    productId?: string;
-    publicationId?: string;
-    productName?: string;
-    productImageUrl?: string;
-    publicPrice?: number;
-    publicUnit?: string;
-    orderId?: string;
-    orderCode?: string;
-    orderTotal?: number;
-    serviceId?: string;
-    serviceName?: string;
-    initialMessage?: string;
-    senderRole?: string;
-  }): { success: boolean; conversation: MarketplaceConversation; isNew: boolean } {
-    if (!this.state.marketplaceConversations) this.state.marketplaceConversations = [];
-    if (!this.state.marketplaceMessages) this.state.marketplaceMessages = [];
-
-    const boutique = this.state.tenants.find(t => t.id === params.boutiqueId);
-    const storeName = boutique?.name || params.boutiqueName || 'Boutique Partenaire';
-
-    // Find existing conversation for this customer, boutique, and context (order, product, or general)
-    let existing = this.state.marketplaceConversations.find(c => {
-      if (c.customerId !== params.customerId || c.boutiqueId !== params.boutiqueId) return false;
-      if (params.orderId) return c.orderId === params.orderId;
-      if (params.productId || params.publicationId) {
-        const targetPid = params.productId || params.publicationId;
-        return c.productId === targetPid || c.publicationId === targetPid;
-      }
-      return !c.orderId && !c.productId;
-    });
-
-    const now = new Date().toISOString();
-
-    if (!existing) {
-      const newConv: MarketplaceConversation = {
-        id: `conv-mkt-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-        customerId: params.customerId,
-        customerName: params.customerName || 'Client Marketplace',
-        customerPhone: params.customerPhone,
-        boutiqueId: params.boutiqueId,
-        boutiqueName: storeName,
-        productId: params.productId,
-        publicationId: params.publicationId || params.productId,
-        productName: params.productName || (params.orderCode ? `Commande ${params.orderCode}` : 'Discussion Boutique'),
-        productImageUrl: params.productImageUrl,
-        publicPrice: params.publicPrice,
-        publicUnit: params.publicUnit,
-        orderId: params.orderId,
-        orderCode: params.orderCode,
-        orderTotal: params.orderTotal,
-        serviceId: params.serviceId,
-        serviceName: params.serviceName,
-        lastMessageContent: params.initialMessage || 'Nouvelle conversation ouverte',
-        lastMessageAt: now,
-        lastSenderRole: params.senderRole || 'Client',
-        unreadByBoutique: params.initialMessage ? 1 : 0,
-        unreadByCustomer: 0,
-        status: 'OPEN',
-        createdAt: now,
-        updatedAt: now
-      };
-
-      this.state.marketplaceConversations.push(newConv);
-
-      if (params.initialMessage) {
-        const firstMsg: MarketplaceMessage = {
-          id: `msg-mkt-${Date.now()}-1`,
-          conversationId: newConv.id,
-          senderId: params.customerId,
-          senderType: 'CUSTOMER',
-          senderName: params.customerName || 'Client Marketplace',
-          senderRole: params.senderRole || 'Client',
-          content: params.initialMessage,
-          messageType: params.orderId ? 'ORDER_REF' : (params.productId ? 'PRODUCT_REF' : 'TEXT'),
-          isRead: false,
-          createdAt: now
-        };
-        this.state.marketplaceMessages.push(firstMsg);
-      }
-
-      this.saveState();
-      return { success: true, conversation: this.getMarketplaceConversationById(newConv.id)!, isNew: true };
-    }
-
-    if (params.initialMessage) {
-      this.sendMarketplaceMessage({
-        conversationId: existing.id,
-        senderId: params.customerId,
-        senderType: 'CUSTOMER',
-        senderName: params.customerName || 'Client Marketplace',
-        senderRole: params.senderRole || 'Client',
-        content: params.initialMessage,
-        messageType: params.orderId ? 'ORDER_REF' : (params.productId ? 'PRODUCT_REF' : 'TEXT')
-      });
-    }
-
-    return { success: true, conversation: this.getMarketplaceConversationById(existing.id)!, isNew: false };
-  }
-
-  public sendMarketplaceMessage(params: {
-    conversationId: string;
-    senderId: string;
-    senderType: 'CUSTOMER' | 'BOUTIQUE' | 'STAFF' | 'ADMIN';
-    senderName: string;
-    senderRole?: string;
-    content: string;
-    messageType?: 'TEXT' | 'IMAGE' | 'ORDER_REF' | 'PRODUCT_REF';
-    imageUrl?: string;
-  }): { success: boolean; message?: MarketplaceMessage; conversation?: MarketplaceConversation; error?: string } {
-    if (!this.state.marketplaceConversations) this.state.marketplaceConversations = [];
-    if (!this.state.marketplaceMessages) this.state.marketplaceMessages = [];
-
-    const conv = this.state.marketplaceConversations.find(c => c.id === params.conversationId);
-    if (!conv) {
-      return { success: false, error: 'Conversation introuvable.' };
-    }
-
-    const trimmedContent = params.content.trim();
-    if (!trimmedContent) {
-      return { success: false, error: 'Le contenu du message ne peut pas être vide.' };
-    }
-
-    const now = new Date().toISOString();
-    const newMsg: MarketplaceMessage = {
-      id: `msg-mkt-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-      conversationId: conv.id,
-      senderId: params.senderId,
-      senderType: params.senderType,
-      senderName: params.senderName,
-      senderRole: params.senderRole || (params.senderType === 'CUSTOMER' ? 'Client' : 'Vendeur'),
-      content: trimmedContent,
-      messageType: params.messageType || 'TEXT',
-      imageUrl: params.imageUrl,
-      isRead: false,
-      createdAt: now
-    };
-
-    this.state.marketplaceMessages.push(newMsg);
-
-    conv.lastMessageContent = trimmedContent;
-    conv.lastMessageAt = now;
-    conv.lastSenderRole = newMsg.senderRole;
-    conv.updatedAt = now;
-
-    if (params.senderType === 'CUSTOMER') {
-      conv.unreadByBoutique = (conv.unreadByBoutique || 0) + 1;
-    } else {
-      conv.unreadByCustomer = (conv.unreadByCustomer || 0) + 1;
-    }
-
-    this.saveState();
-    return {
-      success: true,
-      message: newMsg,
-      conversation: this.getMarketplaceConversationById(conv.id)!
-    };
-  }
-
-  public markMarketplaceConversationAsRead(conversationId: string, readerType: 'BOUTIQUE' | 'CUSTOMER'): { success: boolean } {
-    if (!this.state.marketplaceConversations) this.state.marketplaceConversations = [];
-    if (!this.state.marketplaceMessages) this.state.marketplaceMessages = [];
-
-    const conv = this.state.marketplaceConversations.find(c => c.id === conversationId);
-    if (!conv) return { success: false };
-
-    if (readerType === 'BOUTIQUE') {
-      conv.unreadByBoutique = 0;
-      this.state.marketplaceMessages
-        .filter(m => m.conversationId === conversationId && m.senderType === 'CUSTOMER')
-        .forEach(m => { m.isRead = true; });
-    } else {
-      conv.unreadByCustomer = 0;
-      this.state.marketplaceMessages
-        .filter(m => m.conversationId === conversationId && (m.senderType === 'BOUTIQUE' || m.senderType === 'STAFF' || m.senderType === 'ADMIN'))
-        .forEach(m => { m.isRead = true; });
-    }
-
-    this.saveState();
-    return { success: true };
-  }
-
-  public getMarketplaceUnreadCount(boutiqueId?: string, customerId?: string): number {
-    if (!this.state.marketplaceConversations) return 0;
-    if (boutiqueId) {
-      return this.state.marketplaceConversations
-        .filter(c => c.boutiqueId === boutiqueId)
-        .reduce((sum: number, c: MarketplaceConversation) => sum + (c.unreadByBoutique || 0), 0);
-    }
-    if (customerId) {
-      return this.state.marketplaceConversations
-        .filter(c => c.customerId === customerId)
-        .reduce((sum: number, c: MarketplaceConversation) => sum + (c.unreadByCustomer || 0), 0);
-    }
-    return 0;
-  }
-
   public getTenantNotifications(tenantId?: string, userId?: string, isSuperAdmin?: boolean): AppNotification[] {
     if (!this.state.notifications) this.state.notifications = [];
     if (isSuperAdmin && (!tenantId || tenantId === 'ALL' || tenantId === 'global')) {
       return [...this.state.notifications];
     }
     return this.state.notifications.filter(n => {
-      const targetTenant = n.boutiqueId || n.tenantId;
+      const targetTenant = n.tenantId;
 
       // 1. If notification is specifically directed to this user (e.g., client or specific staff)
       if (userId && n.userId === userId) {
         return true;
       }
 
-      // 2. For boutique / agency staff within a specific tenant/boutique
+      // 2. For agency staff within a specific tenant
       if (tenantId && tenantId !== 'ALL' && tenantId !== 'global') {
         if (targetTenant && targetTenant !== tenantId) return false;
         if (n.userId && userId && n.userId !== userId) return false;
@@ -11348,308 +10708,6 @@ class StoreManager {
 
       return false;
     });
-  }
-
-  public createMarketplaceOrders(params: {
-    items: MarketplaceCartItem[];
-    customerName: string;
-    customerPhone: string;
-    customerEmail?: string;
-    customerId?: string;
-    deliveryCity: string;
-    deliveryAddress: string;
-    orderNotes?: string;
-  }): { success: boolean; createdOrders: Order[]; error?: string } {
-    if (!params.items || params.items.length === 0) {
-      return { success: false, createdOrders: [], error: 'Le panier est vide.' };
-    }
-    if (!params.customerName.trim() || !params.customerPhone.trim() || !params.deliveryAddress.trim()) {
-      return { success: false, createdOrders: [], error: 'Veuillez renseigner le nom, téléphone et adresse de livraison.' };
-    }
-
-    if (!this.state.orders) this.state.orders = [];
-    if (!this.state.notifications) this.state.notifications = [];
-
-    // 1. Group items by storeId (the owning boutique's tenantId)
-    const storeMap = new Map<string, MarketplaceCartItem[]>();
-    for (const item of params.items) {
-      const sId = item.storeId || 't-001';
-      if (!storeMap.has(sId)) {
-        storeMap.set(sId, []);
-      }
-      storeMap.get(sId)!.push(item);
-    }
-
-    const createdOrders: Order[] = [];
-    const now = new Date().toISOString();
-
-    for (const [storeId, storeItems] of storeMap.entries()) {
-      const orderSeq = this.state.orders.length + createdOrders.length + 1;
-      const orderNumber = generateDocNumber('CMD-MP', orderSeq);
-
-      let subtotal = 0;
-      const orderItems: OrderItem[] = storeItems.map((item, idx) => {
-        const itemTotal = item.unitPrice * item.quantity;
-        subtotal += itemTotal;
-
-        const orderItem: OrderItem = {
-          id: `item-mp-${Date.now()}-${idx}-${Math.floor(100 + Math.random() * 900)}`,
-          itemType: 'PRODUCT',
-          productId: item.productId,
-          productName: item.productName,
-          productCode: item.productCode,
-          quantity: item.quantity,
-          requestedQuantity: item.quantity,
-          validatedQuantity: undefined,
-          unit: item.unit || 'Pièce',
-          publicUnit: item.unit || 'Pièce',
-          productImageUrl: item.imageUrl || (item.images && item.images.length > 0 ? item.images[0] : undefined),
-          unitPrice: item.unitPrice,
-          standardUnitPrice: item.unitPrice,
-          discountPercent: 0,
-          discountAmount: 0,
-          totalPrice: itemTotal,
-          productionStatus: 'PENDING',
-          storeId: storeId,
-          notes: params.orderNotes || undefined
-        };
-        return orderItem;
-      });
-
-      const newOrder: Order = {
-        id: `ord-mp-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
-        tenantId: storeId,
-        orderNumber: orderNumber,
-        orderSource: 'MARKETPLACE',
-        customerType: params.customerId ? 'REGISTERED' : 'WALK_IN',
-        personId: params.customerId || undefined,
-        personName: params.customerName.trim(),
-        personPhone: params.customerPhone.trim(),
-        personEmail: params.customerEmail ? params.customerEmail.trim() : undefined,
-        clientCity: params.deliveryCity,
-        deliveryAddress: params.deliveryAddress.trim(),
-        deliveryNotes: params.orderNotes ? params.orderNotes.trim() : undefined,
-        status: 'PENDING',
-        paymentStatus: 'UNPAID',
-        deliveryStatus: 'UNDELIVERED',
-        priority: 'NORMAL',
-        items: orderItems,
-        files: [],
-        subtotal: subtotal,
-        discountAmount: 0,
-        taxAmount: 0,
-        totalAmount: subtotal,
-        paidAmount: 0,
-        dueAmount: subtotal,
-        instructions: `Livraison à ${params.deliveryCity} (${params.deliveryAddress})${params.orderNotes ? ` - Note: ${params.orderNotes}` : ''}`,
-        isReadByMerchant: false,
-        trackingEvents: [
-          {
-            id: `track-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-            orderId: `ord-mp-${orderNumber}`,
-            status: 'ORDER_PLACED',
-            title: 'Commande émise',
-            description: `Commande passée avec succès auprès de la boutique (${params.deliveryCity}).`,
-            timestamp: now,
-            actorName: params.customerName.trim(),
-            actorRole: 'Client',
-            isCompleted: true
-          }
-        ],
-        createdAt: now,
-        updatedAt: now
-      };
-
-      this.state.orders.unshift(newOrder);
-      createdOrders.push(newOrder);
-
-      // 2. Generate scoped merchant notification
-      this.addNotification({
-        tenantId: storeId,
-        boutiqueId: storeId,
-        orderId: newOrder.id,
-        title: '🛒 Nouvelle commande Marketplace',
-        message: `Vous avez reçu la commande ${orderNumber} de ${params.customerName} (${params.deliveryCity}) pour un montant de ${formatCurrency(subtotal)}.`,
-        type: 'SUCCESS',
-        link: '/orders'
-      });
-
-      // 3. Log Audit
-      this.logAudit('MARKETPLACE_ORDER_CREATED', 'ORDER', newOrder.id, null, {
-        orderNumber,
-        storeId,
-        customerName: params.customerName,
-        customerPhone: params.customerPhone,
-        totalAmount: subtotal,
-        itemCount: orderItems.length
-      });
-    }
-
-    this.saveState();
-    return { success: true, createdOrders };
-  }
-
-  public markMarketplaceOrderAsRead(orderId: string): void {
-    if (!this.state.orders) return;
-    const ord = this.state.orders.find(o => o.id === orderId);
-    if (ord && ord.isReadByMerchant === false) {
-      ord.isReadByMerchant = true;
-      ord.updatedAt = new Date().toISOString();
-      this.saveState();
-    }
-  }
-
-  public validateMarketplaceOrder(params: {
-    orderId: string;
-    itemValidations: { itemId: string; validatedQuantity: number }[];
-    performedByName?: string;
-    notes?: string;
-  }): { success: boolean; order?: Order; movementsCount?: number; error?: string } {
-    if (!this.state.orders) return { success: false, error: 'Aucune commande enregistrée.' };
-    const order = this.state.orders.find(o => o.id === params.orderId);
-    if (!order) return { success: false, error: 'Commande introuvable.' };
-
-    if (!params.itemValidations || params.itemValidations.length === 0) {
-      return { success: false, error: 'Aucune validation spécifiée pour les articles.' };
-    }
-
-    // Step 1: Pre-validate stock availability for each product line
-    const products = this.state.products || [];
-    for (const val of params.itemValidations) {
-      const item = order.items.find(it => it.id === val.itemId);
-      if (!item) continue;
-      const validatedQty = Math.max(0, val.validatedQuantity);
-
-      if (item.productId && validatedQty > 0) {
-        const prod = products.find(p => p.id === item.productId);
-        if (!prod) {
-          return { success: false, error: `Produit introuvable pour la ligne « ${item.productName} »` };
-        }
-        const requiredStockUnits = calculateItemStockDeduction({ ...item, quantity: validatedQty }, prod);
-        const availableStock = prod.currentStock || 0;
-
-        if (requiredStockUnits > availableStock && !prod.allowNegativeStock) {
-          return {
-            success: false,
-            error: `Stock insuffisant pour « ${item.productName || prod.name} ». Stock réel disponible : ${availableStock} ${prod.baseUnit || 'unité'}, requis : ${requiredStockUnits} ${prod.baseUnit || 'unité'}.`
-          };
-        }
-      }
-    }
-
-    let movementsCount = 0;
-    const now = new Date().toISOString();
-
-    // Step 2: Perform atomic deduction and order update
-    this.updateState(draft => {
-      const targetOrder = draft.orders.find(o => o.id === params.orderId);
-      if (!targetOrder) return;
-      if (!draft.stockMovements) draft.stockMovements = [];
-
-      let newSubtotal = 0;
-
-      for (const val of params.itemValidations) {
-        const item = targetOrder.items.find(it => it.id === val.itemId);
-        if (!item) continue;
-
-        const valQty = Math.max(0, val.validatedQuantity);
-        if (item.requestedQuantity === undefined) {
-          item.requestedQuantity = item.quantity;
-        }
-        item.validatedQuantity = valQty;
-        item.quantity = valQty;
-        item.totalPrice = item.unitPrice * valQty;
-        newSubtotal += item.totalPrice;
-
-        if (item.productId && valQty > 0) {
-          const prod = draft.products.find(p => p.id === item.productId);
-          if (prod) {
-            const stockDeduction = calculateItemStockDeduction({ ...item, quantity: valQty }, prod);
-            const oldStock = prod.currentStock || 0;
-            const newStock = Math.max(0, oldStock - stockDeduction);
-
-            prod.currentStock = newStock;
-            if (!prod.stockByLocation) prod.stockByLocation = {};
-            prod.stockByLocation['MAIN_STORE'] = newStock;
-
-            const posStore = (draft.stores || []).find(s => s.tenantId === targetOrder.tenantId && (s.type === 'POINT_OF_SALE' || s.isDefault))
-              || (draft.stores || []).find(s => s.tenantId === targetOrder.tenantId);
-            if (posStore) {
-              if (!prod.stockByStore) prod.stockByStore = {};
-              prod.stockByStore[posStore.id] = Math.max(0, (prod.stockByStore[posStore.id] || 0) - stockDeduction);
-            }
-            prod.updatedAt = now;
-
-            // Traceable stock movement
-            draft.stockMovements.unshift({
-              id: `mov-val-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-              tenantId: targetOrder.tenantId,
-              productId: prod.id,
-              productName: prod.name,
-              movementType: 'BOUTIQUE_SALE',
-              quantity: -stockDeduction,
-              oldStock: oldStock,
-              newStock: newStock,
-              unitUsed: prod.baseUnit || item.unit,
-              unitCost: prod.costPrice || 0,
-              totalCost: (prod.costPrice || 0) * stockDeduction,
-              storeId: posStore?.id,
-              storeName: posStore?.name || 'Magasin / Boutique',
-              sourceLocation: posStore?.name || 'Stock Magasin / Boutique',
-              destinationLocation: `Client Marketplace (${targetOrder.personName})`,
-              relatedOrderId: targetOrder.id,
-              relatedOrderItemId: item.id,
-              reason: `Validation commande Marketplace ${targetOrder.orderNumber} : ${valQty} ${item.publicUnit || item.unit} validé(s) sur ${item.requestedQuantity} demandé(s)`,
-              performedByUserName: params.performedByName || 'Commerçant',
-              createdAt: now
-            });
-            movementsCount++;
-          }
-        }
-      }
-
-      targetOrder.subtotal = newSubtotal;
-      targetOrder.totalAmount = Math.max(0, newSubtotal - (targetOrder.discountAmount || 0) + (targetOrder.taxAmount || 0));
-      targetOrder.dueAmount = Math.max(0, targetOrder.totalAmount - (targetOrder.paidAmount || 0));
-      targetOrder.status = 'CONFIRMED';
-      targetOrder.stockDeducted = true;
-      targetOrder.consumablesDeducted = true;
-      targetOrder.updatedAt = now;
-
-      // Add tracking event
-      if (!targetOrder.trackingEvents) targetOrder.trackingEvents = [];
-      const hasPartial = targetOrder.items.some(it => it.requestedQuantity !== undefined && it.validatedQuantity !== undefined && it.validatedQuantity < it.requestedQuantity);
-
-      targetOrder.trackingEvents.push({
-        id: `track-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-        orderId: targetOrder.id,
-        status: 'CONFIRMED',
-        title: hasPartial ? 'Commande partiellement confirmée' : 'Commande confirmée par la boutique',
-        description: hasPartial
-          ? `La boutique a confirmé la commande avec une quantité validée ajustée selon le stock disponible (Nouveau montant : ${formatCurrency(targetOrder.totalAmount)}).`
-          : `La boutique a validé la totalité de votre commande (${formatCurrency(targetOrder.totalAmount)}). Articles réservés et stock déduit.`,
-        timestamp: now,
-        actorName: params.performedByName || 'Commerçant',
-        actorRole: 'Boutique',
-        isCompleted: true
-      });
-
-      // Targeted notification for client
-      this.addNotification({
-        tenantId: targetOrder.tenantId,
-        userId: targetOrder.personId,
-        orderId: targetOrder.id,
-        title: hasPartial ? `Commande #${targetOrder.orderNumber} ajustée` : `Commande #${targetOrder.orderNumber} confirmée`,
-        message: hasPartial
-          ? `Votre commande #${targetOrder.orderNumber} a été validée avec une quantité ajustée selon le stock disponible. Montant net : ${formatCurrency(targetOrder.totalAmount)}.`
-          : `Bonne nouvelle ! Votre commande #${targetOrder.orderNumber} a été confirmée par la boutique (${formatCurrency(targetOrder.totalAmount)}).`,
-        type: 'SUCCESS',
-        link: '/orders'
-      });
-    });
-
-    const updatedOrder = (this.state.orders || []).find(o => o.id === params.orderId);
-    return { success: true, order: updatedOrder, movementsCount };
   }
 
   public updateOrderStatus(
@@ -11969,639 +11027,7 @@ class StoreManager {
     return { success: true, user: newUser, message: 'Compte client créé avec succès !' };
   }
 
-  // ==========================================
-  // SYSTÈME DE GESTION CENTRALISÉE DES CLIENTS ET RELATIONS MULTI-BOUTIQUES
-  // ==========================================
 
-  /**
-   * Recherche un client existant par numéro de téléphone ou email sur toute la plateforme
-   */
-  public findExistingCustomer(query: { phone?: string; email?: string } | string): {
-    found: boolean;
-    person?: Person;
-    user?: User;
-    matchType?: 'PHONE' | 'EMAIL';
-    linkedStores: Tenant[];
-    linkedRelations: ClientStoreRelation[];
-  } {
-    if (!this.state.persons) this.state.persons = [];
-    if (!this.state.users) this.state.users = [];
-    if (!this.state.clientStoreRelations) this.state.clientStoreRelations = [];
-
-    let cleanPhone = '';
-    let cleanEmail = '';
-
-    if (typeof query === 'string') {
-      const q = query.trim();
-      if (q.includes('@')) {
-        cleanEmail = q.toLowerCase();
-      } else {
-        cleanPhone = q.replace(/\s+/g, '').replace(/[^0-9+]/g, '');
-      }
-    } else {
-      if (query.phone) cleanPhone = query.phone.trim().replace(/\s+/g, '').replace(/[^0-9+]/g, '');
-      if (query.email) cleanEmail = query.email.trim().toLowerCase();
-    }
-
-    // 1. Search in persons
-    let matchedPerson = this.state.persons.find(p => {
-      const pPhone = (p.phone || '').replace(/\s+/g, '').replace(/[^0-9+]/g, '');
-      const pEmail = (p.email || '').trim().toLowerCase();
-      if (cleanPhone && pPhone && (pPhone === cleanPhone || pPhone.endsWith(cleanPhone) || cleanPhone.endsWith(pPhone))) {
-        return true;
-      }
-      if (cleanEmail && pEmail && pEmail === cleanEmail) {
-        return true;
-      }
-      return false;
-    });
-
-    // 2. Search in users (Marketplace accounts)
-    let matchedUser = this.state.users.find(u => {
-      const uPhone = (u.phone || u.username || '').replace(/\s+/g, '').replace(/[^0-9+]/g, '');
-      const uEmail = (u.email || '').trim().toLowerCase();
-      if (cleanPhone && uPhone && (uPhone === cleanPhone || uPhone.endsWith(cleanPhone) || cleanPhone.endsWith(uPhone))) {
-        return true;
-      }
-      if (cleanEmail && uEmail && uEmail === cleanEmail) {
-        return true;
-      }
-      return false;
-    });
-
-    // If person not found but user exists, synthesize or locate matching person
-    if (!matchedPerson && matchedUser) {
-      matchedPerson = this.state.persons.find(p => p.phone === matchedUser?.phone || p.email === matchedUser?.email);
-      if (!matchedPerson) {
-        matchedPerson = {
-          id: `pers-${matchedUser.id}`,
-          tenantId: 'global',
-          firstName: matchedUser.firstName,
-          lastName: matchedUser.lastName,
-          phone: matchedUser.phone || matchedUser.username,
-          email: matchedUser.email,
-          types: ['CUSTOMER'],
-          origin: 'MARKETPLACE',
-          status: matchedUser.isActive ? 'ACTIVE' : 'SUSPENDED',
-          isActive: matchedUser.isActive,
-          createdAt: matchedUser.createdAt,
-          updatedAt: matchedUser.createdAt
-        };
-        this.state.persons.push(matchedPerson);
-        this.saveState();
-      }
-    }
-
-    if (!matchedPerson && !matchedUser) {
-      return { found: false, linkedStores: [], linkedRelations: [] };
-    }
-
-    const personId = matchedPerson?.id;
-    const userId = matchedUser?.id;
-
-    // Retrieve linked store relations
-    const relations = this.state.clientStoreRelations.filter(
-      r => (personId && r.personId === personId) || (userId && r.userId === userId)
-    );
-
-    const linkedStoreIds = new Set(relations.map(r => r.tenantId));
-    if (matchedPerson?.tenantId && matchedPerson.tenantId !== 'global') {
-      linkedStoreIds.add(matchedPerson.tenantId);
-    }
-    if (matchedPerson?.registeredByTenantId && matchedPerson.registeredByTenantId !== 'MARKETPLACE') {
-      linkedStoreIds.add(matchedPerson.registeredByTenantId);
-    }
-
-    const linkedStores = (this.state.tenants || []).filter(t => linkedStoreIds.has(t.id));
-
-    return {
-      found: true,
-      person: matchedPerson,
-      user: matchedUser,
-      matchType: cleanPhone ? 'PHONE' : 'EMAIL',
-      linkedStores,
-      linkedRelations: relations
-    };
-  }
-
-  /**
-   * Enregistre un client interne par une boutique (avec détection de doublon et liaison)
-   */
-  public registerStoreClient(data: {
-    tenantId: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    email?: string;
-    address?: string;
-    isLoyalCustomer?: boolean;
-    notes?: string;
-    companyName?: string;
-    isCompany?: boolean;
-    discountRate?: number;
-    creditLimit?: number;
-  }): {
-    success: boolean;
-    person?: Person;
-    relation?: ClientStoreRelation;
-    isExistingAssociated?: boolean;
-    message: string;
-  } {
-    const cleanFirstName = (data.firstName || '').trim();
-    const cleanLastName = (data.lastName || '').trim();
-    const cleanPhone = (data.phone || '').trim();
-    const cleanEmail = (data.email || '').trim().toLowerCase();
-
-    if (!cleanLastName || !cleanPhone) {
-      return { success: false, message: 'Le nom et le numéro de téléphone sont obligatoires.' };
-    }
-
-    if (!isValidPhoneNumber(cleanPhone, { allowEmpty: false, required: true })) {
-      return { success: false, message: 'Le numéro de téléphone fourni est invalide.' };
-    }
-
-    const tenant = (this.state.tenants || []).find(t => t.id === data.tenantId);
-    if (!tenant) {
-      return { success: false, message: 'Boutique introuvable.' };
-    }
-
-    if (!this.state.persons) this.state.persons = [];
-    if (!this.state.clientStoreRelations) this.state.clientStoreRelations = [];
-
-    // Check existing customer
-    const lookup = this.findExistingCustomer({ phone: cleanPhone, email: cleanEmail || undefined });
-
-    if (lookup.found && lookup.person) {
-      const existingPerson = lookup.person;
-      // Check if already linked to this tenant
-      const alreadyLinked = this.state.clientStoreRelations.some(
-        r => r.personId === existingPerson.id && r.tenantId === data.tenantId
-      );
-
-      if (alreadyLinked) {
-        return {
-          success: true,
-          person: existingPerson,
-          isExistingAssociated: true,
-          message: `Ce client est déjà enregistré auprès de votre boutique.`
-        };
-      }
-
-      // Associate existing person to this boutique
-      const relationId = `rel-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-      const newRelation: ClientStoreRelation = {
-        id: relationId,
-        personId: existingPerson.id,
-        userId: lookup.user?.id,
-        tenantId: data.tenantId,
-        tenantName: tenant.name,
-        registeredByTenantId: data.tenantId,
-        isLoyalCustomer: data.isLoyalCustomer ?? true,
-        notes: data.notes?.trim() || undefined,
-        totalOrdersCount: 0,
-        totalSpentAmount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      this.state.clientStoreRelations.push(newRelation);
-
-      this.logAudit('STORE_CLIENT_ASSOCIATED', 'PERSON', existingPerson.id, null, {
-        storeId: data.tenantId,
-        storeName: tenant.name,
-        personName: `${existingPerson.firstName} ${existingPerson.lastName}`,
-        phone: existingPerson.phone,
-        origin: existingPerson.origin || 'MARKETPLACE'
-      });
-
-      this.saveState();
-      return {
-        success: true,
-        person: existingPerson,
-        relation: newRelation,
-        isExistingAssociated: true,
-        message: `Le client existant ${existingPerson.firstName} ${existingPerson.lastName} a été associé avec succès à votre boutique.`
-      };
-    }
-
-    // Create new Person
-    const personId = `pers-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-    const seq = this.state.persons.length + 1;
-    const customerNumber = `CLT-${new Date().getFullYear()}-${seq.toString().padStart(4, '0')}`;
-
-    const newPerson: Person = {
-      id: personId,
-      tenantId: data.tenantId,
-      firstName: cleanFirstName,
-      lastName: cleanLastName,
-      phone: cleanPhone,
-      email: cleanEmail || undefined,
-      address: data.address?.trim() || undefined,
-      notes: data.notes?.trim() || undefined,
-      types: ['CUSTOMER'],
-      origin: 'STORE_REGISTERED',
-      registeredByTenantId: data.tenantId,
-      registeredByTenantName: tenant.name,
-      status: 'ACTIVE',
-      isActive: true,
-      customerProfile: {
-        customerNumber,
-        isCompany: Boolean(data.isCompany || data.companyName),
-        companyName: data.companyName?.trim() || undefined,
-        discountRate: Number(data.discountRate) || 0,
-        creditLimit: Number(data.creditLimit) || 0
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const relationId = `rel-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-    const newRelation: ClientStoreRelation = {
-      id: relationId,
-      personId: newPerson.id,
-      tenantId: data.tenantId,
-      tenantName: tenant.name,
-      registeredByTenantId: data.tenantId,
-      isLoyalCustomer: data.isLoyalCustomer ?? true,
-      notes: data.notes?.trim() || undefined,
-      totalOrdersCount: 0,
-      totalSpentAmount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    this.state.persons.push(newPerson);
-    this.state.clientStoreRelations.push(newRelation);
-
-    this.logAudit('STORE_CLIENT_CREATED', 'PERSON', personId, null, {
-      storeId: data.tenantId,
-      storeName: tenant.name,
-      personName: `${cleanFirstName} ${cleanLastName}`,
-      phone: cleanPhone,
-      customerNumber
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      person: newPerson,
-      relation: newRelation,
-      isExistingAssociated: false,
-      message: `Client ${cleanFirstName} ${cleanLastName} enregistré avec succès dans votre boutique.`
-    };
-  }
-
-  /**
-   * Associe explicitement un client existant de la plateforme à une boutique
-   */
-  public associateExistingClientToStore(params: {
-    personId: string;
-    tenantId: string;
-    isLoyalCustomer?: boolean;
-    notes?: string;
-  }): { success: boolean; relation?: ClientStoreRelation; message: string } {
-    if (!this.state.persons) this.state.persons = [];
-    if (!this.state.clientStoreRelations) this.state.clientStoreRelations = [];
-
-    const person = this.state.persons.find(p => p.id === params.personId);
-    if (!person) {
-      return { success: false, message: 'Client introuvable.' };
-    }
-
-    const tenant = (this.state.tenants || []).find(t => t.id === params.tenantId);
-    if (!tenant) {
-      return { success: false, message: 'Boutique introuvable.' };
-    }
-
-    // Check if relation already exists
-    let relation = this.state.clientStoreRelations.find(
-      r => r.personId === params.personId && r.tenantId === params.tenantId
-    );
-
-    if (relation) {
-      relation.isLoyalCustomer = params.isLoyalCustomer ?? relation.isLoyalCustomer;
-      if (params.notes) relation.notes = params.notes;
-      relation.updatedAt = new Date().toISOString();
-      this.saveState();
-      return { success: true, relation, message: `La relation avec la boutique "${tenant.name}" a été mise à jour.` };
-    }
-
-    // Create relation
-    const relId = `rel-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-    const newRelation: ClientStoreRelation = {
-      id: relId,
-      personId: person.id,
-      tenantId: params.tenantId,
-      tenantName: tenant.name,
-      registeredByTenantId: params.tenantId,
-      isLoyalCustomer: params.isLoyalCustomer ?? true,
-      notes: params.notes?.trim() || undefined,
-      totalOrdersCount: 0,
-      totalSpentAmount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    this.state.clientStoreRelations.push(newRelation);
-
-    this.logAudit('CLIENT_LINKED_TO_STORE', 'PERSON', person.id, null, {
-      storeId: params.tenantId,
-      storeName: tenant.name,
-      personName: `${person.firstName} ${person.lastName}`
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      relation: newRelation,
-      message: `Client ${person.firstName} ${person.lastName} associé avec succès à la boutique "${tenant.name}".`
-    };
-  }
-
-  /**
-   * Récupère la liste des clients appartenant à une boutique donnée (Isolation stricte multi-boutique)
-   */
-  public getStoreClients(tenantId: string): Array<Person & { relation?: ClientStoreRelation; storeTotalOrders: number; storeTotalSpent: number }> {
-    if (!this.state.persons) this.state.persons = [];
-    if (!this.state.clientStoreRelations) this.state.clientStoreRelations = [];
-    if (!this.state.orders) this.state.orders = [];
-    if (!this.state.boutiqueSales) this.state.boutiqueSales = [];
-
-    // Find relations for this boutique
-    const storeRelations = this.state.clientStoreRelations.filter(r => r.tenantId === tenantId);
-    const relatedPersonIds = new Set(storeRelations.map(r => r.personId));
-
-    // Also include directly registered persons for this tenant
-    const matchedPersons = this.state.persons.filter(
-      p => relatedPersonIds.has(p.id) || p.tenantId === tenantId || p.registeredByTenantId === tenantId
-    );
-
-    return matchedPersons.map(p => {
-      const rel = storeRelations.find(r => r.personId === p.id);
-      
-      // Calculate orders and sales specific to this boutique
-      const storeOrders = this.state.orders.filter(
-        o => o.tenantId === tenantId && (o.personId === p.id || (p.phone && o.personPhone === p.phone))
-      );
-      const storeSales = this.state.boutiqueSales.filter(
-        s => s.tenantId === tenantId && (s.personId === p.id || (p.phone && s.personPhone === p.phone))
-      );
-
-      const storeOrdersTotal = storeOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-      const storeSalesTotal = storeSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-      const storeTotalOrders = storeOrders.length + storeSales.length;
-      const storeTotalSpent = storeOrdersTotal + storeSalesTotal;
-
-      return {
-        ...p,
-        relation: rel,
-        storeTotalOrders,
-        storeTotalSpent
-      };
-    });
-  }
-
-  /**
-   * Récupère la liste globale de tous les clients de la plateforme pour le Super Administrateur
-   */
-  public getAllPlatformClients(filter?: {
-    origin?: 'ALL' | 'MARKETPLACE' | 'STORE_REGISTERED';
-    multiStoreOnly?: boolean;
-    status?: 'ALL' | 'ACTIVE' | 'SUSPENDED';
-    search?: string;
-  }): Array<Person & {
-    linkedStoresCount: number;
-    linkedStores: Tenant[];
-    userAccount?: User;
-    totalOrdersCount: number;
-    totalSpentAmount: number;
-    lastOrderDate?: string;
-    lastLoginAt?: string;
-    lastActivityDate?: string;
-    conversationsCount: number;
-    clientTypeLabel: string;
-    principalAgencyLabel: string;
-    ordersList: Array<{
-      id: string;
-      date: string;
-      reference: string;
-      amount: number;
-      type: 'MARKETPLACE_ORDER' | 'BOUTIQUE_SALE';
-      storeName?: string;
-      status: string;
-    }>;
-  }> {
-    if (!this.state.persons) this.state.persons = [];
-    if (!this.state.users) this.state.users = [];
-    if (!this.state.clientStoreRelations) this.state.clientStoreRelations = [];
-    if (!this.state.tenants) this.state.tenants = [];
-    if (!this.state.orders) this.state.orders = [];
-    if (!this.state.boutiqueSales) this.state.boutiqueSales = [];
-    if (!this.state.marketplaceConversations) this.state.marketplaceConversations = [];
-
-    // Collect all CUSTOMER persons (filter out persons who are purely staff without customer role)
-    const customerPersons = this.state.persons.filter(
-      p => p.types.includes('CUSTOMER') || p.origin === 'MARKETPLACE' || p.origin === 'STORE_REGISTERED'
-    );
-
-    const personPhoneMap = new Set(customerPersons.map(p => (p.phone || '').replace(/\s+/g, '')));
-    const personEmailMap = new Set(customerPersons.filter(p => p.email).map(p => p.email!.trim().toLowerCase()));
-
-    // Ensure all client users have a corresponding person view
-    const clientUsers = this.state.users.filter(
-      u => u.roles?.some(r => r.code === 'CLIENT') || u.role === 'CLIENT'
-    );
-
-    const aggregated: Person[] = [...customerPersons];
-
-    for (const u of clientUsers) {
-      const uPhone = (u.phone || u.username || '').replace(/\s+/g, '');
-      const uEmail = (u.email || '').trim().toLowerCase();
-      const hasPhoneMatch = uPhone && personPhoneMap.has(uPhone);
-      const hasEmailMatch = uEmail && personEmailMap.has(uEmail);
-
-      if (!hasPhoneMatch && !hasEmailMatch) {
-        aggregated.push({
-          id: `pers-${u.id}`,
-          tenantId: 'global',
-          firstName: u.firstName,
-          lastName: u.lastName,
-          phone: u.phone || u.username,
-          email: u.email,
-          city: u.city || 'Conakry',
-          address: u.address,
-          types: ['CUSTOMER'],
-          origin: 'MARKETPLACE',
-          status: u.isActive ? 'ACTIVE' : 'SUSPENDED',
-          isActive: u.isActive,
-          createdAt: u.createdAt,
-          updatedAt: u.createdAt
-        });
-      }
-    }
-
-    const results = aggregated.map(p => {
-      const pPhone = (p.phone || '').replace(/\s+/g, '');
-      const pEmail = (p.email || '').toLowerCase();
-
-      // Find user account
-      const userAcc = this.state.users.find(
-        u => (pPhone && (u.phone?.replace(/\s+/g, '') === pPhone || u.username === pPhone)) ||
-             (pEmail && u.email?.toLowerCase() === pEmail)
-      );
-
-      // Find linked store relations
-      const rels = (this.state.clientStoreRelations || []).filter(
-        r => r.personId === p.id || (userAcc && r.userId === userAcc.id)
-      );
-
-      const storeIdSet = new Set(rels.map(r => r.tenantId));
-      if (p.tenantId && p.tenantId !== 'global') {
-        storeIdSet.add(p.tenantId);
-      }
-      if (p.registeredByTenantId && p.registeredByTenantId !== 'MARKETPLACE') {
-        storeIdSet.add(p.registeredByTenantId);
-      }
-
-      const linkedStores = this.state.tenants.filter(t => storeIdSet.has(t.id));
-
-      // Calculate total orders and spent amount
-      const orders = this.state.orders.filter(
-        o => o.personId === p.id || (pPhone && o.personPhone && o.personPhone.replace(/\s+/g, '') === pPhone)
-      );
-      const sales = this.state.boutiqueSales.filter(
-        s => s.personId === p.id || (pPhone && s.personPhone && s.personPhone.replace(/\s+/g, '') === pPhone)
-      );
-
-      const totalSpentAmount = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0) +
-                               sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-      const totalOrdersCount = orders.length + sales.length;
-
-      // Find latest order date
-      let lastOrderDate: string | undefined;
-      const allDates = [
-        ...orders.map(o => o.createdAt),
-        ...sales.map(s => s.createdAt)
-      ].sort().reverse();
-      if (allDates.length > 0) {
-        lastOrderDate = allDates[0];
-      }
-
-      // Build detailed ordersList
-      const ordersList: Array<{
-        id: string;
-        date: string;
-        reference: string;
-        amount: number;
-        type: 'MARKETPLACE_ORDER' | 'BOUTIQUE_SALE';
-        storeName?: string;
-        status: string;
-      }> = [];
-
-      for (const o of orders) {
-        const t = this.state.tenants.find(tenant => tenant.id === o.tenantId);
-        ordersList.push({
-          id: o.id,
-          date: o.createdAt,
-          reference: o.orderNumber || o.id,
-          amount: o.totalAmount || 0,
-          type: 'MARKETPLACE_ORDER',
-          storeName: t?.name,
-          status: o.status
-        });
-      }
-
-      for (const s of sales) {
-        const t = this.state.tenants.find(tenant => tenant.id === s.tenantId);
-        ordersList.push({
-          id: s.id,
-          date: s.createdAt,
-          reference: s.saleNumber || s.id,
-          amount: s.totalAmount || 0,
-          type: 'BOUTIQUE_SALE',
-          storeName: t?.name,
-          status: s.paymentStatus || 'COMPLETED'
-        });
-      }
-
-      ordersList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      // Count conversations
-      const conversationsCount = (this.state.marketplaceConversations || []).filter(
-        c => (userAcc && (c.customerId === userAcc.id || c.customerId === p.id)) || 
-             (pPhone && c.customerPhone && c.customerPhone.replace(/\s+/g, '') === pPhone)
-      ).length;
-
-      const lastLoginAt = userAcc?.lastSuccessfulLoginAt || userAcc?.lastLoginAt;
-      const lastActivityDate = lastOrderDate || lastLoginAt || p.updatedAt || p.createdAt;
-
-      // Determine clientTypeLabel & principalAgencyLabel
-      const isMarketplace = p.origin === 'MARKETPLACE' || Boolean(userAcc && !p.registeredByTenantId);
-      let clientTypeLabel = 'CLIENT MARKETPLACE';
-      if (!isMarketplace && linkedStores.length <= 1) {
-        clientTypeLabel = 'CLIENT ENREGISTRÉ PAR UNE BOUTIQUE';
-      } else if (isMarketplace && linkedStores.length >= 1) {
-        clientTypeLabel = 'CLIENT MARKETPLACE + CLIENT D\'UNE OU PLUSIEURS BOUTIQUES';
-      } else if (linkedStores.length >= 2) {
-        clientTypeLabel = 'CLIENT MULTI-BOUTIQUES';
-      }
-
-      let principalAgencyLabel = 'Aucune';
-      if (!isMarketplace) {
-        principalAgencyLabel = p.registeredByTenantName || linkedStores[0]?.name || 'Non définie';
-      }
-
-      return {
-        ...p,
-        origin: isMarketplace ? ('MARKETPLACE' as const) : ('STORE_REGISTERED' as const),
-        linkedStoresCount: linkedStores.length,
-        linkedStores,
-        userAccount: userAcc,
-        totalOrdersCount,
-        totalSpentAmount,
-        lastOrderDate,
-        lastLoginAt,
-        lastActivityDate,
-        conversationsCount,
-        clientTypeLabel,
-        principalAgencyLabel,
-        ordersList
-      };
-    });
-
-    // Apply filtering
-    return results.filter(item => {
-      // Search
-      if (filter?.search) {
-        const query = filter.search.trim().toLowerCase();
-        const fullName = `${item.firstName} ${item.lastName}`.toLowerCase();
-        const phone = (item.phone || '').toLowerCase();
-        const email = (item.email || '').toLowerCase();
-        const city = (item.city || '').toLowerCase();
-        if (!fullName.includes(query) && !phone.includes(query) && !email.includes(query) && !city.includes(query)) {
-          return false;
-        }
-      }
-
-      // Origin filter
-      if (filter?.origin && filter.origin !== 'ALL') {
-        if (item.origin !== filter.origin) return false;
-      }
-
-      // Status filter
-      if (filter?.status && filter.status !== 'ALL') {
-        const itemStatus = item.status || (item.isActive ? 'ACTIVE' : 'SUSPENDED');
-        if (itemStatus !== filter.status) return false;
-      }
-
-      // Multi-store filter
-      if (filter?.multiStoreOnly) {
-        if (item.linkedStoresCount < 2) return false;
-      }
-
-      return true;
-    });
-  }
 
   /**
    * Suspend ou réactive un client sur la plateforme
@@ -12651,486 +11077,6 @@ class StoreManager {
       status: newStatus,
       message: newStatus === 'SUSPENDED' ? 'Le compte client a été suspendu.' : 'Le compte client a été réactivé avec succès.'
     };
-  }
-
-  // ==========================================
-  // SYSTÈME DE VÉRIFICATION ET D'AUTHENTIFICATION DES BOUTIQUES
-  // ==========================================
-
-  public detectPotentialDuplicateStore(params: {
-    name?: string;
-    phone?: string;
-    responsibleName?: string;
-    excludeStoreId?: string;
-  }): { isDuplicate: boolean; matches: string[]; message?: string } {
-    const matches: string[] = [];
-    if (!this.state.tenants) return { isDuplicate: false, matches: [] };
-
-    const cleanName = (params.name || '').trim().toLowerCase();
-    const cleanPhone = (params.phone || '').trim().replace(/[\s\-\+\(\)]/g, '');
-    const cleanResp = (params.responsibleName || '').trim().toLowerCase();
-
-    for (const t of this.state.tenants) {
-      if (params.excludeStoreId && t.id === params.excludeStoreId) continue;
-
-      const tName = (t.name || '').trim().toLowerCase();
-      const tPhone = (t.phone || '').trim().replace(/[\s\-\+\(\)]/g, '');
-      const tResp = (t.responsibleName || '').trim().toLowerCase();
-
-      if (cleanPhone && tPhone && (cleanPhone === tPhone || (cleanPhone.length >= 8 && (tPhone.endsWith(cleanPhone) || cleanPhone.endsWith(tPhone))))) {
-        matches.push(`Numéro de téléphone (${params.phone}) déjà utilisé par "${t.name}"`);
-      }
-      if (cleanName && (tName === cleanName || (cleanName.length > 4 && (tName.includes(cleanName) || cleanName.includes(tName))))) {
-        matches.push(`Nom de boutique identique ou très similaire à "${t.name}"`);
-      }
-      if (cleanResp && tResp && cleanResp.length > 4 && cleanResp === tResp) {
-        matches.push(`Responsable (${params.responsibleName}) déjà associé à "${t.name}"`);
-      }
-    }
-
-    const isDuplicate = matches.length > 0;
-    return {
-      isDuplicate,
-      matches,
-      message: isDuplicate ? `Boutique potentiellement similaire détectée : ${matches.join(' ; ')}.` : undefined
-    };
-  }
-
-  public submitStoreVerificationRequest(data: {
-    storeName: string;
-    description?: string;
-    logoUrl?: string;
-    coverUrl?: string;
-    activityType?: ActivityType;
-    businessType?: 'PRODUCTS' | 'SERVICES' | 'PRODUCTS_AND_SERVICES';
-    primaryCategory: string;
-    selectedCategories?: string[];
-    city: string;
-    commune?: string;
-    neighborhood: string;
-    address: string;
-    landmark?: string;
-    phone: string;
-    isPhoneVerified: boolean;
-    // Responsible info
-    responsibleFirstName: string;
-    responsibleLastName: string;
-    responsiblePhone: string;
-    responsibleEmail?: string;
-    responsibleRole?: 'Propriétaire' | 'Gérant' | 'Responsable' | 'Autre';
-    ownerUserId: string;
-    // Commercial info
-    isRegisteredBusiness?: boolean;
-    registrationType?: 'RCCM' | 'NIF' | 'AGREMENT' | 'AUTRE';
-    registrationNumber?: string;
-    commercialDocUrl?: string;
-  }): { success: boolean; tenant?: Tenant; verification?: StoreVerification; message: string; warning?: string } {
-    if (!this.state.tenants) this.state.tenants = [];
-    if (!this.state.storeVerifications) this.state.storeVerifications = [];
-
-    const rawFirstName = data.responsibleFirstName || (data as any).responsibleName?.split(' ')[0] || 'Responsable';
-    const rawLastName = data.responsibleLastName !== undefined ? data.responsibleLastName : ((data as any).responsibleName?.split(' ').slice(1).join(' ') || '');
-    const fullRespName = ((data as any).responsibleName || `${rawFirstName} ${rawLastName}`).trim();
-    const storePhone = (data.phone || (data as any).responsiblePhone || '').trim();
-
-    // Check anti-duplicate
-    const dupCheck = this.detectPotentialDuplicateStore({
-      name: data.storeName,
-      phone: storePhone,
-      responsibleName: fullRespName
-    });
-
-    const tenantId = `t-store-${Date.now()}`;
-    const slug = data.storeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `boutique-${Date.now()}`;
-    const now = new Date().toISOString();
-
-    const newTenant: Tenant = {
-      id: tenantId,
-      name: data.storeName.trim(),
-      code: `BTQ-${Math.floor(100 + Math.random() * 900)}`,
-      slug: slug,
-      activityType: data.activityType || 'RETAIL_STORE',
-      status: 'ACTIVE',
-      responsibleName: fullRespName,
-      responsibleRole: data.responsibleRole || 'Propriétaire',
-      ownerUserId: data.ownerUserId || 'u-client-01',
-      phone: storePhone,
-      email: data.responsibleEmail?.trim() || `${slug}@guineeboutiques.gn`,
-      city: data.city,
-      commune: data.commune,
-      neighborhood: data.neighborhood,
-      landmark: data.landmark,
-      address: data.commune ? `${data.commune} - ${data.address}` : data.address,
-      logoUrl: data.logoUrl || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=150&auto=format&fit=crop&q=80',
-      coverUrl: data.coverUrl,
-      currency: 'GNF',
-      taxRate: 0,
-      isActive: true,
-      isOnline: false, // Not public yet!
-      businessType: data.businessType || 'PRODUCTS',
-      primaryCategory: data.primaryCategory,
-      selectedCategories: data.selectedCategories || [data.primaryCategory],
-      isPhoneVerified: data.isPhoneVerified,
-      isVerifiedStore: false,
-      verificationStatus: 'EN_ATTENTE',
-      commercialStatus: 'EN_ATTENTE_VALIDATION',
-      isRegisteredBusiness: data.isRegisteredBusiness,
-      registrationType: data.registrationType,
-      registrationNumber: data.registrationNumber,
-      commercialDocUrl: data.commercialDocUrl,
-      subscriptionStatus: 'TRIAL',
-      trialDaysTotal: 10,
-      trialStartedAt: now,
-      trialEndsAt: now, // starts on approval
-      settings: {
-        companyHeader: `${data.storeName.toUpperCase()} - Boutique Partenaire Agréée`,
-        invoiceFooter: "Merci pour votre confiance. Produits et services garantis.",
-        branding: {
-          logoUrl: data.logoUrl || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=150&auto=format&fit=crop&q=80',
-          logoPosition: 'center',
-          logoSize: 'md',
-          showLogo: true,
-          slogan: data.description || "Commerce vérifié en République de Guinée",
-          headerAlignment: 'center',
-          showPhone: true,
-          showEmail: true,
-          showAddress: true,
-          showWebsite: false,
-          footerAlignment: 'center',
-          showFooter: true
-        }
-      },
-      createdAt: now,
-      updatedAt: now
-    };
-
-    const verificationRecord: StoreVerification = {
-      id: `sv-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-      storeId: tenantId,
-      storeName: newTenant.name,
-      submittedBy: data.ownerUserId,
-      submittedByName: newTenant.responsibleName || 'Responsable',
-      submittedByPhone: data.phone,
-      submittedByEmail: data.responsibleEmail,
-      status: 'EN_ATTENTE',
-      commercialStatus: 'EN_ATTENTE_VALIDATION',
-      hasPotentialDuplicate: dupCheck.isDuplicate,
-      duplicateWarningMessage: dupCheck.message,
-      createdAt: now,
-      updatedAt: now
-    };
-
-    this.state.tenants.push(newTenant);
-    this.state.storeVerifications.unshift(verificationRecord);
-
-    // Create default branch and cash register
-    if (!this.state.branches) this.state.branches = [];
-    this.state.branches.push({
-      id: `b-${Date.now()}`,
-      tenantId: tenantId,
-      name: `Boutique Principale - ${newTenant.name}`,
-      code: `AG-${newTenant.code}`,
-      phone: newTenant.phone,
-      email: newTenant.email,
-      address: newTenant.address,
-      isMain: true,
-      isActive: true
-    });
-
-    if (!this.state.cashRegisters) this.state.cashRegisters = [];
-    this.state.cashRegisters.push({
-      id: `cr-${Date.now()}`,
-      tenantId: tenantId,
-      name: `Caisse 01 - ${newTenant.name}`,
-      code: `CAISSE-01`,
-      isActive: true
-    });
-
-    // Notify user
-    this.addNotification({
-      tenantId: tenantId,
-      userId: data.ownerUserId,
-      title: 'Demande de création de boutique envoyée',
-      message: 'Votre demande de création de boutique a été reçue et sera examinée par notre équipe.',
-      type: 'INFO',
-      link: '/boutique'
-    });
-
-    // Notify Admins
-    this.addNotification({
-      tenantId: 't-001',
-      title: 'Nouvelle demande de vérification de boutique',
-      message: `La boutique "${newTenant.name}" (${newTenant.phone}) attend votre validation.`,
-      type: 'WARNING',
-      link: '/saas-superadmin'
-    });
-
-    this.logAudit('STORE_VERIFICATION_SUBMITTED', 'TENANT', tenantId, null, {
-      storeName: newTenant.name,
-      phone: newTenant.phone,
-      isDuplicateWarning: dupCheck.isDuplicate
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      tenant: newTenant,
-      verification: verificationRecord,
-      message: 'Votre demande de création de boutique a été reçue et sera examinée par notre équipe.',
-      warning: dupCheck.message
-    };
-  }
-
-  public approveStoreVerification(verificationId: string, reviewedByUserId: string, reviewedByUserName: string): { success: boolean; tenant?: Tenant; message: string } {
-    if (!this.state.storeVerifications) return { success: false, message: 'Dossier introuvable.' };
-    const verif = this.state.storeVerifications.find(v => v.id === verificationId || v.storeId === verificationId);
-    if (!verif) return { success: false, message: 'Dossier de vérification introuvable.' };
-
-    const tenant = this.state.tenants.find(t => t.id === verif.storeId);
-    if (!tenant) return { success: false, message: 'Boutique introuvable.' };
-
-    const now = new Date();
-    const trialEnds = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000); // 10 jours gratuits
-
-    verif.status = 'APPROUVE';
-    verif.commercialStatus = 'ESSAI_GRATUIT';
-    verif.reviewedBy = reviewedByUserId;
-    verif.reviewedByName = reviewedByUserName;
-    verif.reviewedAt = now.toISOString();
-    verif.updatedAt = now.toISOString();
-
-    tenant.verificationStatus = 'APPROUVE';
-    tenant.commercialStatus = 'ESSAI_GRATUIT';
-    tenant.subscriptionStatus = 'TRIAL';
-    tenant.isVerifiedStore = true;
-    tenant.isActive = true;
-    tenant.isOnline = true;
-    tenant.trialStartedAt = now.toISOString();
-    tenant.trialEndsAt = trialEnds.toISOString();
-    tenant.trialDaysTotal = 10;
-    tenant.updatedAt = now.toISOString();
-
-    // Notify merchant
-    this.addNotification({
-      tenantId: tenant.id,
-      userId: verif.submittedBy,
-      title: 'Boutique Vérifiée avec Succès !',
-      message: 'Félicitations, votre boutique a été vérifiée. Votre période d\'essai gratuit de 10 jours commence aujourd\'hui.',
-      type: 'SUCCESS',
-      link: '/boutique'
-    });
-
-    this.logAudit('STORE_VERIFICATION_APPROVED', 'TENANT', tenant.id, null, {
-      storeName: tenant.name,
-      reviewedBy: reviewedByUserName,
-      trialEndsAt: tenant.trialEndsAt
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      tenant,
-      message: `La boutique "${tenant.name}" a été approuvée avec succès. La période d'essai de 10 jours a commencé.`
-    };
-  }
-
-  public requestStoreInformation(verificationId: string, requestedInfo: string, reviewedByUserId: string, reviewedByUserName: string): { success: boolean; message: string } {
-    if (!requestedInfo || !requestedInfo.trim()) {
-      return { success: false, message: 'Le motif de la demande d\'informations est obligatoire.' };
-    }
-    if (!this.state.storeVerifications) return { success: false, message: 'Dossier introuvable.' };
-    const verif = this.state.storeVerifications.find(v => v.id === verificationId || v.storeId === verificationId);
-    if (!verif) return { success: false, message: 'Dossier de vérification introuvable.' };
-
-    const tenant = this.state.tenants.find(t => t.id === verif.storeId);
-    if (!tenant) return { success: false, message: 'Boutique introuvable.' };
-
-    const now = new Date().toISOString();
-    verif.status = 'INFORMATIONS_DEMANDEES';
-    verif.requestedInformation = requestedInfo.trim();
-    verif.reviewedBy = reviewedByUserId;
-    verif.reviewedByName = reviewedByUserName;
-    verif.reviewedAt = now;
-    verif.updatedAt = now;
-
-    tenant.verificationStatus = 'INFORMATIONS_DEMANDEES';
-    tenant.commercialStatus = 'EN_ATTENTE_VALIDATION';
-    tenant.requestedInformation = requestedInfo.trim();
-    tenant.isOnline = false; // Remains private
-    tenant.updatedAt = now;
-
-    // Notify merchant
-    this.addNotification({
-      tenantId: tenant.id,
-      userId: verif.submittedBy,
-      title: 'Informations complémentaires demandées',
-      message: `L'équipe de validation a besoin d'informations supplémentaires : ${requestedInfo.trim()}`,
-      type: 'WARNING',
-      link: '/boutique'
-    });
-
-    this.logAudit('STORE_INFO_REQUESTED', 'TENANT', tenant.id, null, {
-      storeName: tenant.name,
-      requestedInfo: requestedInfo.trim(),
-      reviewedBy: reviewedByUserName
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      message: `Demande d'informations transmise au responsable de la boutique "${tenant.name}".`
-    };
-  }
-
-  public rejectStoreVerification(
-    verificationId: string,
-    reason: string,
-    publicNote?: string,
-    internalNotes?: string,
-    reviewedByUserId?: string,
-    reviewedByUserName?: string
-  ): { success: boolean; message: string } {
-    if (!reason || !reason.trim()) {
-      return { success: false, message: 'Le motif du refus est obligatoire.' };
-    }
-    if (!this.state.storeVerifications) return { success: false, message: 'Dossier introuvable.' };
-    const verif = this.state.storeVerifications.find(v => v.id === verificationId || v.storeId === verificationId);
-    if (!verif) return { success: false, message: 'Dossier de vérification introuvable.' };
-
-    const tenant = this.state.tenants.find(t => t.id === verif.storeId);
-    if (!tenant) return { success: false, message: 'Boutique introuvable.' };
-
-    const now = new Date().toISOString();
-    verif.status = 'REFUSE';
-    verif.rejectionReason = reason;
-    verif.rejectionNote = publicNote?.trim() || undefined;
-    verif.internalAdminNotes = internalNotes?.trim() || undefined;
-    verif.reviewedBy = reviewedByUserId;
-    verif.reviewedByName = reviewedByUserName;
-    verif.reviewedAt = now;
-    verif.updatedAt = now;
-
-    tenant.verificationStatus = 'REFUSE';
-    tenant.commercialStatus = 'EN_ATTENTE_VALIDATION';
-    tenant.rejectionReason = reason;
-    tenant.rejectionNote = publicNote?.trim() || undefined;
-    tenant.isOnline = false; // Remains private
-    tenant.updatedAt = now;
-
-    // Notify merchant
-    this.addNotification({
-      tenantId: tenant.id,
-      userId: verif.submittedBy,
-      title: 'Demande de boutique refusée',
-      message: `Votre demande a été refusée pour le motif suivant : ${reason}${publicNote ? ` (${publicNote})` : ''}.`,
-      type: 'DANGER',
-      link: '/boutique'
-    });
-
-    this.logAudit('STORE_VERIFICATION_REJECTED', 'TENANT', tenant.id, null, {
-      storeName: tenant.name,
-      reason,
-      publicNote,
-      reviewedBy: reviewedByUserName
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      message: `La boutique "${tenant.name}" a été refusée (Motif: ${reason}).`
-    };
-  }
-
-  public resubmitStoreVerification(storeId: string, updatedData?: Partial<Tenant>): { success: boolean; message: string } {
-    if (!this.state.storeVerifications) return { success: false, message: 'Dossier introuvable.' };
-    const verif = this.state.storeVerifications.find(v => v.storeId === storeId);
-    const tenant = this.state.tenants.find(t => t.id === storeId);
-    if (!tenant) return { success: false, message: 'Boutique introuvable.' };
-
-    const now = new Date().toISOString();
-    if (updatedData) {
-      Object.assign(tenant, updatedData);
-    }
-    tenant.verificationStatus = 'EN_ATTENTE';
-    tenant.commercialStatus = 'EN_ATTENTE_VALIDATION';
-    tenant.isOnline = false;
-    tenant.updatedAt = now;
-
-    if (verif) {
-      verif.status = 'EN_ATTENTE';
-      verif.commercialStatus = 'EN_ATTENTE_VALIDATION';
-      verif.updatedAt = now;
-    } else {
-      this.state.storeVerifications.unshift({
-        id: `sv-${Date.now()}`,
-        storeId: tenant.id,
-        storeName: tenant.name,
-        submittedBy: tenant.ownerUserId || 'u-admin-01',
-        submittedByName: tenant.responsibleName || 'Responsable',
-        submittedByPhone: tenant.phone || '',
-        submittedByEmail: tenant.email,
-        status: 'EN_ATTENTE',
-        commercialStatus: 'EN_ATTENTE_VALIDATION',
-        createdAt: now,
-        updatedAt: now
-      });
-    }
-
-    // Notify admins
-    this.addNotification({
-      tenantId: 't-001',
-      title: 'Dossier de boutique réexaminé',
-      message: `La boutique "${tenant.name}" a mis à jour ses informations et sollicite une nouvelle vérification.`,
-      type: 'INFO',
-      link: '/saas-superadmin'
-    });
-
-    this.logAudit('STORE_VERIFICATION_RESUBMITTED', 'TENANT', tenant.id, null, {
-      storeName: tenant.name
-    });
-
-    this.saveState();
-    return {
-      success: true,
-      message: 'Votre dossier a été renvoyé pour vérification auprès de nos administrateurs.'
-    };
-  }
-
-  public getStoreVerifications(filterStatus?: string): StoreVerification[] {
-    if (!this.state.storeVerifications) return [];
-    if (!filterStatus || filterStatus === 'ALL') return this.state.storeVerifications;
-    return this.state.storeVerifications.filter(v => v.status === filterStatus);
-  }
-
-  public getStoreVerificationById(id: string): StoreVerification | undefined {
-    return this.state.storeVerifications?.find(v => v.id === id);
-  }
-
-  public getStoreVerificationByStoreId(storeId: string): StoreVerification | undefined {
-    return this.state.storeVerifications?.find(v => v.storeId === storeId);
-  }
-
-  public getPublicStores(): Tenant[] {
-    if (!this.state.tenants) return [];
-    return this.state.tenants.filter(t => {
-      // Must be approved
-      const isApproved = t.verificationStatus === 'APPROUVE' || (!t.verificationStatus && t.isActive);
-      // Commercial status must be active or free trial
-      const isCommercialActive = t.commercialStatus === 'ESSAI_GRATUIT' || t.commercialStatus === 'ACTIVE' || t.commercialStatus === 'VALIDEE' || (!t.commercialStatus && t.subscriptionStatus !== 'SUSPENDED' && t.subscriptionStatus !== 'EXPIRED');
-      const isNotBlocked = t.status !== 'SUSPENDED' && t.status !== 'EXPIRED' && t.status !== 'CLOSED' && t.subscriptionStatus !== 'SUSPENDED' && t.subscriptionStatus !== 'EXPIRED';
-      return isApproved && isCommercialActive && isNotBlocked && t.isActive !== false;
-    });
-  }
-
-  public getPublicProducts(): Product[] {
-    const publicStores = this.getPublicStores();
-    const publicStoreIds = new Set(publicStores.map(s => s.id));
-    if (!this.state.products) return [];
-    return this.state.products.filter(p => {
-      if (p.isActive === false || p.isArchived) return false;
-      const isPublished = p.publicationStatus === 'PUBLISHED' || (p.publicationStatus === undefined && p.isMarketplacePublished !== false);
-      return publicStoreIds.has(p.tenantId) && isPublished;
-    });
   }
 
   public resetToDefault(): void {

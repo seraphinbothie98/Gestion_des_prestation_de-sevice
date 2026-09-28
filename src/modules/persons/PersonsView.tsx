@@ -62,20 +62,14 @@ export const PersonsView: React.FC = () => {
 
   const currentAgencyId = currentTenant?.id || 't-001';
 
-  const agencyPersons = useMemo(() => {
-    if (currentAgencyId === 'ALL' || currentAgencyId === 'global') return state.persons;
-    return dbStore.getStoreClients(currentAgencyId);
-  }, [state.persons, state.clientStoreRelations, state.orders, state.boutiqueSales, currentAgencyId]);
-
-  // Live check for existing customer in the database
-  const existingCustomerMatch = useMemo(() => {
-    if (!newPhone || newPhone.replace(/\s+/g, '').length < 8) return null;
-    return dbStore.findExistingCustomer(newPhone);
-  }, [newPhone, state.persons, state.users, state.clientStoreRelations]);
+  const agencyPersons: Person[] = useMemo(() => {
+    if (currentAgencyId === 'ALL' || currentAgencyId === 'global') return state.persons || [];
+    return (state.persons || []).filter((p: Person) => p.tenantId === currentAgencyId || p.tenantId === 'global');
+  }, [state.persons, currentAgencyId]);
 
   // Filtered persons
   const filteredPersons = useMemo(() => {
-    return agencyPersons.filter(p => {
+    return agencyPersons.filter((p: Person) => {
       const matchSearch =
         `${p.firstName} ${p.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
         (p.phone && p.phone.includes(search)) ||
@@ -99,9 +93,9 @@ export const PersonsView: React.FC = () => {
   // KPIs
   const metrics = useMemo(() => {
     const total = agencyPersons.length;
-    const active = agencyPersons.filter(p => p.isActive !== false).length;
-    const learners = agencyPersons.filter(p => p.types.includes('LEARNER')).length;
-    const companies = agencyPersons.filter(p => p.customerProfile?.isCompany || p.customerProfile?.companyName).length;
+    const active = agencyPersons.filter((p: Person) => p.isActive !== false).length;
+    const learners = agencyPersons.filter((p: Person) => p.types.includes('LEARNER')).length;
+    const companies = agencyPersons.filter((p: Person) => p.customerProfile?.isCompany || p.customerProfile?.companyName).length;
 
     return { total, active, learners, companies };
   }, [agencyPersons]);
@@ -136,7 +130,12 @@ export const PersonsView: React.FC = () => {
       return;
     }
 
-    const res = dbStore.registerStoreClient({
+    const personId = `pers-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const seq = (state.persons || []).length + 1;
+    const customerNumber = `CLT-${new Date().getFullYear()}-${seq.toString().padStart(4, '0')}`;
+
+    const newPerson: Person = {
+      id: personId,
       tenantId: currentAgencyId,
       firstName: newFirstName.trim(),
       lastName: newLastName.trim(),
@@ -144,21 +143,26 @@ export const PersonsView: React.FC = () => {
       email: newEmail.trim() || undefined,
       address: newAddress.trim() || undefined,
       notes: newNotes.trim() || undefined,
-      companyName: newCompanyName.trim() || undefined,
-      isCompany: Boolean(newCompanyName.trim()),
-      isLoyalCustomer: true
+      types: [newType],
+      status: 'ACTIVE',
+      isActive: newIsActive,
+      customerProfile: {
+        customerNumber,
+        isCompany: Boolean(newCompanyName.trim()),
+        companyName: newCompanyName.trim() || undefined,
+        discountRate: 0,
+        creditLimit: 0,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    dbStore.updateState(draft => {
+      if (!draft.persons) draft.persons = [];
+      draft.persons.unshift(newPerson);
     });
 
-    if (!res.success) {
-      showToast('Erreur', res.message, 'DANGER');
-      return;
-    }
-
-    showToast(
-      res.isExistingAssociated ? 'Client Associé' : 'Client Enregistré',
-      res.message,
-      'SUCCESS'
-    );
+    showToast('Client Enregistré', `Le client ${newFirstName} ${newLastName} a été créé avec succès.`, 'SUCCESS');
     setIsCreateModalOpen(false);
   };
 
@@ -417,8 +421,127 @@ export const PersonsView: React.FC = () => {
         </div>
       </Card>
 
-      {/* Clients Table */}
-      <Card>
+      {/* Mobile Cards for Clients (md:hidden) */}
+      <div className="md:hidden space-y-3">
+        {filteredPersons.length > 0 ? (
+          filteredPersons.map(p => {
+            const customerCode = p.customerProfile?.customerNumber || p.learnerProfile?.learnerNumber || 'CLT-0000';
+            return (
+              <div
+                key={p.id}
+                className={`p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3 text-xs ${
+                  p.isActive === false ? 'opacity-60 bg-slate-50/50 dark:bg-slate-900/30' : ''
+                }`}
+              >
+                {/* Header: Avatar, Name & Code */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-bold text-xs flex items-center justify-center border border-brand-200 dark:border-brand-800/50 shrink-0">
+                      {p.firstName ? p.firstName[0] : ''}{p.lastName ? p.lastName[0] : 'C'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
+                        {p.firstName} {p.lastName}
+                      </div>
+                      <span className="font-mono text-[10px] font-bold text-slate-400 block">
+                        {customerCode}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Badge variant={p.isActive !== false ? 'success' : 'danger'} size="sm">
+                    {p.isActive !== false ? '🟢 Actif' : '🔴 Archivé'}
+                  </Badge>
+                </div>
+
+                {/* Company Name & Types */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {p.customerProfile?.companyName && (
+                    <span className="text-[11px] text-brand-600 bg-brand-50 dark:bg-brand-950/60 px-2 py-0.5 rounded-lg font-semibold flex items-center gap-1">
+                      <Building className="w-3 h-3" />
+                      {p.customerProfile.companyName}
+                    </span>
+                  )}
+                  {p.types.map(t => (
+                    <Badge
+                      key={t}
+                      size="sm"
+                      variant={
+                        t === 'CUSTOMER'
+                          ? 'primary'
+                          : t === 'LEARNER'
+                          ? 'success'
+                          : t === 'TRAINER'
+                          ? 'warning'
+                          : 'secondary'
+                      }
+                    >
+                      {t === 'CUSTOMER' ? 'Client Prestation' : t === 'LEARNER' ? 'Apprenant' : t === 'TRAINER' ? 'Formateur' : t}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Contact: Phone with direct tap to call */}
+                <div className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl space-y-1 text-xs">
+                  {p.phone && (
+                    <a
+                      href={`tel:${p.phone}`}
+                      className="flex items-center gap-2 font-bold text-brand-600 dark:text-brand-400 hover:underline"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{p.phone}</span>
+                    </a>
+                  )}
+                  {p.email && (
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px]">
+                      <Mail className="w-3.5 h-3.5" />
+                      <span className="truncate">{p.email}</span>
+                    </div>
+                  )}
+                  {p.address && (
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-[11px]">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span className="truncate">{p.address}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions for Mobile */}
+                <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    icon={Eye}
+                    onClick={() => setPersonToView(p)}
+                    className="flex-1 text-xs font-bold min-h-[38px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200"
+                  >
+                    Fiche 360°
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    icon={Edit}
+                    onClick={() => handleOpenEdit(p)}
+                    className="flex-1 text-xs font-bold min-h-[38px]"
+                  >
+                    Modifier
+                  </Button>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-400 text-xs">
+            Aucun client trouvé avec ces critères.
+          </div>
+        )}
+      </div>
+
+      {/* Clients Desktop Table (hidden md:block) */}
+      <Card className="hidden md:block overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -611,69 +734,20 @@ export const PersonsView: React.FC = () => {
               />
             </div>
 
-            {/* Existing Customer Detection Banner */}
-            {existingCustomerMatch?.found && existingCustomerMatch.person && (
-              <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl flex items-start gap-3 animate-in fade-in duration-150">
-                <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                <div className="flex-1 text-xs">
-                  <p className="font-extrabold text-blue-900 dark:text-blue-200">
-                    Client existant détecté sur la plateforme !
-                  </p>
-                  <p className="text-blue-700 dark:text-blue-300 mt-0.5">
-                    <strong>{existingCustomerMatch.person.firstName} {existingCustomerMatch.person.lastName}</strong> ({existingCustomerMatch.person.phone}) possède déjà un profil ({existingCustomerMatch.person.origin === 'MARKETPLACE' ? 'Compte Marketplace' : 'Client Boutique'}).
-                  </p>
-                  <p className="text-blue-600 dark:text-blue-400 text-[11px] mt-1 font-semibold">
-                    Voulez-vous l'associer à votre boutique sans créer de doublon ?
-                  </p>
-                  <div className="mt-2.5 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        const res = dbStore.associateExistingClientToStore({
-                          personId: existingCustomerMatch.person!.id,
-                          tenantId: currentAgencyId,
-                          isLoyalCustomer: true,
-                          notes: newNotes
-                        });
-                        if (res.success) {
-                          showToast('Client Associé', res.message, 'SUCCESS');
-                          setIsCreateModalOpen(false);
-                        }
-                      }}
-                    >
-                      Associer à ma boutique
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Select
                 label="Type de client"
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as any)}
-                options={
-                  currentTenant?.activityType === 'RETAIL_STORE'
-                    ? [
-                        { value: 'CUSTOMER', label: 'Particulier' },
-                        { value: 'COMPANY', label: 'Entreprise' },
-                        { value: 'ORGANIZATION', label: 'Organisation / ONG / Institution' },
-                        { value: 'RESELLER', label: 'Revendeur / Professionnel' },
-                        { value: 'OTHER', label: 'Autre client' },
-                      ]
-                    : [
-                        { value: 'CUSTOMER', label: 'Client Prestations & Services' },
-                        { value: 'COMPANY', label: 'Entreprise / Organisation' },
-                        ...(currentTenant?.settings?.hasTraining !== false ? [
-                          { value: 'LEARNER', label: 'Apprenant Formation & LMS' },
-                          { value: 'TRAINER', label: 'Formateur & Enseignant' },
-                        ] : []),
-                        { value: 'OTHER', label: 'Autre' },
-                      ]
-                }
+                options={[
+                  { value: 'CUSTOMER', label: 'Client Prestations & Services' },
+                  { value: 'COMPANY', label: 'Entreprise / Organisation' },
+                  ...(currentTenant?.settings?.hasTraining !== false ? [
+                    { value: 'LEARNER', label: 'Apprenant Formation & LMS' },
+                    { value: 'TRAINER', label: 'Formateur & Enseignant' },
+                  ] : []),
+                  { value: 'OTHER', label: 'Autre' },
+                ]}
               />
               <Input
                 label="Entreprise / Organisation (Optionnel)"

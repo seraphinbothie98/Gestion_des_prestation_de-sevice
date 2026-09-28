@@ -32,59 +32,59 @@ export const ACTIVITY_TYPES_CONFIG: Record<ActivityType, ActivityTypeConfig> = {
     type: 'SERVICE_CENTER',
     label: 'Centre de Prestations & Services',
     badgeColor: 'primary',
-    description: 'Prestations de reprographie, imprimerie, secrétariat, formations et vente de consommables.',
+    description: 'Prestations de reprographie, imprimerie, secrétariat, formations et consommables associés.',
     icon: Building2,
     defaultModules: [
-      'dashboard', 'persons', 'orders', 'marketplace-messaging', 'services-pricing', 'production',
-      'equipment', 'training', 'boutique', 'stock', 'suppliers',
+      'dashboard', 'persons', 'orders', 'services-pricing', 'production',
+      'equipment', 'training', 'stock', 'suppliers',
       'cash', 'payments', 'billing', 'reports', 'notifications',
       'users-rbac', 'audit', 'settings', 'licenses'
     ]
   },
   RETAIL_STORE: {
     type: 'RETAIL_STORE',
-    label: 'Gestion de Boutique & Commerce',
+    label: 'Centre de Services Spécialisés',
     badgeColor: 'success',
-    description: 'Commerce de détail et demi-gros (alimentation, quincaillerie, prêt-à-porter, cosmétiques, matériaux...).',
-    icon: Store,
+    description: 'Prestations de services et reprographie spécialisée.',
+    icon: Building2,
     defaultModules: [
-      'dashboard', 'boutique', 'orders', 'marketplace-messaging', 'persons', 'stock', 'suppliers',
+      'dashboard', 'orders', 'persons', 'services-pricing', 'production', 'stock', 'suppliers',
       'cash', 'payments', 'billing', 'reports', 'notifications',
       'users-rbac', 'audit', 'settings', 'licenses'
     ]
   },
   RESTAURANT: {
     type: 'RESTAURANT',
-    label: 'Gestion de Restaurant & Traiteur (Prévu)',
+    label: 'Services & Restauration (Prévu)',
     badgeColor: 'warning',
-    description: 'Restauration, bar, cuisine, tables et commandes (architecture prévue pour intégration future).',
+    description: 'Services associés.',
     icon: UtensilsCrossed,
     defaultModules: [
-      'dashboard', 'marketplace-messaging', 'stock', 'suppliers', 'cash', 'payments',
+      'dashboard', 'stock', 'suppliers', 'cash', 'payments',
       'billing', 'reports', 'notifications', 'users-rbac', 'audit', 'settings', 'licenses'
     ],
     isFutureOnly: true
   },
   WHOLESALE: {
     type: 'WHOLESALE',
-    label: 'Grossiste & Distribution',
+    label: 'Centre de Prestations Grands Volumes',
     badgeColor: 'secondary',
-    description: 'Distribution en gros et gestion de dépôts de stockage.',
+    description: 'Tirages grands volumes et façonnage.',
     icon: PackageCheck,
     defaultModules: [
-      'dashboard', 'boutique', 'orders', 'marketplace-messaging', 'persons', 'stock', 'suppliers',
+      'dashboard', 'orders', 'persons', 'services-pricing', 'production', 'stock', 'suppliers',
       'cash', 'payments', 'billing', 'reports', 'notifications',
       'users-rbac', 'audit', 'settings', 'licenses'
     ]
   },
   OTHER: {
     type: 'OTHER',
-    label: 'Autre Activité Commerciale',
+    label: 'Autre Centre de Services',
     badgeColor: 'outline',
-    description: 'Entreprise de services généraux ou commerce diversifié.',
+    description: 'Entreprise de prestations et services.',
     icon: Building2,
     defaultModules: [
-      'dashboard', 'boutique', 'orders', 'marketplace-messaging', 'persons', 'stock', 'suppliers',
+      'dashboard', 'orders', 'persons', 'services-pricing', 'production', 'stock', 'suppliers',
       'cash', 'payments', 'billing', 'reports', 'notifications',
       'users-rbac', 'audit', 'settings', 'licenses'
     ]
@@ -95,47 +95,31 @@ export const MODULE_CATALOG: ModuleDefinition[] = [
   {
     id: 'dashboard',
     name: 'Tableau de Bord 360°',
-    description: 'Indicateurs clés de performance et synthèse opérationnelle.',
+    description: 'Indicateurs clés de performance et synthèse opérationnelle du centre.',
     category: 'CORE',
     icon: LayoutDashboard,
     isAvailableForActivities: ['SERVICE_CENTER', 'RETAIL_STORE', 'RESTAURANT', 'WHOLESALE', 'OTHER']
   },
   {
-    id: 'boutique',
-    name: 'Boutique & Vente POS',
-    description: 'Point de vente caisse, catalogue articles et scan codes-barres.',
-    category: 'COMMERCIAL',
-    icon: Store,
-    isAvailableForActivities: ['SERVICE_CENTER', 'RETAIL_STORE', 'WHOLESALE', 'OTHER']
-  },
-  {
     id: 'persons',
     name: 'Clients & Contacts',
-    description: 'Fichier clients enregistrés, clients de passage et contacts.',
+    description: 'Fichier clients enregistrés, clients de passage et comptes du centre.',
     category: 'COMMERCIAL',
     icon: Users,
     isAvailableForActivities: ['SERVICE_CENTER', 'RETAIL_STORE', 'RESTAURANT', 'WHOLESALE', 'OTHER']
   },
   {
     id: 'orders',
-    name: 'Commandes & Devis Multi-Lignes',
-    description: 'Prise de commande de prestations et articles, bons de livraison.',
+    name: 'Commandes de Prestations & Devis',
+    description: 'Prise de commande de prestations, devis, dossiers commerciaux et bons de livraison.',
     category: 'COMMERCIAL',
     icon: ShoppingBag,
     isAvailableForActivities: ['SERVICE_CENTER', 'RETAIL_STORE', 'WHOLESALE', 'OTHER']
   },
   {
-    id: 'marketplace-messaging',
-    name: 'Messagerie Client & Marketplace',
-    description: 'Boîte de réception collaborative partagée pour échanger avec les clients et traiter les commandes.',
-    category: 'COMMERCIAL',
-    icon: MessageSquare,
-    isAvailableForActivities: ['SERVICE_CENTER', 'RETAIL_STORE', 'RESTAURANT', 'WHOLESALE', 'OTHER']
-  },
-  {
     id: 'services-pricing',
     name: 'Services & Grille Tarifaire',
-    description: 'Catalogue des prestations et règles de consommations internes.',
+    description: 'Catalogue des prestations, options, règles de calcul et consommables.',
     category: 'SERVICES',
     icon: Tag,
     isAvailableForActivities: ['SERVICE_CENTER']

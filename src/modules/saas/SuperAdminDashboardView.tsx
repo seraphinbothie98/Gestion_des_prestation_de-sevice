@@ -12,7 +12,7 @@ import { dbStore } from '../../server/db/mockStore';
 import { checkAccountLockout } from '../../server/security/securityEngine';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Tenant, ActivityType, AgencyStatus, LicensePlan, User, AuditLog } from '../../types';
+import { Tenant, ActivityType, AgencyStatus, LicensePlan, User, AuditLog, Order, Person } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { ACTIVITY_TYPES_CONFIG } from '../../lib/moduleRegistry';
 import {
@@ -28,12 +28,10 @@ import {
   Sliders, Globe, Filter, Check, HelpCircle, Archive, RotateCcw,
   Trash2, Edit, Download, FileText, Layers, Info, Calendar, X, BadgeCheck, Power
 } from 'lucide-react';
-import { AdminStoresVerificationView } from './AdminStoresVerificationView';
 
 export type SuperAdminTab =
   | 'dashboard'
   | 'agencies'
-  | 'stores-verification'
   | 'agency-admins'
   | 'global-users'
   | 'clients'
@@ -142,11 +140,10 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
     const totalProducts = state.products.length;
 
     // Total Global Turnover
-    const totalBoutiqueRevenue = (state.boutiqueSales || []).reduce((acc, s) => acc + (s.totalAmount || 0), 0);
-    const totalOrdersRevenue = (state.orders || []).reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-    const totalGlobalRevenue = totalBoutiqueRevenue + totalOrdersRevenue;
+    const totalOrdersRevenue = (state.orders || []).reduce((acc: number, o: Order) => acc + (o.totalAmount || 0), 0);
+    const totalGlobalRevenue = totalOrdersRevenue;
 
-    const totalSalesCount = (state.boutiqueSales || []).length;
+    const totalSalesCount = 0;
     const totalOrdersCount = (state.orders || []).length;
 
     const byActivity: Record<ActivityType, number> = {
@@ -166,13 +163,12 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
     // CA by agency
     const revenueByAgency = state.tenants.map(t => {
-      const bRev = (state.boutiqueSales || []).filter(s => s.tenantId === t.id).reduce((acc, s) => acc + (s.totalAmount || 0), 0);
-      const oRev = (state.orders || []).filter(o => o.tenantId === t.id).reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+      const oRev = (state.orders || []).filter(o => o.tenantId === t.id).reduce((acc: number, o: Order) => acc + (o.totalAmount || 0), 0);
       return {
         agencyId: t.id,
         name: t.name,
         code: t.code,
-        revenue: bRev + oRev
+        revenue: oRev
       };
     });
 
@@ -184,7 +180,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
       totalUsers,
       totalAgencyAdmins,
       totalProducts,
-      totalBoutiqueRevenue,
+      totalBoutiqueRevenue: 0,
       totalOrdersRevenue,
       totalGlobalRevenue,
       totalSalesCount,
@@ -196,73 +192,42 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
 
   // Global Clients Data for Super Admin Module
   const allPlatformClients = useMemo(() => {
-    let filterOrigin: 'ALL' | 'MARKETPLACE' | 'STORE_REGISTERED' | undefined = undefined;
-    let filterStatus: 'ALL' | 'ACTIVE' | 'SUSPENDED' | undefined = undefined;
-    let multiStoreOnly = false;
+    const customerPersons = (state.persons || []).filter((p: Person) => p.types.includes('CUSTOMER') || !p.types.includes('STAFF'));
 
-    if (clientSubTab === 'MARKETPLACE') filterOrigin = 'MARKETPLACE';
-    else if (clientSubTab === 'STORE_REGISTERED') filterOrigin = 'STORE_REGISTERED';
-    else if (clientSubTab === 'MULTI_STORE') multiStoreOnly = true;
-    else if (clientSubTab === 'SUSPENDED') filterStatus = 'SUSPENDED';
-
-    if (clientOriginFilter !== 'ALL') filterOrigin = clientOriginFilter;
-
-    let list = dbStore.getAllPlatformClients({
-      origin: filterOrigin,
-      status: filterStatus,
-      multiStoreOnly,
-      search: clientSearch
-    });
-
-    if (clientSubTab === 'RECENT') {
-      list = [...list].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    if (clientSearch) {
+      const q = clientSearch.toLowerCase();
+      return customerPersons.filter((p: Person) =>
+        `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) ||
+        (p.phone && p.phone.includes(q)) ||
+        (p.email && p.email.toLowerCase().includes(q))
+      );
     }
 
-    return list;
-  }, [state.persons, state.users, state.clientStoreRelations, state.orders, state.boutiqueSales, state.tenants, clientSubTab, clientOriginFilter, clientSearch]);
+    if (clientSubTab === 'SUSPENDED') {
+      return customerPersons.filter((p: Person) => p.isActive === false);
+    }
+
+    return customerPersons;
+  }, [state.persons, clientSubTab, clientSearch]);
 
   const clientMetrics = useMemo(() => {
-    const rawList = dbStore.getAllPlatformClients();
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const sevenDaysAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
+    const rawList = (state.persons || []).filter((p: Person) => p.types.includes('CUSTOMER') || !p.types.includes('STAFF'));
     const total = rawList.length;
-    const marketplaceCount = rawList.filter(c => c.origin === 'MARKETPLACE').length;
-    const storeRegisteredCount = rawList.filter(c => c.origin === 'STORE_REGISTERED' || Boolean(c.registeredByTenantId && c.registeredByTenantId !== 'MARKETPLACE')).length;
-    
-    const todayCount = rawList.filter(c => {
-      const d = c.createdAt ? new Date(c.createdAt).getTime() : 0;
-      return d >= startOfToday;
-    }).length;
-
-    const weekCount = rawList.filter(c => {
-      const d = c.createdAt ? new Date(c.createdAt).getTime() : 0;
-      return d >= sevenDaysAgo;
-    }).length;
-
-    const monthCount = rawList.filter(c => {
-      const d = c.createdAt ? new Date(c.createdAt).getTime() : 0;
-      return d >= startOfMonth;
-    }).length;
-
-    const multiStoreCount = rawList.filter(c => c.linkedStoresCount >= 2).length;
-    const activeCount = rawList.filter(c => (c.status === 'ACTIVE' || !c.status) && c.isActive !== false).length;
-    const suspendedCount = rawList.filter(c => c.status === 'SUSPENDED' || c.isActive === false).length;
+    const activeCount = rawList.filter((c: Person) => c.isActive !== false).length;
+    const suspendedCount = rawList.filter((c: Person) => c.isActive === false).length;
 
     return {
       total,
-      marketplaceCount,
-      storeRegisteredCount,
-      todayCount,
-      weekCount,
-      monthCount,
-      multiStoreCount,
+      marketplaceCount: 0,
+      storeRegisteredCount: total,
+      todayCount: 0,
+      weekCount: 0,
+      monthCount: 0,
+      multiStoreCount: 0,
       activeCount,
       suspendedCount
     };
-  }, [state.persons, state.users, state.clientStoreRelations]);
+  }, [state.persons]);
 
   // Filtered Agencies with Tabs and Search
   const filteredAgencies = useMemo(() => {
@@ -654,17 +619,6 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           Agences ({state.tenants.length})
         </button>
 
-        <button
-          onClick={() => setActiveTab('stores-verification')}
-          className={`px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'stores-verification'
-              ? 'bg-brand-600 text-white shadow-md'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <BadgeCheck className="w-4 h-4 text-emerald-400" />
-          Vérification Boutiques
-        </button>
 
         <button
           onClick={() => setActiveTab('agency-admins')}
@@ -1250,12 +1204,6 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
         </Card>
       )}
 
-      {/* ======================================================================= */}
-      {/* TAB 2.5: VÉRIFICATION & VALIDATION DES BOUTIQUES */}
-      {/* ======================================================================= */}
-      {activeTab === 'stores-verification' && (
-        <AdminStoresVerificationView onNavigateToStore={onNavigateToAgency} />
-      )}
 
       {/* ======================================================================= */}
       {/* TAB 3: ADMINISTRATEURS D'AGENCE */}
@@ -1814,18 +1762,17 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
                   <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                     <TableHead className="text-xs font-bold">Client</TableHead>
                     <TableHead className="text-xs font-bold">Coordonnées & Ville</TableHead>
-                    <TableHead className="text-xs font-bold">Type de Client</TableHead>
-                    <TableHead className="text-xs font-bold">Boutiques Associées</TableHead>
-                    <TableHead className="text-xs font-bold">Commandes & Volume</TableHead>
-                    <TableHead className="text-xs font-bold">Dernière Activité</TableHead>
+                    <TableHead className="text-xs font-bold">Agence</TableHead>
+                    <TableHead className="text-xs font-bold">Profil / Types</TableHead>
                     <TableHead className="text-xs font-bold">Statut</TableHead>
                     <TableHead className="text-xs font-bold text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {allPlatformClients.length > 0 ? (
-                    allPlatformClients.map((client) => {
+                    allPlatformClients.map((client: Person) => {
                       const isSuspended = client.status === 'SUSPENDED' || client.isActive === false;
+                      const clientAgency = state.tenants.find(t => t.id === client.tenantId);
                       return (
                         <TableRow key={client.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                           {/* Client Name */}
@@ -1851,91 +1798,32 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
                               <div className="font-mono text-slate-700 dark:text-slate-300 text-[11px] font-bold">
                                 📞 {client.phone || 'Non renseigné'}
                               </div>
-                              {client.email && !client.email.includes('@client.guineeboutiques.gn') && (
+                              {client.email && (
                                 <div className="text-[10px] text-slate-500 truncate max-w-[150px]">
                                   ✉️ {client.email}
                                 </div>
                               )}
                               <div className="text-[10px] text-slate-400">
-                                📍 {client.city || 'Conakry'}
+                                📍 {client.address || 'Conakry'}
                               </div>
                             </div>
                           </TableCell>
 
-                          {/* Client Type */}
+                          {/* Agency */}
                           <TableCell>
-                            {client.origin === 'MARKETPLACE' ? (
-                              <div className="space-y-1">
-                                <Badge variant="primary" size="sm" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] font-extrabold">
-                                  🛒 {client.clientTypeLabel || 'CLIENT MARKETPLACE'}
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {clientAgency?.name || (client.tenantId === 'global' ? 'Toutes agences' : client.tenantId)}
+                            </span>
+                          </TableCell>
+
+                          {/* Client Types */}
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {client.types.map((t: string) => (
+                                <Badge key={t} size="sm" variant="primary" className="text-[10px]">
+                                  {t === 'CUSTOMER' ? 'Client Prestations' : t === 'LEARNER' ? 'Apprenant' : t}
                                 </Badge>
-                                <span className="text-[10px] text-slate-400 block">
-                                  Agence : Aucune
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <Badge variant="success" size="sm" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-extrabold">
-                                  🏬 {client.clientTypeLabel || 'CLIENT ENREGISTRÉ PAR UNE BOUTIQUE'}
-                                </Badge>
-                                <span className="text-[10px] text-slate-500 block truncate max-w-[160px]">
-                                  Boutique : {client.principalAgencyLabel || 'Boutique'}
-                                </span>
-                              </div>
-                            )}
-                          </TableCell>
-
-                          {/* Linked Stores */}
-                          <TableCell>
-                            <div className="space-y-1">
-                              {client.linkedStores && client.linkedStores.length > 0 ? (
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {client.linkedStores.map((s) => (
-                                    <span
-                                      key={s.id}
-                                      className="inline-block text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700 truncate max-w-[130px]"
-                                      title={s.name}
-                                    >
-                                      {s.name}
-                                    </span>
-                                  ))}
-                                  {client.linkedStores.length >= 2 && (
-                                    <Badge variant="warning" size="sm" className="text-[9px] font-black uppercase">
-                                      Multi ({client.linkedStores.length})
-                                    </Badge>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-[11px] text-slate-400 italic">
-                                  Aucune (Marketplace public)
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          {/* Orders & Volume */}
-                          <TableCell>
-                            <div className="space-y-0.5 text-xs">
-                              <strong className="text-slate-800 dark:text-slate-200 font-bold block">
-                                {client.totalOrdersCount} commande(s)
-                              </strong>
-                              <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] block">
-                                {formatCurrency(client.totalSpentAmount || 0)}
-                              </span>
-                            </div>
-                          </TableCell>
-
-                          {/* Last Activity */}
-                          <TableCell>
-                            <div className="space-y-0.5 text-[11px]">
-                              <strong className="text-slate-700 dark:text-slate-300 font-mono block">
-                                {client.lastActivityDate ? formatDate(client.lastActivityDate) : 'Aucune'}
-                              </strong>
-                              {client.lastLoginAt && (
-                                <span className="text-[10px] text-slate-400 block font-mono">
-                                  Connexion : {formatDate(client.lastLoginAt)}
-                                </span>
-                              )}
+                              ))}
                             </div>
                           </TableCell>
 
@@ -1949,16 +1837,6 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
                           {/* Actions */}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                icon={Eye}
-                                onClick={() => setSelectedClientForView(client)}
-                                className="text-xs font-bold py-1 px-2.5 h-auto text-brand-700 bg-brand-50 hover:bg-brand-100"
-                              >
-                                Fiche Client
-                              </Button>
-
                               <button
                                 onClick={() => {
                                   const res = dbStore.toggleClientSuspension(client.id);
@@ -1986,7 +1864,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12 text-slate-400 text-xs">
+                      <TableCell colSpan={6} className="text-center py-12 text-slate-400 text-xs">
                         Aucun client ne correspond aux critères de filtre ou de recherche.
                       </TableCell>
                     </TableRow>

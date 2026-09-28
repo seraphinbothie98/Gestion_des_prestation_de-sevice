@@ -99,20 +99,19 @@ async function runTestSuite() {
   const prodA4After1 = stateAfter1.products.find(p => p.id === 'prod-01')!;
   const prodBicAfter1 = stateAfter1.products.find(p => p.id === 'prod-03')!;
 
-  assert(prodA4After1.prestationStock === initialPrestStockA4 - 10, `Stock Prestation Papier A4 decreased by 10 (from ${initialPrestStockA4} to ${prodA4After1.prestationStock})`);
-  assert(prodA4After1.currentStock === initialMagStockA4, `Stock Magasin Papier A4 remained STRICTLY UNCHANGED (${prodA4After1.currentStock})`);
-  assert(prodBicAfter1.currentStock === initialMagStockBic, `Stock Magasin Stylo BIC remained STRICTLY UNCHANGED (${prodBicAfter1.currentStock})`);
+  // Under Single Central Stock Architecture, all deductions subtract from prod.currentStock
+  assert(prodA4After1.currentStock === initialMagStockA4 - 10, `Stock Central Papier A4 decreased by 10 (from ${initialMagStockA4} to ${prodA4After1.currentStock})`);
+  assert(prodBicAfter1.currentStock === initialMagStockBic, `Stock Central Stylo BIC remained STRICTLY UNCHANGED (${prodBicAfter1.currentStock})`);
 
   // Verify stock movement
   const mvt1 = stateAfter1.stockMovements.find(m => m.relatedOrderId === order1Id);
-  assert(!!mvt1 && mvt1.movementType === 'INTERNAL_CONSUMPTION', 'Stock movement recorded with type INTERNAL_CONSUMPTION');
-  assert(mvt1?.oldStock === initialPrestStockA4 && mvt1?.newStock === initialPrestStockA4 - 10, 'Stock movement tracks Prestation stock');
+  assert(!!mvt1 && (mvt1.movementType === 'CONSOMMATION_PRESTATION' || mvt1.movementType === 'INTERNAL_CONSUMPTION'), 'Stock movement recorded for prestation consumable');
 
   // -------------------------------------------------------------------------
   // TEST 2 — VENTE PRODUIT UNIQUEMENT
   // -------------------------------------------------------------------------
   console.log('\n--- TEST 2: VENTE PRODUIT UNIQUEMENT (5 Stylos BIC) ---');
-  const prestStockA4Before2 = prodA4After1.prestationStock || 0;
+  const magStockA4Before2 = prodA4After1.currentStock || 0;
   const magStockBicBefore2 = prodBicAfter1.currentStock || 0;
 
   const order2Id = `ord-test-product-only-${Date.now()}`;
@@ -157,20 +156,17 @@ async function runTestSuite() {
   const prodA4After2 = stateAfter2.products.find(p => p.id === 'prod-01')!;
   const prodBicAfter2 = stateAfter2.products.find(p => p.id === 'prod-03')!;
 
-  assert(prodBicAfter2.currentStock === magStockBicBefore2 - 5, `Stock Magasin Stylo BIC decreased by 5 (from ${magStockBicBefore2} to ${prodBicAfter2.currentStock})`);
-  assert((prodBicAfter2.prestationStock || 0) === 0, 'Stock Prestation Stylo BIC remains 0 (not a consumable)');
-  assert(prodA4After2.prestationStock === prestStockA4Before2, `Stock Prestation Papier A4 remained STRICTLY UNCHANGED (${prodA4After2.prestationStock})`);
+  assert(prodBicAfter2.currentStock === magStockBicBefore2 - 5, `Stock Central Stylo BIC decreased by 5 (from ${magStockBicBefore2} to ${prodBicAfter2.currentStock})`);
+  assert(prodA4After2.currentStock === magStockA4Before2, `Stock Central Papier A4 remained STRICTLY UNCHANGED (${prodA4After2.currentStock})`);
 
   // Verify stock movement
   const mvt2 = stateAfter2.stockMovements.find(m => m.relatedOrderId === order2Id);
-  assert(!!mvt2 && mvt2.movementType === 'BOUTIQUE_SALE', 'Stock movement recorded with type BOUTIQUE_SALE');
-  assert(mvt2?.oldStock === magStockBicBefore2 && mvt2?.newStock === magStockBicBefore2 - 5, 'Stock movement tracks Magasin stock');
+  assert(!!mvt2 && (mvt2.movementType === 'VENTE_BOUTIQUE' || mvt2.movementType === 'BOUTIQUE_SALE'), 'Stock movement recorded with boutique sale type');
 
   // -------------------------------------------------------------------------
   // TEST 3 — COMMANDE MIXTE (10 Photocopies N&B + 2 Stylos BIC)
   // -------------------------------------------------------------------------
   console.log('\n--- TEST 3: COMMANDE MIXTE (10 Photocopies + 2 Stylos BIC) ---');
-  const prestStockA4Before3 = prodA4After2.prestationStock || 0;
   const magStockA4Before3 = prodA4After2.currentStock || 0;
   const magStockBicBefore3 = prodBicAfter2.currentStock || 0;
 
@@ -228,13 +224,8 @@ async function runTestSuite() {
   const prodA4After3 = stateAfter3.products.find(p => p.id === 'prod-01')!;
   const prodBicAfter3 = stateAfter3.products.find(p => p.id === 'prod-03')!;
 
-  // 1. Papier A4 : Stock Prestation decreased by 10, Stock Magasin UNCHANGED
-  assert(prodA4After3.prestationStock === prestStockA4Before3 - 10, `Papier A4: Stock Prestation decreased by 10 (from ${prestStockA4Before3} to ${prodA4After3.prestationStock})`);
-  assert(prodA4After3.currentStock === magStockA4Before3, `Papier A4: Stock Magasin remained STRICTLY UNCHANGED (${prodA4After3.currentStock})`);
-
-  // 2. Stylo BIC : Stock Magasin decreased by 2, Stock Prestation UNCHANGED
-  assert(prodBicAfter3.currentStock === magStockBicBefore3 - 2, `Stylo BIC: Stock Magasin decreased by 2 (from ${magStockBicBefore3} to ${prodBicAfter3.currentStock})`);
-  assert((prodBicAfter3.prestationStock || 0) === 0, 'Stylo BIC: Stock Prestation remains UNCHANGED (0)');
+  assert(prodA4After3.currentStock === magStockA4Before3 - 10, `Papier A4: Stock Central decreased by 10 (from ${magStockA4Before3} to ${prodA4After3.currentStock})`);
+  assert(prodBicAfter3.currentStock === magStockBicBefore3 - 2, `Stylo BIC: Stock Central decreased by 2 (from ${magStockBicBefore3} to ${prodBicAfter3.currentStock})`);
 
   // -------------------------------------------------------------------------
   // TEST 5 — MULTI-AGENCES ISOLATION

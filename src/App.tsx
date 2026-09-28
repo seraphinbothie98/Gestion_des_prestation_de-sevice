@@ -4,162 +4,21 @@ import { NotificationProvider } from './context/NotificationContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginView } from './modules/auth/LoginView';
 import { CertificateVerificationView } from './modules/certificates/CertificateVerificationView';
-import { MarketplaceHomeView } from './modules/marketplace/MarketplaceHomeView';
-import { dbStore, DatabaseState } from './server/db/mockStore';
-import { Tenant } from './types';
-import { ArrowLeft, Sparkles, LayoutDashboard } from 'lucide-react';
 
 const MainAppRouter: React.FC<{
   onOpenCertificateVerification: (code?: string) => void;
 }> = ({ onOpenCertificateVerification }) => {
-  const { isAuthenticated, allTenants, currentUser } = useAuth();
-  const [dbState, setDbState] = useState<DatabaseState>(() => dbStore.getState());
-  const [loginMode, setLoginMode] = useState<'BOUTIQUE' | 'CLIENT' | 'SUPER_ADMIN'>('CLIENT');
-  const [showLogin, setShowLogin] = useState<boolean>(() => {
-    return window.location.pathname === '/login' || window.location.hash === '#login' || window.location.hash === '#saas-superadmin';
-  });
-  const [showMarketplacePreview, setShowMarketplacePreview] = useState<boolean>(false);
+  const { isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    return dbStore.subscribe(() => {
-      setDbState({ ...dbStore.getState() });
-    });
-  }, []);
-
-  // Sync with browser back/forward or hash changes
-  useEffect(() => {
-    const handleHashOrPop = () => {
-      if (window.location.pathname === '/login' || window.location.hash === '#login') {
-        setShowLogin(true);
-      } else if (window.location.hash === '#saas-superadmin' && !isAuthenticated) {
-        setLoginMode('SUPER_ADMIN');
-        setShowLogin(true);
-      } else if (window.location.pathname === '/marketplace' || window.location.hash === '#marketplace') {
-        setShowMarketplacePreview(true);
-        setShowLogin(false);
-      }
-    };
-    window.addEventListener('popstate', handleHashOrPop);
-    window.addEventListener('hashchange', handleHashOrPop);
-    return () => {
-      window.removeEventListener('popstate', handleHashOrPop);
-      window.removeEventListener('hashchange', handleHashOrPop);
-    };
-  }, [isAuthenticated]);
-
-  // When unauthenticated (e.g. logout), ensure login overlay & preview mode are cleared
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setShowMarketplacePreview(false);
-    }
-  }, [isAuthenticated]);
-
-  const handleRegisterStoreSuccess = (newTenant: Tenant) => {
-    // Tenant is registered, offer to log in or update store list
-    dbStore.updateState(draft => {
-      const exists = draft.tenants.some(t => t.id === newTenant.id);
-      if (!exists) {
-        draft.tenants.push(newTenant);
-      }
-    });
-  };
-
-  const isClientUser = Boolean(
-    currentUser && (
-      currentUser.roles?.some(r => r.code === 'CLIENT') ||
-      currentUser.role === 'CLIENT' ||
-      (!currentUser.isSuperAdmin && !currentUser.roles?.some(r => ['SUPER_ADMIN', 'ADMIN_CENTRE', 'GERANT', 'CAISSIER', 'OPERATEUR', 'RESPONSABLE_FORMATION', 'FORMATEUR', 'MAGASINIER', 'RECEPTIONNISTE'].includes(r.code)))
-    )
-  );
-
-  // Case 1: Authenticated CLIENT user is on the Public Marketplace Experience
-  if (isAuthenticated && isClientUser) {
-    return (
-      <MarketplaceHomeView
-        tenants={dbState.tenants}
-        products={dbState.products}
-        onOpenLogin={(mode) => {
-          setLoginMode(mode || 'CLIENT');
-          setShowLogin(true);
-        }}
-        onRegisterStoreSuccess={handleRegisterStoreSuccess}
-      />
-    );
-  }
-
-  // Case 2: Authenticated Staff/Admin is previewing the public marketplace
-  if (isAuthenticated && showMarketplacePreview) {
-    return (
-      <div className="relative">
-        {/* Floating Quick Return Bar for Authenticated Users */}
-        <div className="sticky top-0 z-50 bg-slate-900/95 border-b border-brand-500/30 backdrop-blur-md px-4 py-2.5 flex items-center justify-between text-xs text-slate-200 shadow-xl">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold text-white">Mode Aperçu Marketplace Publique</span>
-            <span className="hidden sm:inline text-slate-400">
-              (Connecté en tant que <strong className="text-brand-400">{currentUser?.firstName} {currentUser?.lastName}</strong>)
-            </span>
-          </div>
-
-          <button
-            onClick={() => setShowMarketplacePreview(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-black transition-all shadow-md"
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>← Retour à mon Espace de Gestion</span>
-          </button>
-        </div>
-
-        <MarketplaceHomeView
-          tenants={dbState.tenants}
-          products={dbState.products}
-          onOpenLogin={(mode) => {
-            setLoginMode(mode || 'CLIENT');
-            setShowLogin(true);
-          }}
-          onRegisterStoreSuccess={handleRegisterStoreSuccess}
-        />
-      </div>
-    );
-  }
-
-  // Case 3: Authenticated Staff/Admin user in the standard administration & business management layout
   if (isAuthenticated) {
     return (
       <AppLayout
         onOpenCertificateVerification={onOpenCertificateVerification}
-        onOpenMarketplace={() => setShowMarketplacePreview(true)}
       />
     );
   }
 
-  // Case 4: Unauthenticated user navigated to Login View
-  if (showLogin) {
-    return (
-      <LoginView
-        initialMode={loginMode}
-        onBackToMarketplace={() => {
-          setShowLogin(false);
-          if (window.location.hash === '#login' || window.location.hash === '#saas-superadmin') {
-            window.location.hash = '';
-          }
-        }}
-      />
-    );
-  }
-
-  // Case 5: Default public landing page for visitors & clients (Marketplace Boutiques)
-  return (
-    <MarketplaceHomeView
-      tenants={dbState.tenants}
-      products={dbState.products}
-      onOpenLogin={(mode) => {
-        setLoginMode(mode || 'CLIENT');
-        setShowLogin(true);
-      }}
-      onRegisterStoreSuccess={handleRegisterStoreSuccess}
-    />
-  );
+  return <LoginView />;
 };
 
 export const App: React.FC = () => {
@@ -206,4 +65,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

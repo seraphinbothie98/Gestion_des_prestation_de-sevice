@@ -10,7 +10,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 import { dbStore } from '../../server/db/mockStore';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Product, ProductCategory, StockMovement, Supplier, StockMovementType, ProductPackaging, ProductPublicationStatus } from '../../types';
+import { Product, ProductCategory, StockMovement, Supplier, StockMovementType, ProductPackaging } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import {
   Boxes, Plus, AlertTriangle, Search, Eye, Edit,
@@ -63,8 +63,7 @@ const ProductCardVisual: React.FC<{
   isOutOfStock?: boolean;
   isLowStock?: boolean;
   isActive?: boolean;
-  publicationStatus?: ProductPublicationStatus;
-}> = ({ imageUrl, name, category, isArchived, isOutOfStock, isLowStock, isActive = true, publicationStatus }) => {
+}> = ({ imageUrl, name, category, isArchived, isOutOfStock, isLowStock, isActive = true }) => {
   const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
@@ -117,23 +116,7 @@ const ProductCardVisual: React.FC<{
         )}
       </div>
 
-      {/* Publication Status Badge Bottom Left */}
-      <div className="absolute bottom-2.5 left-2.5">
-        {publicationStatus === 'PUBLISHED' ? (
-          <span className="px-2 py-0.5 rounded-lg bg-emerald-600/90 backdrop-blur-md text-white text-[10px] font-black shadow-md flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-            🌐 En ligne (Marketplace)
-          </span>
-        ) : publicationStatus === 'UNPUBLISHED' ? (
-          <span className="px-2 py-0.5 rounded-lg bg-amber-600/90 backdrop-blur-md text-white text-[10px] font-bold shadow-md">
-            🚫 Dépublié
-          </span>
-        ) : (
-          <span className="px-2 py-0.5 rounded-lg bg-slate-800/90 backdrop-blur-md text-slate-300 text-[10px] font-semibold shadow-md">
-            📝 Brouillon (Privé)
-          </span>
-        )}
-      </div>
+
 
       {/* Category Tag Top Right */}
       {category && (
@@ -188,7 +171,6 @@ const ProductThumbnailSmall: React.FC<{
   );
 };
 
-// Unified Actions dropdown menu for articles (Cards & Table)
 const ProductActionsDropdown: React.FC<{
   product: Product;
   isOpen: boolean;
@@ -200,8 +182,6 @@ const ProductActionsDropdown: React.FC<{
   onBarcode: () => void;
   onToggleActive: () => void;
   onDelete: () => void;
-  onPublish?: () => void;
-  onUnpublish?: () => void;
   canEdit: boolean;
   canDelete: boolean;
   placement?: 'top' | 'bottom';
@@ -216,14 +196,10 @@ const ProductActionsDropdown: React.FC<{
   onBarcode,
   onToggleActive,
   onDelete,
-  onPublish,
-  onUnpublish,
   canEdit,
   canDelete,
   placement = 'top',
 }) => {
-  const isPublished = product.publicationStatus === 'PUBLISHED';
-
   return (
     <div className="relative inline-block text-left">
       <Button
@@ -285,37 +261,6 @@ const ProductActionsDropdown: React.FC<{
                   <Edit className="w-4 h-4 text-amber-500" />
                   <span>✏ Modifier l'article</span>
                 </button>
-              )}
-
-              {/* Publication / Dépublication Marketplace Action */}
-              {canEdit && (
-                <>
-                  {!isPublished ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        if (onPublish) onPublish();
-                      }}
-                      className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-left transition-colors"
-                    >
-                      <Globe className="w-4 h-4 text-emerald-500" />
-                      <span>🌐 Publier le produit</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        if (onUnpublish) onUnpublish();
-                      }}
-                      className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-left transition-colors"
-                    >
-                      <Globe className="w-4 h-4 text-amber-500" />
-                      <span>🚫 Dépublier (Masquer)</span>
-                    </button>
-                  )}
-                </>
               )}
 
               <button
@@ -442,8 +387,6 @@ export const StockView: React.FC = () => {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [productToToggleActive, setProductToToggleActive] = useState<Product | null>(null);
   const [productForBarcode, setProductForBarcode] = useState<Product | null>(null);
-  const [productToPublish, setProductToPublish] = useState<Product | null>(null);
-  const [productToUnpublish, setProductToUnpublish] = useState<Product | null>(null);
   const [activeActionMenuId, setActiveActionMenuId] = useState<string | null>(null);
 
   // Category Modals state
@@ -1497,10 +1440,6 @@ export const StockView: React.FC = () => {
       category: selectedCategory?.name || 'Général',
       description: newDescription.trim() || undefined,
       imageUrl: primaryImg,
-      images: validImages,
-      publicUnit: newPublicUnit || newDefaultSaleUnit || trimmedBaseUnit,
-      publicPrice: newPublicPrice !== undefined ? newPublicPrice : newSalePrice,
-      conversionFactorToStockUnit: newConversionFactorToStock || 1,
       baseUnit: trimmedBaseUnit,
       packagings: computedPkgs,
       defaultSaleUnit: newDefaultSaleUnit || trimmedBaseUnit,
@@ -1536,21 +1475,12 @@ export const StockView: React.FC = () => {
     setEditDescription(p.description || '');
     setEditImageUrl(p.imageUrl || '');
 
-    const existingImgs = (p.images && p.images.length > 0)
-      ? p.images.filter(img => typeof img === 'string' && img.trim().length > 0)
-      : (p.imageUrl ? [p.imageUrl] : []);
-    setEditImages(existingImgs.length > 0 ? existingImgs : ['']);
-
     const baseU = p.baseUnit || p.unit || 'unité';
     setEditBaseUnit(baseU);
     const pkgs = p.packagings ? JSON.parse(JSON.stringify(p.packagings)) : [];
     setEditPackagings(pkgs);
     setEditDefaultSaleUnit(p.defaultSaleUnit || baseU);
     setEditDefaultPurchaseUnit(p.defaultPurchaseUnit || p.purchaseUnit || baseU);
-
-    setEditPublicUnit(p.publicUnit || p.defaultSaleUnit || baseU);
-    setEditPublicPrice(p.publicPrice !== undefined ? p.publicPrice : p.salePrice);
-    setEditConversionFactorToStock(p.conversionFactorToStockUnit || 1);
 
     setEditCostPrice(p.costPrice || 0);
     setEditSalePrice(p.salePrice || 0);
@@ -1616,10 +1546,6 @@ export const StockView: React.FC = () => {
       category: selectedCategory?.name || productToEdit.category,
       description: editDescription.trim() || undefined,
       imageUrl: primaryImg,
-      images: validImages,
-      publicUnit: editPublicUnit || editDefaultSaleUnit || trimmedBaseUnit,
-      publicPrice: editPublicPrice !== undefined ? editPublicPrice : editSalePrice,
-      conversionFactorToStockUnit: editConversionFactorToStock || 1,
       baseUnit: trimmedBaseUnit,
       packagings: computedPkgs,
       defaultSaleUnit: editDefaultSaleUnit || trimmedBaseUnit,
@@ -1747,29 +1673,6 @@ export const StockView: React.FC = () => {
     }
   };
 
-  const handleConfirmPublish = () => {
-    if (!productToPublish) return;
-    const result = dbStore.publishProduct(productToPublish.id, currentAgencyId, isSuperAdmin);
-
-    if (result.success) {
-      showToast('Publication réussie 🌐', result.message, 'SUCCESS');
-      setProductToPublish(null);
-    } else {
-      showToast('Publication impossible ⚠️', result.message, 'DANGER');
-    }
-  };
-
-  const handleConfirmUnpublish = () => {
-    if (!productToUnpublish) return;
-    const result = dbStore.unpublishProduct(productToUnpublish.id, currentAgencyId, isSuperAdmin);
-
-    if (result.success) {
-      showToast('Dépublication effectuée', result.message, 'SUCCESS');
-      setProductToUnpublish(null);
-    } else {
-      showToast('Erreur', result.message, 'DANGER');
-    }
-  };
 
   const handleDeactivateInsteadFromDeleteModal = () => {
     if (!productToDelete) return;
@@ -2014,14 +1917,14 @@ export const StockView: React.FC = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <Boxes className="w-6 h-6 text-brand-500" />
-              Stock & Magasin
+              Stock Central
             </h2>
             <Badge variant="primary" size="sm" className="font-bold text-[11px] px-2 py-0.5">
               🏬 {currentTenant?.name || 'Agence Active'} ({currentAgencyId})
             </Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Gestion isolée du catalogue, articles, multi-unités, mouvements et inventaires de l'agence.
+            Ressource physique centrale commune pour la Boutique, les Prestations et le Marketplace.
           </p>
         </div>
 
@@ -2113,14 +2016,9 @@ export const StockView: React.FC = () => {
       {/* Main Tabs Navigation */}
       <Tabs
         tabs={[
-          { id: 'inventory', label: `Stock Magasin (${agencyProducts.filter(p => !p.isArchived).length})`, icon: Boxes },
-          ...(isPrestationAgency ? [
-            { id: 'prestation_stock', label: `Stock Prestation (${prestationMetrics.totalItems})`, icon: Sparkles },
-            { id: 'consumption', label: 'Transfert vers Prestation', icon: Wrench },
-          ] : []),
+          { id: 'inventory', label: `Stock Central (${agencyProducts.filter(p => !p.isArchived).length})`, icon: Boxes },
           { id: 'categories', label: `Gestion des Catégories (${agencyCategories.length})`, icon: FolderTree },
           { id: 'movements', label: `Journal Mouvements (${agencyMovements.length})`, icon: History },
-          { id: 'transfers', label: 'Transferts Inter-Emplacements', icon: ArrowLeftRight },
           { id: 'losses', label: 'Pertes & Détériorations', icon: Flame },
           { id: 'audit', label: 'Inventaire Physique', icon: CheckCircle2 },
           { id: 'analytics', label: 'Valorisation & Rapports', icon: Calculator },
@@ -2294,7 +2192,6 @@ export const StockView: React.FC = () => {
                         isOutOfStock={isOutOfStock}
                         isLowStock={isLowStock}
                         isActive={p.isActive}
-                        publicationStatus={p.publicationStatus}
                       />
 
                       {/* Card Content */}
@@ -2425,8 +2322,6 @@ export const StockView: React.FC = () => {
                                 onBarcode={() => setProductForBarcode(p)}
                                 onToggleActive={() => handleToggleProductActive(p)}
                                 onDelete={() => setProductToDelete(p)}
-                                onPublish={() => setProductToPublish(p)}
-                                onUnpublish={() => setProductToUnpublish(p)}
                                 canEdit={isSuperAdmin || hasPermission('article.edit') || hasPermission('stock.manage')}
                                 canDelete={isSuperAdmin || hasPermission('article.delete') || hasPermission('stock.manage')}
                               />
@@ -2614,8 +2509,6 @@ export const StockView: React.FC = () => {
                                 onBarcode={() => setProductForBarcode(p)}
                                 onToggleActive={() => handleToggleProductActive(p)}
                                 onDelete={() => setProductToDelete(p)}
-                                onPublish={() => setProductToPublish(p)}
-                                onUnpublish={() => setProductToUnpublish(p)}
                                 canEdit={isSuperAdmin || hasPermission('article.edit') || hasPermission('stock.manage')}
                                 canDelete={isSuperAdmin || hasPermission('article.delete') || hasPermission('stock.manage')}
                               />
@@ -3365,8 +3258,6 @@ export const StockView: React.FC = () => {
                           variant={
                             m.movementType === 'PURCHASE_ENTRY' || m.movementType === 'IN' || m.movementType === 'CUSTOMER_RETURN'
                               ? 'success'
-                              : m.movementType === 'BOUTIQUE_SALE'
-                              ? 'primary'
                               : m.movementType === 'INTERNAL_CONSUMPTION'
                               ? 'warning'
                               : m.movementType === 'LOSS' || m.movementType === 'DETERIORATION'
@@ -3378,8 +3269,6 @@ export const StockView: React.FC = () => {
                         >
                           {m.movementType === 'PURCHASE_ENTRY'
                             ? '📥 Réception Fournisseur'
-                            : m.movementType === 'BOUTIQUE_SALE'
-                            ? '🛒 Vente Boutique'
                             : m.movementType === 'INTERNAL_CONSUMPTION'
                             ? '🛠️ Consommation Interne'
                             : m.movementType === 'TRANSFER_OUT'
@@ -5709,39 +5598,35 @@ export const StockView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-amber-200 dark:border-amber-900 space-y-1 text-[11px]">
-                    <span className="font-bold text-slate-700 dark:text-slate-300 block">Données historiques associées :</span>
-                    {deletability.linkedDataSummary.movementsCount > 0 && (
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                        <span>• Mouvements de stock :</span>
-                        <strong>{deletability.linkedDataSummary.movementsCount} mouvement(s)</strong>
-                      </div>
-                    )}
-                    {deletability.linkedDataSummary.salesCount > 0 && (
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                        <span>• Ventes boutique :</span>
-                        <strong>{deletability.linkedDataSummary.salesCount} vente(s)</strong>
-                      </div>
-                    )}
-                    {deletability.linkedDataSummary.ordersCount > 0 && (
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                        <span>• Commandes :</span>
-                        <strong>{deletability.linkedDataSummary.ordersCount} commande(s)</strong>
-                      </div>
-                    )}
-                    {deletability.linkedDataSummary.purchaseOrdersCount > 0 && (
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                        <span>• Bons de commande :</span>
-                        <strong>{deletability.linkedDataSummary.purchaseOrdersCount} bon(s)</strong>
-                      </div>
-                    )}
-                    {deletability.linkedDataSummary.servicesCount > 0 && (
-                      <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                        <span>• Prestations associées :</span>
-                        <strong>{deletability.linkedDataSummary.servicesCount} prestation(s)</strong>
-                      </div>
-                    )}
-                  </div>
+                  {deletability.linkedDataSummary && (
+                    <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-amber-200 dark:border-amber-900 space-y-1 text-[11px]">
+                      <span className="font-bold text-slate-700 dark:text-slate-300 block">Données historiques associées :</span>
+                      {deletability.linkedDataSummary.movementsCount > 0 && (
+                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                          <span>• Mouvements de stock :</span>
+                          <strong>{deletability.linkedDataSummary.movementsCount} mouvement(s)</strong>
+                        </div>
+                      )}
+                      {deletability.linkedDataSummary.ordersCount > 0 && (
+                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                          <span>• Commandes :</span>
+                          <strong>{deletability.linkedDataSummary.ordersCount} commande(s)</strong>
+                        </div>
+                      )}
+                      {deletability.linkedDataSummary.purchaseOrdersCount > 0 && (
+                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                          <span>• Bons de commande :</span>
+                          <strong>{deletability.linkedDataSummary.purchaseOrdersCount} bon(s)</strong>
+                        </div>
+                      )}
+                      {deletability.linkedDataSummary.servicesCount > 0 && (
+                        <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                          <span>• Prestations associées :</span>
+                          <strong>{deletability.linkedDataSummary.servicesCount} prestation(s)</strong>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -6366,124 +6251,6 @@ export const StockView: React.FC = () => {
         />
       )}
 
-      {/* ========================================================================= */}
-      {/* MODAL: CONFIRMATION PUBLICATION MARKETPLACE */}
-      {/* ========================================================================= */}
-      {productToPublish && (
-        <Modal
-          isOpen={!!productToPublish}
-          onClose={() => setProductToPublish(null)}
-          title="🌐 Publier le produit sur le Marketplace"
-          maxWidth="md"
-        >
-          <div className="space-y-4 pt-1">
-            <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0">
-                <Globe className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Voulez-vous publier cet article ?
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Une fois publié, ce produit sera instantanément accessible et commandable par tous les visiteurs et clients sur le <strong>Marketplace National de Guinée</strong> et dans votre vitrine boutique.
-                </p>
-              </div>
-            </div>
-
-            {/* Product Summary */}
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center gap-3">
-              {(productToPublish.images?.[0] || productToPublish.imageUrl) ? (
-                <img
-                  src={productToPublish.images?.[0] || productToPublish.imageUrl}
-                  alt={productToPublish.name}
-                  className="w-12 h-12 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-400 shrink-0">
-                  <Package className="w-6 h-6" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h5 className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                  {productToPublish.name}
-                </h5>
-                <p className="text-[11px] text-slate-500">
-                  Réf : {productToPublish.code} • Catégorie : {productToPublish.category}
-                </p>
-                <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  {(productToPublish.publicPrice || productToPublish.salePrice || 0).toLocaleString('fr-FR')} GNF / {productToPublish.publicUnit || productToPublish.baseUnit || 'Unité'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setProductToPublish(null)}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="primary"
-                type="button"
-                icon={Globe}
-                onClick={handleConfirmPublish}
-                className="bg-emerald-600 hover:bg-emerald-500 font-black shadow-lg shadow-emerald-600/30"
-              >
-                Confirmer la Publication
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: CONFIRMATION DÉPUBLICATION MARKETPLACE */}
-      {/* ========================================================================= */}
-      {productToUnpublish && (
-        <Modal
-          isOpen={!!productToUnpublish}
-          onClose={() => setProductToUnpublish(null)}
-          title="🚫 Dépublier le produit du Marketplace"
-          maxWidth="md"
-        >
-          <div className="space-y-4 pt-1">
-            <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-800/60 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-                <Globe className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Retirer ce produit de la visibilité publique ?
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Le produit « <strong>{productToUnpublish.name}</strong> » sera masqué du catalogue public marketplace et de votre vitrine. Il reste présent dans votre inventaire boutique et pourra être republié à tout moment.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setProductToUnpublish(null)}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="primary"
-                type="button"
-                onClick={handleConfirmUnpublish}
-                className="bg-amber-600 hover:bg-amber-500 font-bold"
-              >
-                Dépublier (Masquer)
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };

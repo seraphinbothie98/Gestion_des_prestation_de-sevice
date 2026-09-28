@@ -101,63 +101,7 @@ export interface AgencyLicense {
   updatedAt?: string;
 }
 
-export type StoreVerificationStatus = 
-  | 'BROUILLON' 
-  | 'EN_ATTENTE' 
-  | 'EN_REVISION' 
-  | 'INFORMATIONS_DEMANDEES' 
-  | 'APPROUVE' 
-  | 'REFUSE' 
-  | 'ANNULE';
 
-export type StoreCommercialStatus = 
-  | 'EN_ATTENTE_VALIDATION' 
-  | 'VALIDEE' 
-  | 'ESSAI_GRATUIT' 
-  | 'ACTIVE' 
-  | 'SUSPENDUE' 
-  | 'ESSAI_EXPIRE' 
-  | 'ABONNEMENT_EXPIRE' 
-  | 'FERMEE';
-
-export type StoreBusinessType = 'PRODUCTS' | 'SERVICES' | 'PRODUCTS_AND_SERVICES';
-
-export type StoreRejectionReason = 
-  | 'Informations insuffisantes'
-  | 'Informations incohérentes'
-  | 'Boutique déjà existante'
-  | 'Activité non conforme'
-  | 'Tentative d\'usurpation'
-  | 'Autre';
-
-export type ProductPublicationStatus = 
-  | 'DRAFT' 
-  | 'PUBLISHED' 
-  | 'UNPUBLISHED' 
-  | 'DISABLED';
-
-export interface StoreVerification {
-  id: string;
-  storeId: string;
-  storeName: string;
-  submittedBy: string;
-  submittedByName: string;
-  submittedByPhone: string;
-  submittedByEmail?: string;
-  status: StoreVerificationStatus;
-  commercialStatus: StoreCommercialStatus;
-  reviewedBy?: string;
-  reviewedByName?: string;
-  reviewedAt?: string;
-  rejectionReason?: string;
-  rejectionNote?: string;
-  internalAdminNotes?: string;
-  requestedInformation?: string;
-  hasPotentialDuplicate?: boolean;
-  duplicateWarningMessage?: string;
-  createdAt: string;
-  updatedAt?: string;
-}
 
 export interface Tenant {
   id: string;
@@ -203,39 +147,6 @@ export interface Tenant {
   licenseHistory?: LicenseHistoryEvent[];
   supportContact?: SupportContactConfig;
 
-  // Store Verification & Authentication System
-  ownerUserId?: string;
-  verificationStatus?: StoreVerificationStatus;
-  commercialStatus?: StoreCommercialStatus;
-  isPhoneVerified?: boolean;
-  isVerifiedStore?: boolean;
-  businessType?: StoreBusinessType;
-  primaryCategory?: string;
-  commune?: string;
-  neighborhood?: string;
-  landmark?: string;
-  coverUrl?: string;
-  isRegisteredBusiness?: boolean;
-  registrationType?: 'RCCM' | 'NIF' | 'AGREMENT' | 'AUTRE';
-  registrationNumber?: string;
-  commercialDocUrl?: string;
-  rejectionReason?: string;
-  rejectionNote?: string;
-  requestedInformation?: string;
-  responsibleRole?: 'Propriétaire' | 'Gérant' | 'Responsable' | 'Autre';
-
-  // Marketplace Extensions (Marketplace Nationale)
-  isOnline?: boolean;
-  lastActiveAt?: string;
-  selectedCategories?: string[];
-  isLiveStreaming?: boolean;
-  liveStreamData?: {
-    title: string;
-    videoUrl?: string;
-    viewerCount?: number;
-    startedAt: string;
-    currentPromotion?: string;
-  };
 
   settings: Record<string, any> & {
     branding?: BrandingConfig;
@@ -711,7 +622,7 @@ export type CustomerType = 'REGISTERED' | 'WALK_IN';
 
 export type PaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
 
-export type OrderSource = 'INTERNAL' | 'BOUTIQUE_POS' | 'MARKETPLACE' | 'PRESTATION';
+export type OrderSource = 'INTERNAL' | 'BOUTIQUE_POS' | 'MARKETPLACE' | 'PRESTATION' | 'VENTE_ARTICLE';
 
 export interface Order {
   id: string;
@@ -1355,15 +1266,15 @@ export interface Product {
   salePricePerPurchaseUnit?: number; // Sale price per carton/purchase unit (ex: 330 000 GNF/carton)
   wholesalePrice?: number; // Wholesale price per base unit
   
-  // Stock Levels (EXPRESSED STRICTLY IN BASE UNIT)
+  // Stock Levels (EXPRESSED STRICTLY IN BASE UNIT - SINGLE CENTRAL STOCK)
   initialStock: number; // in baseUnit
-  currentStock: number; // in baseUnit (Magasin Principal)
-  prestationStock?: number; // in baseUnit (Stock Atelier / Prestation disponible)
-  minStockAlert: number; // in baseUnit (Seuil alerte Magasin)
-  prestationMinStockAlert?: number; // in baseUnit (Seuil alerte Prestation)
+  currentStock: number; // in baseUnit (Stock Central Unique de l'Agence - Source Unique de Vérité)
+  prestationStock?: number; // Deprecated alias / synchronized value with currentStock
+  minStockAlert: number; // in baseUnit (Seuil alerte Stock Central)
+  prestationMinStockAlert?: number; // Deprecated alias to minStockAlert
   maxStock?: number; // in baseUnit
-  stockByLocation?: Record<string, number>; // in baseUnit ('MAIN_STORE', 'PRESTATION', 'BOUTIQUE')
-  stockByStore?: Record<string, number>; // in baseUnit (storeId -> quantity)
+  stockByLocation?: Record<string, number>; // Synced to { CENTRAL: currentStock }
+  stockByStore?: Record<string, number>; // Synced to { CENTRAL: currentStock }
   
   // Product type classification
   isConsumable?: boolean; // Can be used as raw material / consumable in prestations
@@ -1372,22 +1283,6 @@ export interface Product {
   // Conversion configuration history
   conversionHistory?: ProductPackagingHistory[];
   
-  // Marketplace & E-commerce Extensions (Marketplace Nationale)
-  images?: string[]; // Multiple photos gallery (1 to 4 photos)
-  photos?: string[]; // Alias for images gallery
-  photoUrl?: string; // Main photo URL alias
-  videoUrl?: string; // Optional explanatory video URL
-  publicUnit?: string; // Public selling unit displayed to customer (e.g. "Carton", "Paquet", "Sac 50kg")
-  publicPrice?: number; // Commercial sale price per publicUnit (e.g. 35 000 GNF/paquet)
-  pricingTiers?: { unit: string; price: number; conversionFactor?: number }[];
-  conversionFactorToStockUnit?: number; // Conversion factor from publicUnit to base stock unit (e.g. 500)
-  subcategory?: string; // Optional subcategory
-  isMarketplacePublished?: boolean; // Visibility on public marketplace
-  publicationStatus?: ProductPublicationStatus; // 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'DISABLED'
-  publishedAt?: string;
-  unpublishedAt?: string;
-  featuredBadge?: string; // "TOP VENTE", "POPULAIRE", "NOUVEAU"
-
   supplierId?: string;
   supplierName?: string;
   location?: string;
@@ -1401,8 +1296,13 @@ export interface Product {
 }
 
 export type StockMovementType =
+  | 'VENTE_BOUTIQUE'
+  | 'VENTE_MARKETPLACE'
+  | 'CONSOMMATION_PRESTATION'
+  | 'ENTREE_ACHAT'
+  | 'AJUSTEMENT'
+  | 'RETOUR'
   | 'PURCHASE_ENTRY'
-  | 'BOUTIQUE_SALE'
   | 'INTERNAL_CONSUMPTION'
   | 'TRANSFER_OUT'
   | 'TRANSFER_IN'
@@ -1526,71 +1426,6 @@ export interface PurchaseOrder {
   payments?: SupplierPayment[];
 }
 
-// BOUTIQUE / POS SALES
-export interface BoutiqueSaleItem {
-  productId: string;
-  productCode: string;
-  productName: string;
-  unitSold: string; // 'STOCK_UNIT' | 'PURCHASE_UNIT' | 'CUSTOM'
-  unitLabel: string; // "Paquet", "Carton", etc.
-  quantitySold: number; // Number of units sold in that selected unit
-  conversionFactor: number; // e.g. 5
-  stockDeduction: number; // Quantity deducted from base stock (quantitySold * factor)
-  unitCostPrice: number; // Base cost price
-  unitSalePrice: number; // Unit selling price charged
-  subtotal: number;
-  discountType?: 'NONE' | 'PERCENTAGE' | 'FIXED' | 'WHOLESALE';
-  discountValue?: number;
-  finalPrice: number;
-  totalCost: number; // stockDeduction * unitCostPrice
-  marginAmount: number; // finalPrice - totalCost
-  marginPercentage: number; // (marginAmount / finalPrice) * 100
-}
-
-export interface BoutiqueSale {
-  id: string;
-  tenantId: string;
-  saleNumber: string; // VNT-2026-000001
-  cashSessionId?: string;
-  personId?: string;
-  personName: string;
-  personPhone?: string;
-  items: BoutiqueSaleItem[];
-  subtotal: number;
-  totalDiscount: number;
-  totalAmount: number;
-  totalCost: number;
-  grossMargin: number;
-  marginPercentage: number;
-  paymentMethod: PaymentMethod;
-  paidAmount: number;
-  dueAmount: number;
-  paymentStatus: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
-  deliveryStatus: 'DELIVERED' | 'PENDING';
-  location: string;
-  sellerUserId?: string;
-  sellerUserName: string;
-  notes?: string;
-  createdAt: string;
-}
-
-export interface BoutiqueSaleReturn {
-  id: string;
-  tenantId: string;
-  returnNumber: string;
-  saleId: string;
-  saleNumber: string;
-  productId: string;
-  productName: string;
-  quantityReturned: number; // in base stock unit
-  returnReason: string;
-  restockInStore: boolean; // if true, item is added back to stock
-  refundAmount: number;
-  refundMethod: PaymentMethod;
-  performedByUserName: string;
-  createdAt: string;
-}
-
 // BILLING & INVOICES
 export interface Invoice {
   id: string;
@@ -1631,7 +1466,6 @@ export interface Invoice {
 export interface AppNotification {
   id: string;
   tenantId: string;
-  boutiqueId?: string;
   userId?: string;
   serviceId?: string;
   orderId?: string;
@@ -1723,13 +1557,11 @@ export interface ResetSummaryData {
     expenses: number;
     enrollments: number;
     certificates: number;
-    boutiqueSales: number;
   };
   commercial: {
     orders: number;
     invoices: number;
     payments: number;
-    boutiqueSales: number;
     customers: number;
   };
   financial: {
@@ -1743,7 +1575,6 @@ export interface ResetSummaryData {
     orders: number;
     invoices: number;
     payments: number;
-    boutiqueSales: number;
     customers: number;
     trainingSessions: number;
     enrollments: number;
@@ -1769,7 +1600,6 @@ export interface ResetSummaryData {
 export interface OperationalResetOptions {
   resetServices: boolean;
   resetTraining: boolean;
-  resetBoutique: boolean;
   resetClients: boolean;
   stockOption: 'PRESERVE' | 'CLEAR_MOVEMENTS_ONLY' | 'FULL_STOCK_RESET';
   resetFinancialTreasury: boolean;
@@ -1792,7 +1622,6 @@ export interface ResetExecutionResult {
     attendanceSheets?: number;
     assessments?: number;
     stockMovements?: number;
-    boutiqueSales?: number;
     cashSessions?: number;
     purchaseOrders?: number;
     supplierDebts?: number;
@@ -1808,57 +1637,5 @@ export interface ResetExecutionResult {
   };
 }
 
-export interface MarketplaceMessage {
-  id: string;
-  conversationId: string;
-  senderId: string;
-  senderType: 'CUSTOMER' | 'BOUTIQUE' | 'STAFF' | 'ADMIN';
-  senderName: string;
-  senderRole?: string; // e.g. 'Client', 'Vendeur', 'Gérant', 'Accueil / Réception', 'Administrateur'
-  content: string;
-  messageType?: 'TEXT' | 'IMAGE' | 'ORDER_REF' | 'PRODUCT_REF';
-  imageUrl?: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export interface MarketplaceConversation {
-  id: string;
-  customerId: string;
-  customerName: string;
-  customerPhone?: string;
-  boutiqueId: string; // tenantId
-  boutiqueName: string;
-  productId?: string;
-  publicationId?: string;
-  productName?: string;
-  productImageUrl?: string;
-  publicPrice?: number;
-  publicUnit?: string;
-  orderId?: string;
-  orderCode?: string;
-  orderTotal?: number;
-  serviceId?: string;
-  serviceName?: string;
-  lastMessageContent?: string;
-  lastMessageAt: string;
-  lastSenderRole?: string;
-  unreadByBoutique: number;
-  unreadByCustomer: number;
-  status?: 'OPEN' | 'ARCHIVED' | 'CLOSED';
-  messages?: MarketplaceMessage[];
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface MarketplaceCategoryItem {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  icon?: string;
-  displayOrder?: number;
-  isActive?: boolean;
-}
 
 

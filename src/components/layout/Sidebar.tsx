@@ -14,7 +14,6 @@ export type NavSection =
   | 'dashboard'
   | 'persons'
   | 'orders'
-  | 'boutique'
   | 'production'
   | 'equipment'
   | 'services-pricing'
@@ -30,16 +29,13 @@ export type NavSection =
   | 'audit'
   | 'settings'
   | 'licenses'
-  | 'saas-superadmin'
-  | 'marketplace-messaging'
-  | 'stores-verification';
+  | 'saas-superadmin';
 
 interface SidebarProps {
   currentSection: NavSection;
   onNavigate: (section: NavSection) => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
-  onOpenMarketplace?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -47,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   isOpenMobile,
   onCloseMobile,
-  onOpenMarketplace,
 }) => {
   const { currentTenant, currentUser, allTenants, switchTenant, hasPermission, isSuperAdmin, canPerformMutations, logout } = useAuth();
   const roleCode = currentUser?.roles[0]?.code || 'ADMIN_CENTRE';
@@ -90,9 +85,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (id === 'reports') {
       return !isReceptionistOrCashier && (hasPermission('reports.view') || hasPermission('reports.*') || hasPermission('*'));
     }
-    if (id === 'stores-verification') {
-      return isSuperAdmin || isAdmin || hasPermission('stores.*') || hasPermission('*');
-    }
     if (id === 'training') {
       return hasPermission('training.view') || hasPermission('training.*') || hasPermission('*');
     }
@@ -111,9 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       groups.push({
         title: "SUPER ADMIN SAAS",
         items: [
-          { id: 'saas-superadmin', label: 'Administration SaaS & Agences', icon: Sparkles },
-          { id: 'stores-verification', label: 'Vérification Boutiques', icon: BadgeCheck },
-          { id: 'marketplace-messaging', label: 'Supervision Messagerie', icon: MessageSquare }
+          { id: 'saas-superadmin', label: 'Administration SaaS & Agences', icon: Sparkles }
         ]
       });
     }
@@ -122,19 +112,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     if (isReceptionistOrCashier) {
       const cashierItems = [
         { id: 'dashboard' as NavSection, label: 'Tableau de Bord', icon: LayoutDashboard },
-        { id: 'boutique' as NavSection, label: 'Boutique & Vente POS', icon: Store },
-        { id: 'orders' as NavSection, label: 'Commandes & Devis', icon: ShoppingBag },
-        { id: 'marketplace-messaging' as NavSection, label: 'Messagerie Client', icon: MessageSquare },
+        { id: 'orders' as NavSection, label: 'Commandes de Prestations', icon: ShoppingBag },
         { id: 'persons' as NavSection, label: 'Clients & Contacts', icon: Users },
         { id: 'cash' as NavSection, label: 'Finance & Trésorerie', icon: Wallet },
-        { id: 'stock' as NavSection, label: 'Stock & Magasin', icon: Boxes },
-        { id: 'billing' as NavSection, label: 'Factures & Reçus', icon: Receipt }
+        { id: 'stock' as NavSection, label: 'Stock Consommables', icon: Boxes },
+        { id: 'billing' as NavSection, label: 'Factures & Reçus', icon: Receipt },
+        { id: 'production' as NavSection, label: 'Atelier Production', icon: Factory },
+        { id: 'services-pricing' as NavSection, label: 'Consultation des Tarifs', icon: Tag }
       ];
-
-      if (activityType === 'SERVICE_CENTER') {
-        cashierItems.push({ id: 'production' as NavSection, label: 'Atelier Production', icon: Factory });
-        cashierItems.push({ id: 'services-pricing' as NavSection, label: 'Consultation des Tarifs', icon: Tag });
-      }
 
       return [
         ...groups,
@@ -156,7 +141,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             { id: 'production' as NavSection, label: 'Atelier Production', icon: Factory },
             { id: 'equipment' as NavSection, label: 'Matériel du Centre', icon: Monitor },
             { id: 'orders' as NavSection, label: 'Commandes à Traiter', icon: ShoppingBag },
-            { id: 'marketplace-messaging' as NavSection, label: 'Messagerie Client', icon: MessageSquare },
           ]
         }
       ];
@@ -173,108 +157,62 @@ export const Sidebar: React.FC<SidebarProps> = ({
             { id: 'training' as NavSection, label: 'Formations & Sessions', icon: GraduationCap },
             { id: 'persons' as NavSection, label: 'Apprenants & Formateurs', icon: Users },
             { id: 'payments' as NavSection, label: 'Paiements Formations', icon: CreditCard },
-            { id: 'marketplace-messaging' as NavSection, label: 'Messagerie Client', icon: MessageSquare },
           ]
         }
       ];
     }
 
-    // 4. TAILORED NAVIGATION BY ACTIVITY TYPE (RETAIL_STORE vs SERVICE_CENTER)
-    if (activityType === 'RETAIL_STORE') {
-      // BOUTIQUE & COMMERCE DE DÉTAIL
-      groups.push(
-        {
-          title: "GÉNÉRAL & COMMERCIAL",
-          items: [
-            { id: 'dashboard', label: 'Tableau de Bord 360°', icon: LayoutDashboard },
-            { id: 'boutique', label: 'Boutique & Vente POS', icon: Store },
-            { id: 'orders', label: 'Commandes & Devis', icon: ShoppingBag },
-            { id: 'marketplace-messaging', label: 'Messagerie Client', icon: MessageSquare },
-            { id: 'persons', label: 'Clients & Personnes', icon: Users },
-            { id: 'billing', label: 'Facturation & Devis', icon: Receipt },
-          ]
-        },
-        {
-          title: "STOCK & FOURNISSEURS",
-          items: [
-            { id: 'stock', label: 'Stock & Magasin', icon: Boxes },
-            { id: 'suppliers', label: 'Fournisseurs & BC', icon: Truck },
-          ]
-        },
-        {
-          title: "FINANCES & CAISSE",
-          items: [
-            { id: 'cash', label: 'Finance & Trésorerie', icon: Wallet },
-            { id: 'payments', label: 'Paiements & Reçus', icon: CreditCard },
-          ]
-        },
-        {
-          title: "PILOTAGE & ADMINISTRATION",
-          items: [
-            { id: 'reports', label: 'Rapports & Marges', icon: BarChart3 },
-            { id: 'notifications', label: 'Centre Notifications', icon: Bell },
-            { id: 'users-rbac', label: 'Utilisateurs & Postes', icon: ShieldCheck },
-            { id: 'audit', label: 'Journal d\'Audit', icon: History },
-            { id: 'settings', label: 'Paramètres Agence', icon: Settings },
-            { id: 'licenses', label: 'Licence & Formule', icon: KeyRound },
-          ]
-        }
-      );
-    } else {
-      // SERVICE_CENTER (CENTRE DE PRESTATIONS & REPROGRAPHIE)
-      groups.push(
-        {
-          title: "GÉNÉRAL",
-          items: [
-            { id: 'dashboard', label: 'Tableau de Bord 360°', icon: LayoutDashboard },
-            { id: 'persons', label: 'Clients & Personnes', icon: Users },
-          ]
-        },
-        {
-          title: "PÔLE 1 — SERVICES & PRODUCTION",
-          items: [
-            { id: 'orders', label: 'Commandes & Devis', icon: ShoppingBag },
-            { id: 'production', label: 'Atelier Production', icon: Factory },
-            { id: 'services-pricing', label: 'Services & Tarifs', icon: Tag },
-            { id: 'equipment', label: 'Matériel du Centre', icon: Monitor },
-          ]
-        },
-        {
-          title: "PÔLE 2 — FORMATION",
-          items: [
-            { id: 'training', label: 'Formations & LMS', icon: GraduationCap },
-          ]
-        },
-        {
-          title: "PÔLE 3 — BOUTIQUE & LOGISTIQUE",
-          items: [
-            { id: 'boutique', label: 'Boutique & Vente POS', icon: Store },
-            { id: 'marketplace-messaging', label: 'Messagerie Client', icon: MessageSquare },
-            { id: 'stock', label: 'Stock & Magasin', icon: Boxes },
-            { id: 'suppliers', label: 'Fournisseurs & BC', icon: Truck },
-            { id: 'billing', label: 'Facturation & Devis', icon: Receipt },
-          ]
-        },
-        {
-          title: "FINANCES & CAISSE",
-          items: [
-            { id: 'cash', label: 'Finance & Trésorerie', icon: Wallet },
-            { id: 'payments', label: 'Paiements & Reçus', icon: CreditCard },
-          ]
-        },
-        {
-          title: "PILOTAGE & ADMINISTRATION",
-          items: [
-            { id: 'reports', label: 'Rapports & Analytics', icon: BarChart3 },
-            { id: 'notifications', label: 'Centre Notifications', icon: Bell },
-            { id: 'users-rbac', label: 'Utilisateurs & Postes', icon: ShieldCheck },
-            { id: 'audit', label: 'Journal d\'Audit', icon: History },
-            { id: 'settings', label: 'Paramètres Agence', icon: Settings },
-            { id: 'licenses', label: 'Licence & Souscription', icon: KeyRound },
-          ]
-        }
-      );
-    }
+    // 4. STANDARD NAVIGATION FOR CENTRE DE PRESTATIONS
+    groups.push(
+      {
+        title: "GÉNÉRAL",
+        items: [
+          { id: 'dashboard', label: 'Tableau de Bord 360°', icon: LayoutDashboard },
+          { id: 'persons', label: 'Clients & Contacts', icon: Users },
+        ]
+      },
+      {
+        title: "PÔLE 1 — SERVICES & PRODUCTION",
+        items: [
+          { id: 'orders', label: 'Commandes de Prestations', icon: ShoppingBag },
+          { id: 'production', label: 'Atelier Production', icon: Factory },
+          { id: 'services-pricing', label: 'Services & Tarifs', icon: Tag },
+          { id: 'equipment', label: 'Matériel du Centre', icon: Monitor },
+        ]
+      },
+      {
+        title: "PÔLE 2 — FORMATION",
+        items: [
+          { id: 'training', label: 'Formations & LMS', icon: GraduationCap },
+        ]
+      },
+      {
+        title: "LOGISTIQUE & APPROVISIONNEMENT",
+        items: [
+          { id: 'stock', label: 'Stock Consommables', icon: Boxes },
+          { id: 'suppliers', label: 'Fournisseurs & Commandes', icon: Truck },
+          { id: 'billing', label: 'Facturation & Devis', icon: Receipt },
+        ]
+      },
+      {
+        title: "FINANCES & CAISSE",
+        items: [
+          { id: 'cash', label: 'Finance & Trésorerie', icon: Wallet },
+          { id: 'payments', label: 'Paiements & Reçus', icon: CreditCard },
+        ]
+      },
+      {
+        title: "PILOTAGE & ADMINISTRATION",
+        items: [
+          { id: 'reports', label: 'Rapports & Analytics', icon: BarChart3 },
+          { id: 'notifications', label: 'Centre Notifications', icon: Bell },
+          { id: 'users-rbac', label: 'Utilisateurs & Postes', icon: ShieldCheck },
+          { id: 'audit', label: 'Journal d\'Audit', icon: History },
+          { id: 'settings', label: 'Paramètres Agence', icon: Settings },
+          { id: 'licenses', label: 'Licence & Souscription', icon: KeyRound },
+        ]
+      }
+    );
 
     // Filter each group's items by permission & availability
     return groups
@@ -306,28 +244,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Brand Header & Tenant Switcher */}
         <div className="p-4 border-b border-slate-800/80 bg-slate-950/40">
           <div className="flex items-center space-x-3 mb-3">
-            {isSuperAdmin ? (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-lg shadow-glow">
+            {(currentTenant?.settings?.branding?.showLogo ?? true) && (currentTenant?.settings?.branding?.logoUrl || currentTenant?.logoUrl) ? (
+              <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center overflow-hidden border border-slate-700/60 shadow-glow shrink-0">
+                <img
+                  src={currentTenant?.settings?.branding?.logoUrl || currentTenant?.logoUrl}
+                  alt={currentTenant?.name || 'Logo'}
+                  className="max-h-full max-w-full object-contain rounded"
+                />
+              </div>
+            ) : isSuperAdmin ? (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-lg shadow-glow shrink-0">
                 👑
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-glow">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-glow shrink-0">
                 <Sparkles className="w-5 h-5" />
               </div>
             )}
-            <div>
-              <h1 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
-                {isSuperAdmin ? "SUPER ADMIN" : "PLATEFORME SaaS"}
-                <span className={`text-[10px] uppercase tracking-widest px-1.5 py-0.2 rounded border ${
-                  isSuperAdmin
-                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                    : 'bg-brand-500/20 text-brand-400 border-brand-500/30'
-                }`}>
-                  {isSuperAdmin ? 'GLOBAL' : 'v2.0'}
-                </span>
+            <div className="min-w-0">
+              <h1 className="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5 truncate">
+                <span className="truncate">{currentTenant?.name || (isSuperAdmin ? "SUPER ADMIN" : "CENTRE GESTION")}</span>
               </h1>
-              <p className="text-[11px] text-slate-400 font-medium">
-                {isSuperAdmin ? "Administration Globale" : "Multi-Agences & Activités"}
+              <p className="text-[11px] text-slate-400 font-medium truncate">
+                {isSuperAdmin ? "Administration Globale" : (currentTenant?.settings?.branding?.slogan || "Centre de Prestations & Reprographie")}
               </p>
             </div>
           </div>
@@ -381,11 +320,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {group.items.map(item => {
                 const Icon = item.icon;
                 const isActive = currentSection === item.id;
-                const unreadCount = item.id === 'marketplace-messaging' 
-                  ? dbStore.getMarketplaceUnreadCount(currentTenant?.id) 
-                  : item.id === 'orders'
-                  ? dbStore.getMarketplaceOrdersUnreadCount(currentTenant?.id)
-                  : 0;
 
                 return (
                   <button
@@ -406,11 +340,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className="truncate">{item.label}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {unreadCount > 0 && (
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
-                          🔴 {unreadCount}
-                        </span>
-                      )}
                       {isActive && <ChevronRight className="w-3.5 h-3.5 text-brand-200" />}
                     </div>
                   </button>
@@ -419,26 +348,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           ))}
         </div>
-
-        {/* Marketplace Public Link */}
-        {onOpenMarketplace && (
-          <div className="p-3 border-t border-slate-800 bg-slate-900/40">
-            <button
-              type="button"
-              onClick={() => {
-                onCloseMobile();
-                onOpenMarketplace();
-              }}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/15 to-amber-500/15 hover:from-amber-500/25 hover:to-yellow-500/25 text-amber-300 font-bold text-xs border border-amber-500/30 transition-all shadow-sm group"
-            >
-              <div className="flex items-center gap-2">
-                <Store className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                <span>Marketplace Boutiques</span>
-              </div>
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            </button>
-          </div>
-        )}
 
         {/* User Card & Logout at bottom */}
         <div className="p-3 border-t border-slate-800 bg-slate-950/60 space-y-2">

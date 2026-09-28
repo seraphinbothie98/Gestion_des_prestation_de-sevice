@@ -55,7 +55,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Only mark notifications scoped to current tenant/user as read
         if (
           isSuperAdmin ||
-          (effectiveTenantId && (n.tenantId === effectiveTenantId || n.boutiqueId === effectiveTenantId)) ||
+          (effectiveTenantId && n.tenantId === effectiveTenantId) ||
           (currentUser?.id && n.userId === currentUser.id)
         ) {
           n.isRead = true;
