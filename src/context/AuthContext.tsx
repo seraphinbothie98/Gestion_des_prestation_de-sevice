@@ -136,6 +136,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         draft.currentTenantId = user.tenantId;
       }
     });
+    localStorage.setItem('cms_active_section', 'dashboard');
+    window.location.hash = 'dashboard';
     dbStore.logAudit('USER_SESSION_SWITCHED', 'USER', userId, null, {
       username: user.username,
       email: user.email,
@@ -196,16 +198,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (!user.isSuperAdmin && !user.roles?.some(r => ['SUPER_ADMIN', 'ADMIN_CENTRE', 'GERANT', 'CAISSIER', 'OPERATEUR', 'RESPONSABLE_FORMATION', 'FORMATEUR', 'MAGASINIER', 'RECEPTIONNISTE'].includes(r.code)))
     );
 
-    if (userIsSuper) {
-      localStorage.setItem('cms_active_section', 'saas-superadmin');
-      window.location.hash = 'saas-superadmin';
-    } else if (isClient) {
+    if (isClient) {
       localStorage.setItem('cms_active_section', 'marketplace');
       window.location.hash = '';
       if (window.location.pathname !== '/') {
         window.history.pushState({}, '', '/');
       }
     } else {
+      // Tout utilisateur connecté accède automatiquement au module tableau de bord
       localStorage.setItem('cms_active_section', 'dashboard');
       window.location.hash = 'dashboard';
     }

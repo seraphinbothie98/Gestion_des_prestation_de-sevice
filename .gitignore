@@ -30,3 +30,4 @@ dist-ssr
 *.tsbuildinfo
 dist-tests
 *.lnk
+scratch/

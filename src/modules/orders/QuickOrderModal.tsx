@@ -22,110 +22,15 @@ import {
   Percent, Tag, ShieldAlert, Sparkles, Minus, AlertCircle, Info, FileText,
   Lock, Unlock, Store, Wrench, Layers, AlertTriangle, Paperclip,
   Users, Search, Truck, RotateCcw, Boxes, ArrowRight, Check, Settings2, Clock,
-  Printer, ShieldCheck
+  Printer, ShieldCheck, X
 } from 'lucide-react';
 import { OpenCashModal } from '../cash/OpenCashModal';
 import { PaymentReceiptModal } from './PaymentReceiptModal';
 import { calculateOrderStockRequirements, evaluateOrderStock, StockEvaluation, resolveProductPurchasePrice, calculateEffectiveServiceConsumableQty } from '../../lib/stockEngine';
-
-// Helper to get visual cues (icon, badge color, category) for any service dynamically
-function getServiceVisuals(service: Service) {
-  const nameLower = (service.name || '').toLowerCase();
-  const codeLower = (service.code || '').toLowerCase();
-  const catLower = (service.categoryName || '').toLowerCase();
-
-  if (nameLower.includes('photocopi') || codeLower.includes('photo-') || nameLower.includes('copie')) {
-    return {
-      icon: '📄',
-      badgeColor: 'bg-blue-500/10 text-blue-600 border-blue-200 dark:border-blue-800',
-      categoryTag: 'Photocopie',
-    };
-  }
-  if (nameLower.includes('impress') || codeLower.includes('print') || nameLower.includes('laser') || nameLower.includes('jet d\'encre')) {
-    return {
-      icon: '🖨️',
-      badgeColor: 'bg-indigo-500/10 text-indigo-600 border-indigo-200 dark:border-indigo-800',
-      categoryTag: 'Impression',
-    };
-  }
-  if (nameLower.includes('reliur') || codeLower.includes('reliure') || nameLower.includes('spirale') || nameLower.includes('thermoreliure')) {
-    return {
-      icon: '📚',
-      badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:border-emerald-800',
-      categoryTag: 'Reliure',
-    };
-  }
-  if (nameLower.includes('plastif') || codeLower.includes('plastif') || nameLower.includes('pochette')) {
-    return {
-      icon: '🗂️',
-      badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-200 dark:border-amber-800',
-      categoryTag: 'Plastification',
-    };
-  }
-  if (nameLower.includes('t-shirt') || nameLower.includes('tshirt') || nameLower.includes('sublim') || nameLower.includes('pressage') || nameLower.includes('flocage') || nameLower.includes('textile')) {
-    return {
-      icon: '👕',
-      badgeColor: 'bg-purple-500/10 text-purple-600 border-purple-200 dark:border-purple-800',
-      categoryTag: 'Textile / Sublimation',
-    };
-  }
-  if (nameLower.includes('format') || nameLower.includes('cours') || nameLower.includes('atelier') || catLower.includes('format')) {
-    return {
-      icon: '🎓',
-      badgeColor: 'bg-teal-500/10 text-teal-600 border-teal-200 dark:border-teal-800',
-      categoryTag: 'Formation',
-    };
-  }
-  if (nameLower.includes('scan') || nameLower.includes('numéris') || codeLower.includes('scan')) {
-    return {
-      icon: '🔍',
-      badgeColor: 'bg-cyan-500/10 text-cyan-600 border-cyan-200 dark:border-cyan-800',
-      categoryTag: 'Numérisation',
-    };
-  }
-  if (nameLower.includes('photo') || nameLower.includes('identit') || codeLower.includes('photo')) {
-    return {
-      icon: '📸',
-      badgeColor: 'bg-rose-500/10 text-rose-600 border-rose-200 dark:border-rose-800',
-      categoryTag: 'Photo',
-    };
-  }
-  if (nameLower.includes('infograph') || nameLower.includes('design') || nameLower.includes('graphism') || nameLower.includes('logo') || nameLower.includes('affiche')) {
-    return {
-      icon: '🎨',
-      badgeColor: 'bg-violet-500/10 text-violet-600 border-violet-200 dark:border-violet-800',
-      categoryTag: 'Infographie',
-    };
-  }
-  if (nameLower.includes('tampon') || nameLower.includes('cachet') || nameLower.includes('gravur')) {
-    return {
-      icon: '🏷️',
-      badgeColor: 'bg-orange-500/10 text-orange-600 border-orange-200 dark:border-orange-800',
-      categoryTag: 'Cachet & Tampon',
-    };
-  }
-  return {
-    icon: '🛠️',
-    badgeColor: 'bg-slate-500/10 text-slate-600 border-slate-200 dark:border-slate-800',
-    categoryTag: service.categoryName || 'Prestation',
-  };
-}
-
-// Helper to auto-assign the best matching department when a service is picked
-function getDepartmentForService(service: Service): 'DESIGN' | 'PRINT' | 'FINISHING' | 'PHOTOCOPY' | 'PHOTO' | 'OTHER' {
-  const nameLower = (service.name || '').toLowerCase();
-  const codeLower = (service.code || '').toLowerCase();
-  if (nameLower.includes('photocopi') || codeLower.includes('photo-') || nameLower.includes('copie')) return 'PHOTOCOPY';
-  if (nameLower.includes('impress') || codeLower.includes('print') || nameLower.includes('scan') || nameLower.includes('numéris')) return 'PRINT';
-  if (nameLower.includes('reliur') || nameLower.includes('plastif') || codeLower.includes('reliure') || codeLower.includes('plastif')) return 'FINISHING';
-  if (nameLower.includes('photo') || nameLower.includes('identit')) return 'PHOTO';
-  if (nameLower.includes('infograph') || nameLower.includes('design') || nameLower.includes('logo')) return 'DESIGN';
-  return 'PRINT';
-}
-
-// Re-export specifications engine
-export { getServiceSpecificationGroups, resolveSpecOption, getSelectedSpecOption, resolveServiceSpecsImpact } from '../../lib/serviceSpecs';
 import { getServiceSpecificationGroups, resolveSpecOption, getSelectedSpecOption, resolveServiceSpecsImpact } from '../../lib/serviceSpecs';
+import { formatReceiptItemDetails } from '../../lib/orderItemUtils';
+
+export { getServiceSpecificationGroups, resolveSpecOption, getSelectedSpecOption, resolveServiceSpecsImpact };
 
 interface QuickOrderModalProps {
   isOpen: boolean;
@@ -171,6 +76,94 @@ interface CalculatedLine extends OrderFormLine {
   service?: Service;
   product?: Product;
 }
+
+export const isPhotocopieLine = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = (line.name || '').toLowerCase();
+  const code = (line.service?.code || '').toLowerCase();
+  return name.includes('photocopie') || code.includes('photo');
+};
+
+export const isImpressionLine = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = (line.name || '').toLowerCase();
+  const code = (line.service?.code || '').toLowerCase();
+  return (name.includes('impression') || code.includes('imp')) && !isPhotocopieLine(line);
+};
+
+export const isPageServiceLine = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  if (isPhotocopieLine(line) || isImpressionLine(line)) return true;
+  const unit = (line.unit || '').toLowerCase();
+  const cat = (line.category || '').toLowerCase();
+  return unit === 'page' || unit === 'feuille' || unit === 'tirage' || cat.includes('impression') || cat.includes('photocopie');
+};
+
+export const getLineRectoVerso = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = line.service.options || [];
+
+  let targetOpt = opts.find(o =>
+    (o.values || []).some((v: any) => {
+      const s = typeof v === 'string' ? v : (v.name || v.label || '');
+      return s.toLowerCase().includes('recto');
+    })
+  );
+  if (!targetOpt) {
+    targetOpt = opts.find(o => {
+      const n = o.name.toLowerCase();
+      return n.includes('recto') || n.includes('type d\'impression') || n.includes('mode d\'impression');
+    });
+  }
+
+  const optionName = targetOpt ? targetOpt.name : "Type d'impression";
+  const rawValues = targetOpt?.values?.length
+    ? (targetOpt.values as any[]).map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')))
+    : ['Recto', 'Recto-verso'];
+  const values = Array.from(new Set(rawValues.concat(['Recto', 'Recto-verso'])));
+
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  let currentVal = match && match[1] ? match[1].trim() : '';
+  if (!currentVal) {
+    if (notes.toLowerCase().includes('recto-verso')) currentVal = 'Recto-verso';
+    else currentVal = 'Recto';
+  }
+
+  return {
+    optionName,
+    values,
+    currentVal,
+  };
+};
+
+export const getLinePrimaryOption = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = line.service.options || [];
+  if (opts.length === 0) return null;
+
+  let primaryOpt = opts.find(o => o.name.toLowerCase() === 'mode' || o.name.toLowerCase().includes('couleur'));
+  if (!primaryOpt) {
+    primaryOpt = opts.find(o => o.name.toLowerCase().includes('type'));
+  }
+  if (!primaryOpt) {
+    primaryOpt = opts[0];
+  }
+
+  if (!primaryOpt) return null;
+
+  const optionName = primaryOpt.name;
+  const values = ((primaryOpt.values as any[]) || []).map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  const currentVal = match && match[1] ? match[1].trim() : (values[0] || '');
+
+  return {
+    optionName,
+    values,
+    currentVal,
+  };
+};
 
 export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   isOpen,
@@ -238,10 +231,23 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const [newPersonPhone, setNewPersonPhone] = useState('');
   const [newPersonType, setNewPersonType] = useState<'ALL' | 'STUDENT' | 'COMPANY'>('ALL');
 
+  // Quick Add Search Bar State
+  const [quickSearchQuery, setQuickSearchQuery] = useState('');
+  const [selectedAddItem, setSelectedAddItem] = useState<{ type: 'SERVICE' | 'PRODUCT'; id: string } | null>(null);
+
+  // Editing Panel Modal State for line details
+  const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
+
+  // Remise Modal State for dedicated line discount
+  const [remiseLineIndex, setRemiseLineIndex] = useState<number | null>(null);
+  const [remiseNewAmount, setRemiseNewAmount] = useState<number>(0);
+  const [remiseCategory, setRemiseCategory] = useState<'VOLUME' | 'LOYALTY' | 'INSTITUTIONAL' | 'PROMOTION' | 'COMMERCIAL_NEGOTIATION' | 'OTHER'>('COMMERCIAL_NEGOTIATION');
+  const [remiseCustomReason, setRemiseCustomReason] = useState<string>('');
+
   // Form Lines State
   const defaultInitialService = tenantServices[0] || state.services[0];
   const initialSpecs = getServiceSpecificationGroups(defaultInitialService);
-  const initialNotes = initialSpecs.map(g => `${g.name}: ${g.defaultValue || g.options[0]}`).join(' | ');
+  const initialNotes = initialSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
 
   const [lines, setLines] = useState<OrderFormLine[]>([
     {
@@ -265,7 +271,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const [instructions, setInstructions] = useState('');
   const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Enhanced 3-Option Payment State: 'UNPAID' | 'FULL' | 'PARTIAL'
+  // Payment Options
   const [paymentOption, setPaymentOption] = useState<'UNPAID' | 'FULL' | 'PARTIAL'>('FULL');
   const [partialAmount, setPartialAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
@@ -289,11 +295,67 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const effectiveFinancialAccountId = selectedFinancialAccountId || matchingAccounts[0]?.id || tenantAccounts[0]?.id || '';
   const effectiveFinancialAccount = tenantAccounts.find(a => a.id === effectiveFinancialAccountId);
 
-  // Complete Reset of Form State to Initial Values
+  // Combined Catalogue of Services + Articles for Quick Search & Add
+  const catalogueItems = useMemo(() => {
+    const list: Array<{
+      id: string;
+      type: 'SERVICE' | 'PRODUCT';
+      name: string;
+      code: string;
+      category: string;
+      price: number;
+      unit: string;
+      stock?: number;
+      service?: Service;
+      product?: Product;
+    }> = [];
+
+    tenantServices.forEach(s => {
+      list.push({
+        id: s.id,
+        type: 'SERVICE',
+        name: s.name,
+        code: s.code,
+        category: s.categoryName || 'Prestation',
+        price: s.basePrice,
+        unit: s.unit || 'page',
+        service: s,
+      });
+    });
+
+    tenantProducts.forEach(p => {
+      list.push({
+        id: p.id,
+        type: 'PRODUCT',
+        name: p.name,
+        code: p.code || p.id,
+        category: p.category || 'Article Stock Central',
+        price: p.salePrice || p.costPrice || 0,
+        unit: p.unit || 'unité',
+        stock: p.currentStock || 0,
+        product: p,
+      });
+    });
+
+    return list;
+  }, [tenantServices, tenantProducts]);
+
+  // Filtered Catalogue Items based on quick search query
+  const filteredCatalogueItems = useMemo(() => {
+    if (!quickSearchQuery.trim()) return catalogueItems;
+    const q = quickSearchQuery.toLowerCase();
+    return catalogueItems.filter(item =>
+      item.name.toLowerCase().includes(q) ||
+      item.code.toLowerCase().includes(q) ||
+      item.category.toLowerCase().includes(q)
+    );
+  }, [catalogueItems, quickSearchQuery]);
+
+  // Reset Form
   const resetForm = () => {
     const defaultSrv = tenantServices[0] || state.services[0];
     const srvSpecs = getServiceSpecificationGroups(defaultSrv);
-    const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || g.options[0]}`).join(' | ');
+    const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
     setLines([
       {
         id: `line-${Date.now()}-1`,
@@ -329,9 +391,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     setPaymentMethod('CASH');
     setSelectedFinancialAccountId('');
     setPaymentReference('');
+    setQuickSearchQuery('');
+    setSelectedAddItem(null);
+    setEditingLineIndex(null);
+    setRemiseLineIndex(null);
   };
 
-  // Filtered persons for instant dynamic search
+  // Filtered Persons
   const filteredPersons = useMemo(() => {
     const tenantPersons = (state.persons || []).filter(p => p.tenantId === tenantId || p.tenantId === 'global');
     if (!clientSearchQuery.trim()) return tenantPersons;
@@ -340,8 +406,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       p.firstName.toLowerCase().includes(q) ||
       (p.lastName && p.lastName.toLowerCase().includes(q)) ||
       (p.phone && p.phone.includes(q)) ||
-      (p.customerProfile?.customerNumber && p.customerProfile.customerNumber.toLowerCase().includes(q)) ||
-      (p.customerProfile?.companyName && p.customerProfile.companyName.toLowerCase().includes(q))
+      (p.customerProfile?.customerNumber && p.customerProfile.customerNumber.toLowerCase().includes(q))
     );
   }, [state.persons, tenantId, clientSearchQuery]);
 
@@ -351,15 +416,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     return (state.persons || []).find(p => p.id === selectedPersonId);
   }, [clientMode, selectedPersonId, state.persons]);
 
-  // Derived customer type for pricing engine
-  const customerType = useMemo(() => {
-    if (clientMode === 'WALK_IN') return 'ALL';
-    if (selectedPerson?.customerProfile?.isCompany) return 'COMPANY';
-    if (selectedPerson?.types.includes('LEARNER')) return 'STUDENT';
-    return 'ALL';
-  }, [clientMode, selectedPerson]);
-
-  // Detailed calculations for all lines
+  // Calculated Lines for Compact Table
   const calculatedLines = useMemo((): CalculatedLine[] => {
     return lines.map(line => {
       if (line.itemType === 'SERVICE') {
@@ -369,7 +426,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         const appliedUnitPrice = line.isCustomPrice && line.customUnitPrice !== undefined
           ? line.customUnitPrice
           : standardUnitPrice;
-        
+
         const grossTotal = standardUnitPrice * line.quantity;
         const netTotal = appliedUnitPrice * line.quantity;
         const discountAmount = Math.max(0, grossTotal - netTotal);
@@ -386,7 +443,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
           ...line,
           name: srv?.name || 'Prestation',
           category: (srv as any)?.category || srv?.categoryName || 'Service',
-          unit: srv?.unit || 'unité',
+          unit: srv?.unit || 'page',
           standardUnitPrice,
           appliedUnitPrice,
           grossTotal,
@@ -397,7 +454,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
           service: srv,
         };
       } else {
-        // BOUTIQUE PRODUCT / STOCK MAGASIN
         const prod = tenantProducts.find(p => p.id === line.productId) || state.products.find(p => p.id === line.productId);
         const conversion = prod?.conversionFactor || 1;
         const isCarton = line.usePurchaseUnit && conversion > 1;
@@ -426,7 +482,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         return {
           ...line,
           name: prod?.name || 'Article Fourniture',
-          category: prod?.category || 'Fournitures / Boutique',
+          category: prod?.category || 'Stock Central',
           unit: isCarton ? (prod?.purchaseUnit || 'carton') : (prod?.unit || 'unité'),
           stockUnit: prod?.unit || 'unité',
           stockDeduction,
@@ -444,7 +500,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     });
   }, [lines, tenantServices, tenantProducts, state.services, state.products, userRoleCode, roleLimits, hasAdminPerm]);
 
-  // Order Totals Breakdown & Effective Payment Amount Calculation
+  // Order Totals
   const totals = useMemo(() => {
     const grossSubtotal = calculatedLines.reduce((acc, curr) => acc + curr.grossTotal, 0);
     const subtotal = calculatedLines.reduce((acc, curr) => acc + curr.netTotal, 0);
@@ -457,13 +513,10 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     } else if (paymentOption === 'FULL') {
       computedPaidAmount = totalAmount;
     } else {
-      // PARTIAL
       computedPaidAmount = Math.min(totalAmount, Math.max(0, partialAmount));
     }
 
     const dueAmount = Math.max(0, totalAmount - computedPaidAmount);
-    const hasHighDiscount = calculatedLines.some(l => l.discountPercent > 20 && !hasAdminPerm);
-
     return {
       grossSubtotal,
       subtotal,
@@ -471,194 +524,54 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       totalAmount,
       paidAmount: computedPaidAmount,
       dueAmount,
-      hasHighDiscount,
     };
-  }, [calculatedLines, paymentOption, partialAmount, hasAdminPerm]);
+  }, [calculatedLines, paymentOption, partialAmount]);
 
   const paymentAmount = totals.paidAmount;
 
-  // Aggregate stock requirements across boutique items and service internal consumptions
-  const stockRequirements = useMemo(() => {
-    return calculateOrderStockRequirements(calculatedLines, state.services, state.products);
-  }, [calculatedLines, state.services, state.products]);
-
-  // Live stock evaluations with threshold alerts, open POs, and restock suggestions
-  const stockEvaluations = useMemo(() => {
-    return evaluateOrderStock(stockRequirements, state.products, state.purchaseOrders);
-  }, [stockRequirements, state.products, state.purchaseOrders]);
-
-  // High-level stock status summary
-  const stockStatusSummary = useMemo(() => {
-    const insufficientItems = stockEvaluations.filter(e => e.status === 'INSUFFICIENT' && !e.allowNegativeStock);
-    const restockInProgressItems = stockEvaluations.filter(e => e.status === 'RESTOCK_IN_PROGRESS');
-    const lowStockItems = stockEvaluations.filter(e => e.status === 'LOW_STOCK');
-
-    const hasInsufficient = insufficientItems.length > 0;
-    const hasRestockInProgress = restockInProgressItems.length > 0;
-    const hasLowStock = lowStockItems.length > 0;
-    const allSufficient = !hasInsufficient && !hasRestockInProgress && !hasLowStock;
-
-    return {
-      hasInsufficient,
-      hasRestockInProgress,
-      hasLowStock,
-      insufficientItems,
-      restockInProgressItems,
-      lowStockItems,
-      allSufficient,
-    };
-  }, [stockEvaluations]);
-
-  // Restock PO Modal State
-  const [isRestockPOModalOpen, setIsRestockPOModalOpen] = useState(false);
-  const [restockSupplierId, setRestockSupplierId] = useState<string>('');
-  const [restockDepartmentId, setRestockDepartmentId] = useState<string>('');
-  const [restockLines, setRestockLines] = useState<Array<{
-    productId: string;
-    productName: string;
-    productCode: string;
-    category: string;
-    orderedQuantityPurchaseUnit: number;
-    purchaseUnitName: string;
-    conversionFactor: number;
-    quantityInStockUnit: number;
-    unitPricePurchaseUnit: number;
-    unitPriceStockUnit: number;
-    totalPrice: number;
-    currentStock: number;
-    baseUnit: string;
-  }>>([]);
-  const [restockNotes, setRestockNotes] = useState('');
-
-  // Open Restock PO Modal pre-populated with missing / low-stock items
-  const handleOpenRestockPO = (targetEvaluations?: StockEvaluation[]) => {
-    const itemsToRestock = targetEvaluations && targetEvaluations.length > 0
-      ? targetEvaluations
-      : stockEvaluations.filter(e => e.status === 'INSUFFICIENT' || e.status === 'LOW_STOCK' || e.status === 'RESTOCK_IN_PROGRESS');
-
-    if (itemsToRestock.length === 0) return;
-
-    // Pick first supplier among items, or first available supplier
-    const detectedSupplierId = itemsToRestock.find(it => it.usualSupplierId)?.usualSupplierId || state.suppliers[0]?.id || '';
-    setRestockSupplierId(detectedSupplierId);
-    
-    // Pick first active department if available
-    const dept = state.requestingDepartments?.find(d => d.isActive)?.id || '';
-    setRestockDepartmentId(dept);
-
-    const initialPOLines = itemsToRestock.map(it => {
-      const prod = state.products.find(p => p.id === it.productId);
-      const chosenUnit = it.purchaseUnit || 'carton';
-      const priceRes = prod ? resolveProductPurchasePrice(prod, chosenUnit) : null;
-      const conversion = priceRes ? priceRes.factorToBase : (it.conversionFactor || 1);
-      const orderQtyPU = it.recommendedPurchaseQty > 0 ? it.recommendedPurchaseQty : 1;
-      const unitPricePU = priceRes && priceRes.unitPrice > 0 ? priceRes.unitPrice : (it.purchasePricePerPurchaseUnit || (it.costPrice * conversion));
-      const unitPriceSU = conversion > 0 ? Math.round(unitPricePU / conversion) : unitPricePU;
-
-      return {
-        productId: it.productId,
-        productName: it.productName,
-        productCode: it.productCode,
-        category: it.category,
-        orderedQuantityPurchaseUnit: orderQtyPU,
-        purchaseUnitName: priceRes ? priceRes.selectedUnitName : chosenUnit,
-        conversionFactor: conversion,
-        quantityInStockUnit: orderQtyPU * conversion,
-        unitPricePurchaseUnit: unitPricePU,
-        unitPriceStockUnit: unitPriceSU,
-        totalPrice: orderQtyPU * unitPricePU,
-        currentStock: it.currentStock,
-        baseUnit: it.stockUnit,
-      };
-    });
-
-    setRestockLines(initialPOLines);
-    setRestockNotes(`Ravitaillement express déclenché pour la commande client (besoin immédiat).`);
-    setIsRestockPOModalOpen(true);
-  };
-
-  // Submit Restock PO
-  const handleCreateRestockPO = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!restockSupplierId) {
-      showToast('Fournisseur Requis', 'Veuillez sélectionner un fournisseur.', 'DANGER');
-      return;
-    }
-    if (restockLines.length === 0) {
-      showToast('Articles Requis', 'Aucun article dans la commande fournisseur.', 'DANGER');
+  // Add Item Handler from Top Quick Add Zone
+  const handleAddItemFromCatalogue = (targetItem?: { type: 'SERVICE' | 'PRODUCT'; id: string }) => {
+    const itemToAdd = targetItem || selectedAddItem || (filteredCatalogueItems.length > 0 ? { type: filteredCatalogueItems[0].type, id: filteredCatalogueItems[0].id } : null);
+    if (!itemToAdd) {
+      showToast('Sélection requise', 'Veuillez sélectionner une prestation ou un article à ajouter.', 'WARNING');
       return;
     }
 
-    const performedBy = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Gestionnaire Commandes';
+    if (itemToAdd.type === 'SERVICE') {
+      const srv = tenantServices.find(s => s.id === itemToAdd.id) || state.services.find(s => s.id === itemToAdd.id);
+      if (!srv) return;
+      const srvSpecs = getServiceSpecificationGroups(srv);
+      const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
 
-    const result = dbStore.createSecurePurchaseOrder(
-      {
-        supplierId: restockSupplierId,
-        departmentId: restockDepartmentId,
-        notes: restockNotes,
-        expectedDelivery: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-        items: restockLines.map(l => ({
-          productId: l.productId,
-          orderedQuantityPurchaseUnit: l.orderedQuantityPurchaseUnit,
-          purchaseUnitName: l.purchaseUnitName,
-          unitPricePurchaseUnit: l.unitPricePurchaseUnit
-        }))
-      },
-      currentTenant?.id || 't-001',
-      performedBy,
-      isSuperAdmin
-    );
-
-    if (result.success && result.purchaseOrder) {
-      showToast(
-        'Bon de Commande Émis 📦',
-        `Bon de commande ${result.purchaseOrder.poNumber} émis auprès de ${result.purchaseOrder.supplierName} (${result.purchaseOrder.items.length} article(s)).`,
-        'SUCCESS'
-      );
-      setIsRestockPOModalOpen(false);
-    } else {
-      showToast('Erreur', result.message, 'DANGER');
-    }
-  };
-
-  // Add Service Line
-  const handleAddServiceLine = () => {
-    const defaultSrv = state.services.find(s => s.isActive) || state.services[0];
-    const srvSpecs = getServiceSpecificationGroups(defaultSrv);
-    const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || g.options[0]}`).join(' | ');
-    setLines(prev => [
-      ...prev,
-      {
-        id: `line-${Date.now()}-${prev.length + 1}`,
+      const newLine: OrderFormLine = {
+        id: `line-${Date.now()}-${lines.length + 1}`,
         itemType: 'SERVICE',
-        serviceId: defaultSrv?.id || '',
+        serviceId: srv.id,
         pageCount: 1,
         copiesCount: 1,
         quantity: 1,
-        unit: defaultSrv?.unit || 'page',
+        unit: srv.unit || 'page',
         isCustomPrice: false,
         discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
         discountReasonCustom: '',
         assignedDepartment: 'PRINT',
         notes: defaultNotes,
         files: [],
-      }
-    ]);
-  };
+      };
+      setLines(prev => [...prev, newLine]);
+      showToast('Prestation ajoutée', `« ${srv.name} » a été ajouté à la commande.`, 'SUCCESS');
+    } else {
+      const prod = tenantProducts.find(p => p.id === itemToAdd.id) || state.products.find(p => p.id === itemToAdd.id);
+      if (!prod) return;
 
-  // Add Product Line (Boutique)
-  const handleAddProductLine = () => {
-    const defaultProd = state.products.find(p => p.isActive && p.currentStock > 0) || state.products[0];
-    setLines(prev => [
-      ...prev,
-      {
-        id: `line-${Date.now()}-${prev.length + 1}`,
+      const newLine: OrderFormLine = {
+        id: `line-${Date.now()}-${lines.length + 1}`,
         itemType: 'PRODUCT',
-        productId: defaultProd?.id || '',
+        productId: prod.id,
         quantity: 1,
-        unit: defaultProd?.unit || 'unité',
-        purchaseUnitName: defaultProd?.purchaseUnit || 'carton',
-        conversionFactor: defaultProd?.conversionFactor || 1,
+        unit: prod.unit || 'unité',
+        purchaseUnitName: prod.purchaseUnit || 'carton',
+        conversionFactor: prod.conversionFactor || 1,
         usePurchaseUnit: false,
         isCustomPrice: false,
         discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
@@ -666,33 +579,40 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         assignedDepartment: 'STORE',
         notes: '',
         files: [],
-      }
-    ]);
-  };
-
-  // Remove Line
-  const handleRemoveLine = (index: number) => {
-    if (lines.length > 1) {
-      setLines(prev => prev.filter((_, i) => i !== index));
+      };
+      setLines(prev => [...prev, newLine]);
+      showToast('Article ajouté', `« ${prod.name} » (Stock: ${prod.currentStock}) a été ajouté à la commande.`, 'SUCCESS');
     }
+
+    setQuickSearchQuery('');
+    setSelectedAddItem(null);
   };
 
-  // Update Line Field with dynamic reactive calculation for pageCount * copiesCount
+  // Remove Line (unchecks corresponding service if applicable)
+  const handleRemoveLine = (index: number) => {
+    setLines(prev => prev.filter((_, i) => i !== index));
+    if (editingLineIndex === index) setEditingLineIndex(null);
+    if (remiseLineIndex === index) setRemiseLineIndex(null);
+  };
+
+  // Update Line Field
   const handleUpdateLine = (index: number, updates: Partial<OrderFormLine>) => {
     setLines(prev => {
       const copy = [...prev];
       const current = copy[index];
+      if (!current) return prev;
       let newPageCount = updates.pageCount !== undefined ? updates.pageCount : current.pageCount;
       let newCopiesCount = updates.copiesCount !== undefined ? updates.copiesCount : current.copiesCount;
       let newQuantity = updates.quantity !== undefined ? updates.quantity : current.quantity;
 
-      // Recompute total quantity whenever pageCount or copiesCount is edited
       if (updates.pageCount !== undefined || updates.copiesCount !== undefined) {
         const p = Math.max(1, newPageCount !== undefined ? Number(newPageCount) : 1);
         const c = Math.max(1, newCopiesCount !== undefined ? Number(newCopiesCount) : 1);
         newPageCount = p;
         newCopiesCount = c;
         newQuantity = p * c;
+      } else if (updates.quantity !== undefined) {
+        newQuantity = Math.max(1, Number(updates.quantity));
       }
 
       copy[index] = {
@@ -706,7 +626,40 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     });
   };
 
-  // Quick Client Creation
+  // Update Line Option in Notes
+  const handleUpdateLineOption = (index: number, optionName: string, newValue: string) => {
+    setLines(prev => {
+      const copy = [...prev];
+      const current = copy[index];
+      if (!current) return prev;
+
+      const currentNotes = current.notes || '';
+      const parts = currentNotes
+        .split(' | ')
+        .map(p => p.trim())
+        .filter(p => p && !p.toLowerCase().startsWith(optionName.toLowerCase() + ':'));
+      parts.push(`${optionName}: ${newValue}`);
+      const updatedNotes = parts.join(' | ');
+
+      copy[index] = {
+        ...current,
+        notes: updatedNotes,
+      };
+      return copy;
+    });
+  };
+
+  // Open Remise Modal
+  const handleOpenRemiseModal = (idx: number) => {
+    const line = calculatedLines[idx];
+    if (!line) return;
+    setRemiseLineIndex(idx);
+    setRemiseNewAmount(line.netTotal);
+    setRemiseCategory(line.discountReasonCategory || 'COMMERCIAL_NEGOTIATION');
+    setRemiseCustomReason(line.discountReasonCustom || '');
+  };
+
+  // Quick Person Creation
   const handleCreateNewPerson = () => {
     if (!newPersonName.trim()) return;
 
@@ -759,10 +712,9 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Verification licence serveur
       const evalRes = evaluateTenantSubscription(currentTenant);
       if (evalRes.isExpired || evalRes.isSuspended) {
-        showToast('Période d\'Essai Expirée', "Votre période d'essai de 45 jours est arrivée à son terme. Veuillez contacter l'administrateur.", 'DANGER');
+        showToast('Période d\'Essai Expirée', "Votre période d'essai est arrivée à son terme. Veuillez contacter l'administrateur.", 'DANGER');
         setIsSubmitting(false);
         return;
       }
@@ -779,7 +731,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         return;
       }
 
-      // Check cash session for upfront payment if destination account is cash
       const isCashDestination = paymentMethod === 'CASH' || effectiveFinancialAccount?.type === 'CASH' || effectiveFinancialAccount?.isMainCash;
       if (paymentAmount > 0 && isCashDestination && !activeCashSession) {
         showToast('Caisse Fermée', 'Veuillez ouvrir la caisse du jour pour encaisser en espèces.', 'WARNING');
@@ -788,7 +739,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         return;
       }
 
-      // Live stock verification for boutique products and service internal consumptions
+      // Check stock availability
       const liveReqs = calculateOrderStockRequirements(calculatedLines, state.services, state.products);
       const liveEvals = evaluateOrderStock(liveReqs, state.products, state.purchaseOrders);
       const blockingEvals = liveEvals.filter(e => e.status === 'INSUFFICIENT' && !e.allowNegativeStock);
@@ -820,7 +771,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         ? selectedPerson.email
         : undefined;
 
-      // Map OrderItems
       const orderItems: OrderItem[] = calculatedLines.map((line, idx) => ({
         id: `item-${Date.now()}-${idx + 1}`,
         orderId,
@@ -858,7 +808,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         stockQuantityDeducted: line.itemType === 'PRODUCT' ? line.stockDeduction : undefined,
       }));
 
-      // Pre-validation: Check Availability of Prestation Consumables and Products
       const tenantId = currentTenant?.id || 't-001';
       const stockCheck = dbStore.checkConsumablesStockAvailability(orderItems, tenantId);
       if (!stockCheck.isAvailable && stockCheck.missingItems && stockCheck.missingItems.length > 0) {
@@ -874,7 +823,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         return;
       }
 
-      // Production Jobs for services
       const productionJobs: ProductionJob[] = calculatedLines
         .filter(l => l.itemType === 'SERVICE')
         .map((line, idx) => ({
@@ -939,7 +887,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       dbStore.updateState(draft => {
         draft.orders.unshift(newOrder);
 
-        // Append production jobs
         if (!draft.productionJobs) draft.productionJobs = [];
         productionJobs.forEach(job => draft.productionJobs.unshift(job));
       });
@@ -948,7 +895,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       dbStore.deductConsumablesForOrder(newOrder.id, tenantId, performedBy);
 
       dbStore.updateState(draft => {
-        // Register Cash Payment & Inflow if paymentAmount > 0
         if (paymentAmount > 0) {
           if (isCashDestination && activeCashSession) {
             const activeSess = draft.cashSessions.find(cs => cs.id === activeCashSession.id);
@@ -968,8 +914,9 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             }
           }
 
+          let createdPayObj: any = null;
           if (!draft.payments) draft.payments = [];
-          draft.payments.unshift({
+          createdPayObj = {
             id: `pay-${Date.now()}`,
             tenantId: currentTenant?.id || 't-001',
             cashSessionId: isCashDestination && activeCashSession ? activeCashSession.id : undefined,
@@ -989,38 +936,18 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             notes: `Règlement commande multi-prestations ${orderNumber} (${paymentOption === 'FULL' ? 'Paiement total' : 'Paiement partiel'})`,
             receivedByUserName: performedBy,
             createdAt: new Date().toISOString()
-          });
+          };
+          draft.payments.unshift(createdPayObj);
+          (newOrder as any)._createdPayment = createdPayObj;
         }
-
-        // Log discount audit if any
-        calculatedLines.forEach(line => {
-          if (line.discountAmount > 0) {
-            if (!draft.discountAudits) draft.discountAudits = [];
-            draft.discountAudits.unshift({
-              id: `disc-${Date.now()}-${line.id}`,
-              tenantId: currentTenant?.id || 't-001',
-              orderId,
-              orderNumber,
-              serviceId: line.serviceId,
-              serviceName: line.name,
-              quantity: line.quantity,
-              unit: line.unit,
-              standardPrice: line.standardUnitPrice,
-              appliedPrice: line.appliedUnitPrice,
-              grossTotal: line.grossTotal,
-              discountAmount: line.discountAmount,
-              discountPercent: line.discountPercent,
-              discountType: 'EXCEPTIONAL',
-              discountReasonCategory: line.discountReasonCategory,
-              discountReason: line.discountReasonCategory === 'OTHER' ? line.discountReasonCustom : line.discountReasonCategory,
-              grantedByUserId: currentUser?.id || 'usr-admin',
-              grantedByUserName: performedBy,
-              status: 'APPLIED',
-              createdAt: new Date().toISOString()
-            });
-          }
-        });
       });
+
+      setReceiptOrder(newOrder);
+      if (paymentAmount > 0 && (newOrder as any)._createdPayment) {
+        setReceiptPayment((newOrder as any)._createdPayment);
+      } else {
+        setReceiptPayment(null);
+      }
 
       dbStore.logAudit('ORDER_CREATED', 'ORDER', orderId, null, {
         orderNumber,
@@ -1028,7 +955,6 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         customerType: finalCustomerType,
       });
 
-      // Synchronisation automatique avec Finance & Trésorerie
       if (paymentAmount > 0) {
         dbStore.recordIncomingPayment({
           tenantId: currentTenant?.id || 't-001',
@@ -1045,9 +971,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         });
       }
 
-      showToast('Dossier Commercial Validé 🟢', `Dossier commercial ${orderNumber} créé et validé avec succès (${orderItems.length} ligne(s)).`, 'SUCCESS');
+      showToast('Commande Enregistrée 🟢', `La commande ${orderNumber} a été validée avec succès (${orderItems.length} ligne(s)).`, 'SUCCESS');
       
-      // Stocke le résumé de la commande validée pour affichage de la confirmation et enchaînement
       setCreatedOrderSummary({
         id: orderId,
         orderNumber,
@@ -1064,7 +989,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       onOrderCreated?.(orderId);
     } catch (error) {
       setIsSubmitting(false);
-      showToast('Erreur', "Une erreur inattendue est survenue lors de l'enregistrement du dossier commercial.", 'DANGER');
+      showToast('Erreur', "Une erreur inattendue est survenue lors de l'enregistrement.", 'DANGER');
     }
   };
 
@@ -1072,6 +997,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     setCreatedOrderSummary(null);
     setReceiptPayment(null);
     setReceiptOrder(null);
+    setEditingLineIndex(null);
     onClose();
   };
 
@@ -1108,34 +1034,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     }
   };
 
-  const handlePrintReceipt = () => {
-    if (!createdOrderSummary) return;
-    const currentOrder = (state.orders || []).find(o => o.id === createdOrderSummary.id);
-    const existingPayment = ((state.payments || []) as any[]).find(p => p.orderId === createdOrderSummary.id) as Payment | undefined;
-    const resolvedMethod: PaymentMethod = existingPayment ? existingPayment.paymentMethod : paymentMethod;
-
-    const fallbackPayment: Payment = existingPayment || {
-      id: `pay-${createdOrderSummary.id}`,
-      tenantId: currentTenant?.id || 't-001',
-      personId: currentOrder?.personId || 'client-walk-in',
-      personName: createdOrderSummary.clientName,
-      targetType: 'ORDER',
-      orderId: createdOrderSummary.id,
-      orderNumber: createdOrderSummary.orderNumber,
-      paymentNumber: `REC-${createdOrderSummary.orderNumber}`,
-      amount: createdOrderSummary.paidAmount,
-      balanceBefore: createdOrderSummary.totalAmount,
-      balanceAfter: createdOrderSummary.dueAmount,
-      paymentType: createdOrderSummary.dueAmount === 0 ? 'BALANCE_PAYMENT' : 'ADVANCE',
-      paymentMethod: resolvedMethod,
-      reference: `Reçu commande ${createdOrderSummary.orderNumber}`,
-      receivedByUserName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Caisse',
-      createdAt: currentOrder?.createdAt || new Date().toISOString()
-    };
-
-    setReceiptPayment(fallbackPayment);
-    setReceiptOrder(currentOrder || null);
-  };
+  const currentEditingLine = editingLineIndex !== null ? calculatedLines[editingLineIndex] : null;
 
   return (
     <>
@@ -1143,7 +1042,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         isOpen={isOpen}
         onClose={handleModalClose}
         title={createdOrderSummary ? "Confirmation — Commande Validée" : "Nouvelle Commande Multi-Prestations & Fournitures"}
-        maxWidth="2xl"
+        maxWidth="4xl"
       >
         {createdOrderSummary ? (
           <div className="py-6 px-4 sm:px-8 space-y-6 text-center">
@@ -1156,7 +1055,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 Commande Validée avec Succès !
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                La commande <span className="font-mono font-bold text-slate-800 dark:text-slate-200">#{createdOrderSummary.orderNumber}</span> a été enregistrée avec succès.
+                La commande <span className="font-mono font-bold text-slate-800 dark:text-slate-200">#{createdOrderSummary.orderNumber}</span> a été enregistrée.
               </p>
             </div>
 
@@ -1170,72 +1069,45 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 <span className="font-bold text-slate-800 dark:text-slate-200">{createdOrderSummary.clientName}</span>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800">
-                <span className="text-slate-500 font-medium">Prestations / Articles :</span>
+                <span className="text-slate-500 font-medium">Articles / Prestations :</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">{createdOrderSummary.linesCount} ligne(s)</span>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800">
                 <span className="text-slate-500 font-medium">Montant Total :</span>
                 <span className="font-black text-brand-600 dark:text-brand-400 text-sm">{formatCurrency(createdOrderSummary.totalAmount)}</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800">
-                <span className="text-slate-500 font-medium">Statut de la commande :</span>
-                {createdOrderSummary.status === 'DELIVERED' ? (
-                  <Badge variant="success" size="sm" className="font-bold text-[11px]">
-                    🟢 Livrée
-                  </Badge>
-                ) : (
-                  <Badge variant="warning" size="sm" className="font-bold text-[11px]">
-                    🟡 Commande validée / En attente de livraison
-                  </Badge>
-                )}
-              </div>
-              <div className="flex justify-between items-center pt-0.5">
-                <span className="text-slate-500 font-medium">Règlement :</span>
-                {(() => {
-                  const isFullyPaid = createdOrderSummary.paymentStatus === 'PAID' || (createdOrderSummary.paidAmount >= createdOrderSummary.totalAmount && createdOrderSummary.totalAmount > 0);
-                  const hasAdvance = createdOrderSummary.paidAmount > 0 && !isFullyPaid;
-
-                  return (
-                    <Badge variant={isFullyPaid ? 'success' : hasAdvance ? 'warning' : 'outline'} size="sm">
-                      {isFullyPaid ? '✅ Payée Intégralement' : hasAdvance ? `⏳ Acompte : ${formatCurrency(createdOrderSummary.paidAmount)}` : '❌ Non Payée (En attente)'}
-                    </Badge>
-                  );
-                })()}
-              </div>
             </div>
 
-            {/* Delivery & Print Actions */}
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                icon={createdOrderSummary.status === 'DELIVERED' ? ShieldCheck : CheckCircle2}
-                disabled={createdOrderSummary.status === 'DELIVERED' || isValidatingDelivery}
-                onClick={handleValidateAndDeliver}
-                className={
-                  createdOrderSummary.status === 'DELIVERED'
-                    ? 'bg-emerald-600 hover:bg-emerald-600 cursor-default font-extrabold text-xs opacity-90'
-                    : 'bg-emerald-600 hover:bg-emerald-700 font-extrabold text-xs shadow-sm'
-                }
-              >
-                {isValidatingDelivery ? 'Validation en cours...' : createdOrderSummary.status === 'DELIVERED' ? '✓ Commande livrée' : '✓ Valider la commande'}
-              </Button>
-
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <Button
                 type="button"
                 variant="outline"
-                size="md"
+                size="lg"
                 icon={Printer}
-                onClick={handlePrintReceipt}
-                className="font-bold text-xs border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={() => {
+                  if (!receiptPayment && createdOrderSummary) {
+                    setReceiptPayment({
+                      id: `rec-${Date.now()}`,
+                      tenantId: currentTenant?.id || 't-001',
+                      targetType: 'ORDER',
+                      orderId: createdOrderSummary.id,
+                      orderNumber: createdOrderSummary.orderNumber,
+                      paymentNumber: generateDocNumber('PAY', state.payments.length + 1),
+                      amount: createdOrderSummary.paidAmount,
+                      balanceBefore: createdOrderSummary.totalAmount,
+                      balanceAfter: createdOrderSummary.dueAmount,
+                      paymentMethod: paymentMethod || 'CASH',
+                      personName: createdOrderSummary.clientName,
+                      receivedByUserName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Caissier',
+                      createdAt: new Date().toISOString()
+                    });
+                  }
+                }}
+                className="w-full sm:w-auto font-bold text-xs border-brand-300 text-brand-700 hover:bg-brand-50"
               >
-                🖨 Imprimer le reçu
+                Imprimer Reçu Détaillé (A5)
               </Button>
-            </div>
 
-            {/* Successive Order & Close Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
               <Button
                 type="button"
                 variant="primary"
@@ -1245,10 +1117,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   resetForm();
                   setCreatedOrderSummary(null);
                 }}
-                className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 font-black px-6 shadow-md shadow-brand-500/20 text-xs"
+                className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 font-black px-6 text-xs"
               >
-                + Nouvelle commande (Saisir la suivante)
+                + Nouvelle commande (Suivante)
               </Button>
+
               <Button
                 type="button"
                 variant="outline"
@@ -1261,1547 +1134,1113 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmitOrder} className="space-y-5 pt-1">
-          {/* 1. Client & Priority Header */}
-          <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
-            {/* Mode Selector & Priority */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex-1 space-y-1.5">
-                <label className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-brand-500" />
-                  Type de Client Donneur d'Ordre *
-                </label>
+          <form onSubmit={handleSubmitOrder} className="flex flex-col max-h-[82vh] overflow-hidden -m-4">
+            {/* SCROLLABLE MAIN CONTENT AREA */}
+            <div className="p-4 space-y-4 overflow-y-auto flex-1">
 
-                {/* Segmented Control */}
-                <div className="grid grid-cols-2 p-1 bg-slate-200/70 dark:bg-slate-800 rounded-xl max-w-md text-xs font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setClientMode('REGISTERED')}
-                    className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                      clientMode === 'REGISTERED'
-                        ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    Client Enregistré
-                  </button>
+              {/* 1. EN-TÊTE : Client Selection & Header Info */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs">
+                      Client :
+                    </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setClientMode('WALK_IN')}
-                    className={`py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                      clientMode === 'WALK_IN'
-                        ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-300 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Client de Passage
-                  </button>
+                    <div className="inline-flex p-0.5 bg-slate-200 dark:bg-slate-800 rounded-lg text-[11px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setClientMode('WALK_IN')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          clientMode === 'WALK_IN'
+                            ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-300 shadow-sm'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        Client de passage
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setClientMode('REGISTERED')}
+                        className={`px-2.5 py-1 rounded-md transition-all ${
+                          clientMode === 'REGISTERED'
+                            ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-300 shadow-sm'
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}
+                      >
+                        Client Enregistré
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-slate-600 dark:text-slate-400 text-[11px]">Priorité:</span>
+                    <Select
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value as OrderPriority)}
+                      className="text-xs font-bold py-1 px-2 h-7"
+                    >
+                      <option value="NORMAL">🟢 Normale</option>
+                      <option value="HIGH">🟠 Haute</option>
+                      <option value="URGENT">🔴 Urgente (Express)</option>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Client Input Details */}
+                {clientMode === 'REGISTERED' ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <div className="flex-1 w-full">
+                      <Select
+                        value={selectedPersonId}
+                        onChange={(e) => setSelectedPersonId(e.target.value)}
+                        className="text-xs font-semibold w-full"
+                      >
+                        {filteredPersons.map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.firstName} {p.lastName || ''} {p.phone ? `• 📞 ${p.phone}` : ''}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      icon={UserPlus}
+                      onClick={() => setIsCreatingNewPerson(true)}
+                      className="text-xs shrink-0 font-bold h-8"
+                    >
+                      + Nouveau Client
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <Input
+                      type="text"
+                      placeholder="Nom du client (optionnel)..."
+                      value={walkInName}
+                      onChange={(e) => setWalkInName(e.target.value)}
+                      className="text-xs h-8"
+                    />
+                    <PhoneInput
+                      placeholder="Téléphone client (optionnel)..."
+                      value={walkInPhone}
+                      onChange={(e) => setWalkInPhone(e.target.value)}
+                      className="text-xs h-8"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 2. TYPE DE SERVICE : Case à cocher pour les prestations configurées dans Services & Tarifs */}
+              <div className="p-3.5 bg-sky-50/80 dark:bg-slate-900 rounded-xl border border-sky-200 dark:border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-sky-200/60 dark:border-slate-800 pb-2">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-sky-900 dark:text-sky-300 flex items-center gap-1.5">
+                    <Settings2 className="w-4.5 h-4.5 text-sky-600 dark:text-sky-400" />
+                    2. Type de service (Prestations configurées dans Services & Tarifs)
+                  </h3>
+                  <span className="text-[10px] text-sky-700 dark:text-sky-400 font-semibold">
+                    Cochez pour ajouter à la commande
+                  </span>
+                </div>
+
+                {/* Checkboxes Grid of Services */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+                  {tenantServices.map(service => {
+                    const isChecked = lines.some(l => l.itemType === 'SERVICE' && l.serviceId === service.id);
+
+                    return (
+                      <label
+                        key={service.id}
+                        className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-medium cursor-pointer transition-all select-none ${
+                          isChecked
+                            ? 'bg-white dark:bg-slate-800 border-sky-500 text-sky-900 dark:text-sky-200 shadow-sm font-bold ring-1 ring-sky-400'
+                            : 'bg-white/70 dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-sky-300 hover:bg-white'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const srvSpecs = getServiceSpecificationGroups(service);
+                              const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
+                              setLines(prev => [
+                                ...prev,
+                                {
+                                  id: `line-${Date.now()}-${prev.length + 1}`,
+                                  itemType: 'SERVICE',
+                                  serviceId: service.id,
+                                  pageCount: 1,
+                                  copiesCount: 1,
+                                  quantity: 1,
+                                  unit: service.unit || 'page',
+                                  isCustomPrice: false,
+                                  discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
+                                  discountReasonCustom: '',
+                                  assignedDepartment: 'PRINT',
+                                  notes: defaultNotes,
+                                  files: [],
+                                }
+                              ]);
+                              showToast('Prestation ajoutée', `« ${service.name} » a été ajouté à la commande.`, 'SUCCESS');
+                            } else {
+                              setLines(prev => prev.filter(l => !(l.itemType === 'SERVICE' && l.serviceId === service.id)));
+                            }
+                          }}
+                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 w-4 h-4"
+                        />
+                        <span className="truncate">{service.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {/* Option d'ajout d'article du Stock Central si besoin */}
+                {tenantProducts.length > 0 && (
+                  <div className="pt-2 border-t border-sky-200/50 dark:border-slate-800 flex items-center justify-between gap-2 text-[11px]">
+                    <span className="text-slate-500 font-medium">Besoin d'ajouter une fourniture / article du stock central ?</span>
+                    <div className="flex items-center gap-2">
+                      <select
+                        onChange={(e) => {
+                          const prodId = e.target.value;
+                          if (!prodId) return;
+                          const prod = tenantProducts.find(p => p.id === prodId);
+                          if (!prod) return;
+                          setLines(prev => [
+                            ...prev,
+                            {
+                              id: `line-${Date.now()}-${prev.length + 1}`,
+                              itemType: 'PRODUCT',
+                              productId: prod.id,
+                              quantity: 1,
+                              unit: prod.unit || 'unité',
+                              purchaseUnitName: prod.purchaseUnit || 'carton',
+                              conversionFactor: prod.conversionFactor || 1,
+                              usePurchaseUnit: false,
+                              isCustomPrice: false,
+                              discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
+                              discountReasonCustom: '',
+                              assignedDepartment: 'STORE',
+                              notes: '',
+                              files: [],
+                            }
+                          ]);
+                          showToast('Article ajouté', `« ${prod.name} » a été ajouté à la commande.`, 'SUCCESS');
+                          e.target.value = '';
+                        }}
+                        className="py-1 px-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold"
+                      >
+                        <option value="">+ Ajouter un article du Stock Central...</option>
+                        {tenantProducts.map(p => (
+                          <option key={p.id} value={p.id}>
+                            🛒 {p.name} — {formatCurrency(p.salePrice || p.costPrice || 0)} (Dispo: {p.currentStock})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. TABLEAU COMPACT DES LIGNES AJOUTÉES */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-brand-500" />
+                    Lignes de Commande ({lines.length})
+                  </h3>
+                  <span className="text-[11px] text-slate-400 italic">
+                    Paramètres configurables en direct · Cliquez sur « Modifier » pour les options avancées.
+                  </span>
+                </div>
+
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm bg-white dark:bg-slate-950">
+                  {calculatedLines.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-xs italic">
+                      Aucune prestation ou fourniture sélectionnée. Cochez des prestations ci-dessus pour composer la commande.
+                    </div>
+                  ) : (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-extrabold">
+                        <tr>
+                          <th className="p-2.5 min-w-[140px] sm:w-1/4">Désignation</th>
+                          <th className="p-2.5 sm:w-2/5">Paramètres & Quantité</th>
+                          <th className="p-2.5 text-right whitespace-nowrap">Prix unitaire</th>
+                          <th className="p-2.5 text-right whitespace-nowrap">Total</th>
+                          <th className="p-2.5 text-center whitespace-nowrap">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {calculatedLines.map((line, idx) => {
+                          const isPhoto = isPhotocopieLine(line);
+                          const isImp = isImpressionLine(line);
+                          const isPage = isPhoto || isImp || isPageServiceLine(line);
+                          const rectoVersoInfo = getLineRectoVerso(line);
+                          const primaryOptInfo = getLinePrimaryOption(line);
+
+                          return (
+                            <tr key={line.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors">
+                              {/* 1. DÉSIGNATION (Pas de Type encombrant) */}
+                              <td className="p-2.5 align-middle">
+                                <div className="flex flex-col">
+                                  <strong className="text-slate-900 dark:text-white font-bold text-xs">
+                                    {line.name}
+                                  </strong>
+                                  {line.itemType === 'PRODUCT' ? (
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                      Article stock (Dispo: {line.currentStock})
+                                    </span>
+                                  ) : (
+                                    line.notes && (
+                                      <span className="text-[10px] text-slate-400 truncate max-w-[180px] sm:max-w-xs" title={line.notes}>
+                                        {line.notes
+                                          .split(' | ')
+                                          .filter(p => !p.toLowerCase().includes('type d\'impression') && !p.toLowerCase().includes('recto'))
+                                          .join(' · ') || line.notes}
+                                      </span>
+                                    )
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* 2. PARAMÈTRES DYNAMIQUES SELON LA PRESTATION */}
+                              <td className="p-2.5 align-middle">
+                                {isPhoto ? (
+                                  /* PHOTOCOPIE : Recto/Verso ▼ | [10] pages | [2] ex. */
+                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                    {rectoVersoInfo && (
+                                      <select
+                                        value={rectoVersoInfo.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, rectoVersoInfo.optionName, e.target.value)}
+                                        className="h-7 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500 shadow-sm"
+                                        title="Mode Recto ou Recto-verso"
+                                      >
+                                        {rectoVersoInfo.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+
+                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={line.pageCount || 1}
+                                        onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-11 sm:w-12 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                        title="Nombre de pages du document original"
+                                      />
+                                      <span className="text-[11px] text-slate-500 font-semibold">pages</span>
+                                    </div>
+
+                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={line.copiesCount || 1}
+                                        onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-10 sm:w-11 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                        title="Nombre d'exemplaires / reproductions"
+                                      />
+                                      <span className="text-[11px] text-slate-500 font-semibold">ex.</span>
+                                    </div>
+
+                                    {(line.copiesCount || 1) > 1 && (
+                                      <span className="text-[10px] text-slate-400 font-mono hidden md:inline">
+                                        = {line.quantity} pages
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : isImp ? (
+                                  /* IMPRESSION : [Mode / Recto-Verso] | [10] pages | [1] ex. */
+                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                    {rectoVersoInfo ? (
+                                      <select
+                                        value={rectoVersoInfo.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, rectoVersoInfo.optionName, e.target.value)}
+                                        className="h-7 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500 shadow-sm"
+                                        title="Mode Recto ou Recto-verso"
+                                      >
+                                        {rectoVersoInfo.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    ) : primaryOptInfo ? (
+                                      <select
+                                        value={primaryOptInfo.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, primaryOptInfo.optionName, e.target.value)}
+                                        className="h-7 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500 shadow-sm"
+                                        title={primaryOptInfo.optionName}
+                                      >
+                                        {primaryOptInfo.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    ) : null}
+
+                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={line.pageCount || 1}
+                                        onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-11 sm:w-12 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                        title="Nombre de pages du document original"
+                                      />
+                                      <span className="text-[11px] text-slate-500 font-semibold">pages</span>
+                                    </div>
+
+                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={line.copiesCount || 1}
+                                        onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-10 sm:w-11 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                        title="Nombre d'exemplaires / tirages"
+                                      />
+                                      <span className="text-[11px] text-slate-500 font-semibold">ex.</span>
+                                    </div>
+                                  </div>
+                                ) : isPage ? (
+                                  /* AUTRES SERVICES DE TYPE PAGE */
+                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={line.pageCount || 1}
+                                        onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-11 sm:w-12 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                      />
+                                      <span className="text-[11px] text-slate-500 font-semibold">pages</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        value={line.copiesCount || 1}
+                                        onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                                        className="w-10 sm:w-11 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                      />
+                                      <span className="text-[11px] text-slate-500 font-semibold">ex.</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* RELIURE, PLASTIFICATION, AUTRES PRESTATIONS, FOURNITURES */
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] text-slate-500 font-semibold">Quantité :</span>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={line.itemType === 'PRODUCT' ? (line.currentStock || 9999) : 9999}
+                                      value={line.quantity}
+                                      onChange={(e) => handleUpdateLine(idx, {
+                                        quantity: Math.max(1, parseInt(e.target.value) || 1),
+                                        pageCount: 1,
+                                        copiesCount: 1
+                                      })}
+                                      className="w-14 h-7 text-xs font-black text-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1 shadow-sm"
+                                    />
+                                    {line.unit && line.unit !== 'unité' && (
+                                      <span className="text-[11px] text-slate-500 font-medium">
+                                        {line.unit}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+
+                              {/* 3. PRIX UNITAIRE */}
+                              <td className="p-2.5 text-right align-middle text-slate-700 dark:text-slate-300 font-medium">
+                                <span className="font-mono text-xs">{formatCurrency(line.appliedUnitPrice)}</span>
+                                {line.isCustomPrice && line.standardUnitPrice !== line.appliedUnitPrice && (
+                                  <span className="text-[9px] text-slate-400 line-through block font-mono">
+                                    {formatCurrency(line.standardUnitPrice)}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 4. TOTAL */}
+                              <td className="p-2.5 text-right align-middle">
+                                {line.discountAmount > 0 ? (
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-slate-400 line-through block font-mono">
+                                      {formatCurrency(line.grossTotal)}
+                                    </span>
+                                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-xs block">
+                                      {formatCurrency(line.netTotal)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="font-mono font-black text-brand-600 dark:text-brand-400 text-xs">
+                                    {formatCurrency(line.netTotal)}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 5. ACTIONS : [Modifier] [Remise] [Supprimer] */}
+                              <td className="p-2.5 text-center align-middle">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    icon={Settings2}
+                                    onClick={() => setEditingLineIndex(idx)}
+                                    className="h-7 px-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100"
+                                    title="Modifier tous les paramètres de cette prestation"
+                                  >
+                                    Modifier
+                                  </Button>
+
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    icon={Tag}
+                                    onClick={() => handleOpenRemiseModal(idx)}
+                                    className={`h-7 px-2 text-[11px] font-bold transition-all ${
+                                      line.discountAmount > 0
+                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-sm'
+                                        : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                                    }`}
+                                    title="Appliquer ou modifier une remise sur cette ligne"
+                                  >
+                                    Remise
+                                  </Button>
+
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    icon={Trash2}
+                                    onClick={() => handleRemoveLine(idx)}
+                                    className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                    title="Supprimer la ligne"
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
 
-              {/* Priority */}
-              <div className="w-full sm:w-48">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Priorité Production
-                </label>
-                <Select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as OrderPriority)}
-                  className="text-xs font-bold"
-                >
-                  <option value="NORMAL">🟢 Normale</option>
-                  <option value="HIGH">🟠 Haute</option>
-                  <option value="URGENT">🔴 Urgente (Express)</option>
-                  <option value="LOW">⚪ Basse</option>
-                </Select>
-              </div>
             </div>
 
-            {/* Client Selection Content */}
-            {clientMode === 'REGISTERED' ? (
-              <div className="space-y-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="flex-1 relative">
-                    <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+            {/* 6. TOTAL TOUJOURS VISIBLE : Sticky Bottom Bar */}
+            <div className="p-3 bg-white dark:bg-slate-950 border-t-2 border-slate-200 dark:border-slate-800 shadow-xl space-y-3 shrink-0">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Financial Totals */}
+                <div className="flex items-center gap-4 sm:gap-6">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Sous-total</span>
+                    <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                      {formatCurrency(totals.grossSubtotal)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Remise</span>
+                    <span className="font-extrabold text-xs text-emerald-600">
+                      {totals.totalDiscount > 0 ? `-${formatCurrency(totals.totalDiscount)}` : '0 GNF'}
+                    </span>
+                  </div>
+
+                  <div className="p-1.5 bg-brand-50 dark:bg-brand-950/60 rounded-xl border border-brand-200 dark:border-brand-800">
+                    <span className="text-[9px] text-brand-600 dark:text-brand-400 font-black uppercase block">
+                      TOTAL À PAYER
+                    </span>
+                    <span className="font-black text-lg text-brand-700 dark:text-brand-300">
+                      {formatCurrency(totals.totalAmount)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Payment Mode Selector */}
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={paymentOption}
+                    onChange={(e) => setPaymentOption(e.target.value as any)}
+                    className="text-xs font-bold py-1 h-8"
+                  >
+                    <option value="FULL">🟢 Paiement 100% (Comptant)</option>
+                    <option value="PARTIAL">🟠 Acompte (Partiel)</option>
+                    <option value="UNPAID">🔴 Non Payé (Crédit)</option>
+                  </Select>
+
+                  {paymentOption === 'PARTIAL' && (
                     <Input
-                      type="text"
-                      placeholder="Rechercher un client (nom, prénom, téléphone, réf. client)..."
-                      value={clientSearchQuery}
-                      onChange={(e) => setClientSearchQuery(e.target.value)}
-                      className="pl-9 text-xs"
+                      type="number"
+                      min={0}
+                      max={totals.totalAmount}
+                      value={partialAmount}
+                      onChange={(e) => setPartialAmount(Number(e.target.value))}
+                      className="w-28 text-xs font-bold h-8"
+                      placeholder="Acompte GNF"
                     />
-                  </div>
+                  )}
 
-                  <div className="flex-1">
-                    <Select
-                      value={selectedPersonId}
-                      onChange={(e) => setSelectedPersonId(e.target.value)}
-                      className="text-xs font-semibold"
-                    >
-                      {filteredPersons.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.firstName} {p.lastName || ''} {p.phone ? `• ${p.phone}` : ''} {p.customerProfile?.customerNumber ? `(${p.customerProfile.customerNumber})` : ''}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
+                  <Select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as any)}
+                    className="text-xs font-bold py-1 h-8"
+                  >
+                    <option value="CASH">💵 Espèces</option>
+                    <option value="ORANGE_MONEY">📱 Orange Money</option>
+                    <option value="MTN_MOMO">📱 MTN Momo</option>
+                    <option value="BANK_TRANSFER">🏦 Virement</option>
+                  </Select>
+                </div>
 
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     variant="outline"
-                    icon={UserPlus}
-                    onClick={() => setIsCreatingNewPerson(true)}
-                    className="text-xs shrink-0 font-bold"
+                    onClick={handleModalClose}
+                    className="font-bold text-xs h-9 px-4"
                   >
-                    + Nouveau
+                    Annuler
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    icon={CheckCircle2}
+                    disabled={isSubmitting}
+                    className="font-black text-xs bg-brand-600 hover:bg-brand-700 px-6 h-9 shadow-md shadow-brand-500/20"
+                  >
+                    {isSubmitting ? 'Enregistrement...' : 'Enregistrer la commande'}
                   </Button>
                 </div>
-
-                {selectedPerson && (
-                  <div className="p-2.5 bg-brand-50/50 dark:bg-brand-950/30 rounded-xl border border-brand-200/60 text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 dark:text-white">
-                        {selectedPerson.firstName} {selectedPerson.lastName || ''}
-                      </span>
-                      {selectedPerson.phone && (
-                        <span className="text-slate-500 font-mono text-[11px]">
-                          📞 {selectedPerson.phone}
-                        </span>
-                      )}
-                      {selectedPerson.customerProfile?.customerNumber && (
-                        <Badge variant="outline" size="sm" className="font-mono text-[10px]">
-                          {selectedPerson.customerProfile.customerNumber}
-                        </Badge>
-                      )}
-                    </div>
-                    <Badge variant="primary" size="sm" className="text-[10px]">
-                      {customerType === 'COMPANY' ? '🏢 Entreprise' : customerType === 'STUDENT' ? '🎓 Étudiant' : '👤 Particulier'}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            ) : (
-              /* WALK-IN CLIENT BANNER & OPTIONAL FIELDS */
-              <div className="space-y-3 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
-                  <Sparkles className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <strong className="font-bold block">Client de passage (Vente directe au comptoir)</strong>
-                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
-                      Aucune fiche client ne sera créée dans la base. La transaction, le chiffre d'affaires, le stock et la caisse seront enregistrés normalement.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <label className="font-medium text-slate-600 dark:text-slate-400 block mb-1">
-                      Nom / Référence libre (Facultatif)
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="ex: Client Comptoir, M. Barry, Lycée..."
-                      value={walkInName}
-                      onChange={(e) => setWalkInName(e.target.value)}
-                      className="text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <PhoneInput
-                      label="Téléphone de contact (Facultatif)"
-                      placeholder="ex: +224 6XX XX XX XX"
-                      value={walkInPhone}
-                      onChange={(e) => setWalkInPhone(e.target.value)}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* 2. Multi-Lines Container */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-brand-500" />
-                Lignes du Dossier Commercial ({lines.length})
-              </h3>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  icon={Plus}
-                  onClick={handleAddServiceLine}
-                  className="text-xs font-bold text-brand-600 border-brand-300 hover:bg-brand-50"
-                >
-                  + Prestation
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  icon={Store}
-                  onClick={handleAddProductLine}
-                  className="text-xs font-bold text-amber-600 border-amber-300 hover:bg-amber-50"
-                >
-                  + Fourniture Boutique
-                </Button>
               </div>
             </div>
-
-            {/* Stock Health Synthesis Banner */}
-            {stockEvaluations.length > 0 && (
-              <div className="space-y-2">
-                {stockStatusSummary.hasInsufficient && (
-                  <div className="p-3.5 bg-rose-500/10 border-2 border-rose-500/30 rounded-2xl text-xs text-rose-900 dark:text-rose-200 space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                        <div>
-                          <strong className="font-extrabold text-sm block text-rose-700 dark:text-rose-300">
-                            ⚠️ Stock Insuffisant — Ravitaillement Nécessaire ({stockStatusSummary.insufficientItems.length} article(s))
-                          </strong>
-                          <p className="text-xs text-rose-800/90 dark:text-rose-300/90 mt-0.5">
-                            Cette commande ne peut pas être exécutée correctement sans réapprovisionnement préalable auprès d'un fournisseur.
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="primary"
-                        icon={Truck}
-                        onClick={() => handleOpenRestockPO(stockStatusSummary.insufficientItems)}
-                        className="bg-rose-600 hover:bg-rose-700 font-bold shrink-0 shadow-sm"
-                      >
-                        Passer une commande fournisseur
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1">
-                      {stockStatusSummary.insufficientItems.map(item => (
-                        <div key={item.productId} className="p-2.5 bg-white/90 dark:bg-slate-900/90 rounded-xl border border-rose-200 dark:border-rose-900/60 text-[11px] space-y-1">
-                          <strong className="block text-slate-900 dark:text-white font-bold truncate">
-                            {item.productName}
-                          </strong>
-                          <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                            <span>Besoin : <strong>{item.totalRequired} {item.stockUnit}</strong></span>
-                            <span>Dispo : <strong>{item.currentStock} {item.stockUnit}</strong></span>
-                          </div>
-                          <div className="flex justify-between text-rose-600 font-bold">
-                            <span>Manquant :</span>
-                            <span>{item.missingQty} {item.stockUnit}</span>
-                          </div>
-                          {item.recommendedPurchaseQty > 0 && (
-                            <div className="text-[10px] text-brand-600 dark:text-brand-400 border-t border-slate-100 dark:border-slate-800 pt-1 flex justify-between">
-                              <span>Achat suggéré :</span>
-                              <span className="font-bold">{item.recommendedPurchaseQty} {item.purchaseUnit}(s)</span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {!stockStatusSummary.hasInsufficient && stockStatusSummary.hasRestockInProgress && (
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Truck className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>
-                        <strong>Ravitaillement en cours :</strong> Une ou plusieurs commandes fournisseurs ouvertes couvrent les besoins en stock de ce dossier commercial.
-                      </span>
-                    </div>
-                    <Badge variant="warning" size="sm" className="shrink-0 font-mono">
-                      BC en attente
-                    </Badge>
-                  </div>
-                )}
-
-                {!stockStatusSummary.hasInsufficient && stockStatusSummary.hasLowStock && (
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>
-                        <strong>Stock faible :</strong> La commande passera sous le seuil d'alerte ({stockStatusSummary.lowStockItems.map(i => `${i.productName}: reste ${i.remainingStockAfter}/${i.minStockAlert}`).join(', ')}).
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      icon={Truck}
-                      onClick={() => handleOpenRestockPO(stockStatusSummary.lowStockItems)}
-                      className="text-xs font-bold text-amber-700 border-amber-300 hover:bg-amber-100 shrink-0"
-                    >
-                      Ravitailler le stock
-                    </Button>
-                  </div>
-                )}
-
-                {stockStatusSummary.allSufficient && (
-                  <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>
-                      <strong>Disponibilité vérifiée :</strong> Tous les articles et consommations internes sont couverts par le stock disponible.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Render Each Line */}
-            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
-              {calculatedLines.map((line, idx) => {
-                const isService = line.itemType === 'SERVICE';
-
-                return (
-                  <div
-                    key={line.id}
-                    className="p-4 bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
-                  >
-                    {/* Line Header */}
-                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant={isService ? 'primary' : 'warning'}
-                          size="sm"
-                          className="font-bold text-[10px]"
-                        >
-                          {isService ? '🛠️ Prestation' : '🛒 Boutique / Stock'}
-                        </Badge>
-                        <span className="text-xs font-bold text-slate-500">
-                          Ligne #{idx + 1}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-900 dark:text-white">
-                          Total : {formatCurrency(line.netTotal)}
-                        </span>
-                        {lines.length > 1 && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            icon={Trash2}
-                            onClick={() => handleRemoveLine(idx)}
-                            className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700"
-                            title="Supprimer cette ligne"
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Selector & Quantity Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
-                      {isService ? (
-                        <div className="sm:col-span-12 space-y-3">
-                          {/* Visual Prestation / Service Cards Selection */}
-                          <div>
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                              <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                                <span>🛠️</span> Prestation / Service *
-                              </label>
-                              <span className="text-[11px] text-slate-500 font-medium">
-                                {(tenantServices.length > 0 ? tenantServices : state.services.filter(s => s.isActive)).length} prestation(s) disponible(s)
-                              </span>
-                            </div>
-
-                            {/* Service Cards Responsive Grid */}
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                              {(tenantServices.length > 0 ? tenantServices : state.services.filter(s => s.isActive)).map((srv) => {
-                                const isSelected = line.serviceId === srv.id;
-                                const visuals = getServiceVisuals(srv);
-
-                                return (
-                                  <button
-                                    key={srv.id}
-                                    type="button"
-                                    onClick={() => {
-                                      const autoDept = getDepartmentForService(srv);
-                                      const specGroups = getServiceSpecificationGroups(srv);
-                                      const defaultNotes = specGroups.map(g => {
-                                        const def = g.defaultValue || resolveSpecOption(g.options[0])?.name || '';
-                                        return `${g.name}: ${def}`;
-                                      }).join(' | ');
-                                      handleUpdateLine(idx, {
-                                        serviceId: srv.id,
-                                        unit: srv.unit,
-                                        assignedDepartment: autoDept || line.assignedDepartment,
-                                        notes: defaultNotes,
-                                      });
-                                    }}
-                                    className={`relative flex flex-col justify-between p-3 rounded-xl border-2 text-left transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-brand-500/50 cursor-pointer ${
-                                      isSelected
-                                        ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/40 shadow-sm ring-2 ring-brand-500/20 scale-[1.01]'
-                                        : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:border-brand-300 dark:hover:border-slate-700 hover:bg-slate-50/80 dark:hover:bg-slate-900 hover:shadow-xs'
-                                    }`}
-                                  >
-                                    {/* Selected Badge Checkmark */}
-                                    {isSelected && (
-                                      <span className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 rounded-full bg-brand-600 text-white shadow-xs">
-                                        <Check className="w-3 h-3 stroke-[3]" />
-                                      </span>
-                                    )}
-
-                                    {/* Icon & Category Tag */}
-                                    <div className="flex items-start justify-between gap-1.5 mb-1.5">
-                                      <span className="text-2xl leading-none select-none filter drop-shadow-xs">
-                                        {visuals.icon}
-                                      </span>
-                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border truncate max-w-[85px] ${visuals.badgeColor}`}>
-                                        {visuals.categoryTag}
-                                      </span>
-                                    </div>
-
-                                    {/* Service Name */}
-                                    <div className="mt-1 flex-1">
-                                      <span className={`block text-xs leading-snug line-clamp-2 ${
-                                        isSelected ? 'text-brand-950 dark:text-brand-100 font-extrabold' : 'text-slate-800 dark:text-slate-200 font-bold'
-                                      }`}>
-                                        {srv.name}
-                                      </span>
-                                    </div>
-
-                                    {/* Price & Unit Pill */}
-                                    <div className="mt-2.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
-                                      <span className="font-black text-brand-600 dark:text-brand-400">
-                                        {formatCurrency(srv.basePrice)}
-                                      </span>
-                                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-                                        / {srv.unit}
-                                      </span>
-                                    </div>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Dynamic Parameters & Specifications for Selected Service (Horizontal Dropdowns) */}
-                          {line.service && (() => {
-                            const srv = line.service;
-                            const specGroups = getServiceSpecificationGroups(srv);
-                            const specsImpact = resolveServiceSpecsImpact(srv, line.notes, state.products);
-
-                            // Helper to extract or fallback the current selected value for a group
-                            const getGroupValue = (group: ServiceSpecificationGroup) => {
-                              const currentNotes = line.notes || '';
-                              const regex = new RegExp(`${group.name}\\s*:\\s*([^|\\n,]+)`, 'i');
-                              const match = currentNotes.match(regex);
-                              const optNames = group.options.map(o => resolveSpecOption(o).name);
-                              if (match && match[1]) {
-                                const found = match[1].trim();
-                                if (optNames.some(n => n.toLowerCase() === found.toLowerCase())) {
-                                  return optNames.find(n => n.toLowerCase() === found.toLowerCase()) || found;
-                                }
-                              }
-                              return group.defaultValue || optNames[0] || '';
-                            };
-
-                            const handleGroupChange = (groupName: string, newValue: string) => {
-                              const currentNotes = line.notes || '';
-                              const regex = new RegExp(`(${groupName}\\s*:\\s*)([^|\\n,]+)`, 'i');
-                              let updated = '';
-                              if (regex.test(currentNotes)) {
-                                updated = currentNotes.replace(regex, `$1${newValue}`);
-                              } else {
-                                updated = currentNotes ? `${currentNotes} | ${groupName}: ${newValue}` : `${groupName}: ${newValue}`;
-                              }
-                              handleUpdateLine(idx, { notes: updated });
-                            };
-
-                            return (
-                              <div className="p-3 bg-slate-50/90 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-3 text-xs">
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2">
-                                  <div className="flex items-center gap-2">
-                                    <Settings2 className="w-4 h-4 text-brand-500" />
-                                    <span className="font-bold text-slate-800 dark:text-slate-200 text-[11px]">
-                                      Paramètres & Spécifications de la prestation
-                                    </span>
-                                    <Badge variant="primary" size="sm" className="font-bold text-[10px]">
-                                      Tarif : {formatCurrency(specsImpact.standardUnitPrice)} / {srv.unit}
-                                    </Badge>
-                                  </div>
-
-                                  {srv.estimatedDurationMinutes > 0 && (
-                                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                                      <Clock className="w-3 h-3 text-slate-400" />
-                                      Délai estimé : <strong>~{srv.estimatedDurationMinutes} min</strong>
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Horizontal Dropdowns Grid */}
-                                {specGroups.length > 0 && (
-                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 items-end">
-                                    {specGroups.map((group) => {
-                                      const val = getGroupValue(group);
-                                      return (
-                                        <div key={group.name} className="space-y-1">
-                                          <label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 block uppercase tracking-wider truncate">
-                                            {group.name} :
-                                          </label>
-                                          <Select
-                                            value={val}
-                                            onChange={(e) => handleGroupChange(group.name, e.target.value)}
-                                            className="text-xs h-8 bg-white dark:bg-slate-950 font-bold border-slate-200 dark:border-slate-700 shadow-2xs"
-                                          >
-                                            {group.options.map((optRaw) => {
-                                              const opt = resolveSpecOption(optRaw);
-                                              let label = opt.name;
-                                              if (opt.unitPrice !== undefined && opt.unitPrice > 0) {
-                                                label += ` (${formatCurrency(opt.unitPrice)})`;
-                                              } else if (opt.priceAdjustment !== undefined && opt.priceAdjustment !== 0) {
-                                                label += ` (${opt.priceAdjustment > 0 ? '+' : ''}${formatCurrency(opt.priceAdjustment)})`;
-                                              }
-                                              return (
-                                                <option key={opt.name} value={opt.name}>
-                                                  {label}
-                                                </option>
-                                              );
-                                            })}
-                                          </Select>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-
-                                {/* Consumable linked badges indicator with Recto-verso sheet conversion */}
-                                {specsImpact.consumables.length > 0 && (
-                                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px] text-slate-500">
-                                    <span className="font-semibold text-slate-600 dark:text-slate-400">📦 Consommables associés :</span>
-                                    {specsImpact.consumables.map((c, cIdx) => {
-                                      const effectiveQty = calculateEffectiveServiceConsumableQty(srv, line, c);
-                                      return (
-                                        <span key={cIdx} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 rounded-md font-medium text-[10px]">
-                                          {c.productName} ({effectiveQty} {c.unit})
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-
-                                {/* File Requirement Notice if applicable */}
-                                {srv.requiresFile && (
-                                  <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-between gap-2 text-[11px] text-amber-900 dark:text-amber-200">
-                                    <span className="flex items-center gap-1.5 font-medium">
-                                      <Paperclip className="w-3.5 h-3.5 text-amber-600" />
-                                      <span><strong>Fichier requis :</strong> Cette prestation nécessite le document ou fichier numérique du client.</span>
-                                    </span>
-                                    <span className="text-[10px] bg-amber-200/60 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded font-bold shrink-0">
-                                      Fichier à fournir
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Instructions for workshop / custom notes */}
-                                <div>
-                                  <Input
-                                    type="text"
-                                    placeholder="Instructions ou détails supplémentaires pour l'atelier (ex: recto-verso, reliure spirale noire...)"
-                                    value={line.notes || ''}
-                                    onChange={(e) => handleUpdateLine(idx, { notes: e.target.value })}
-                                    className="text-xs h-8 bg-white dark:bg-slate-950"
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })()}
-
-                          {/* Quantity & Pôle Grid for Service */}
-                          {(() => {
-                            const srv = state.services.find(s => s.id === line.serviceId) || tenantServices.find(s => s.id === line.serviceId);
-                            const srvName = (srv?.name || '').toLowerCase();
-                            const isPageBased = (
-                              (line.unit || '').toLowerCase() === 'page' ||
-                              (line.unit || '').toLowerCase() === 'feuille' ||
-                              srvName.includes('photocopi') ||
-                              srvName.includes('impress') ||
-                              srvName.includes('scan') ||
-                              srvName.includes('tirage')
-                            );
-
-                            if (isPageBased) {
-                              const pages = line.pageCount ?? 1;
-                              const copies = line.copiesCount ?? 1;
-                              const totalPages = pages * copies;
-
-                              return (
-                                <div className="space-y-2 pt-1">
-                                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
-                                    {/* Pages du document */}
-                                    <div className="sm:col-span-6">
-                                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
-                                        📄 Pages du document *
-                                      </label>
-                                      <div className="flex items-center gap-1.5">
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleUpdateLine(idx, { pageCount: Math.max(1, pages - 1) })}
-                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                                        >
-                                          -
-                                        </Button>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          value={pages}
-                                          onChange={(e) => handleUpdateLine(idx, { pageCount: parseInt(e.target.value) || 1 })}
-                                          className="h-11 text-center text-base sm:text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500"
-                                        />
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleUpdateLine(idx, { pageCount: pages + 1 })}
-                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                                        >
-                                          +
-                                        </Button>
-                                      </div>
-                                    </div>
-
-                                    {/* Nombre d'exemplaires */}
-                                    <div className="sm:col-span-6">
-                                      <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
-                                        📑 Nombre d'exemplaires *
-                                      </label>
-                                      <div className="flex items-center gap-1.5">
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleUpdateLine(idx, { copiesCount: Math.max(1, copies - 1) })}
-                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                                        >
-                                          -
-                                        </Button>
-                                        <Input
-                                          type="number"
-                                          min="1"
-                                          value={copies}
-                                          onChange={(e) => handleUpdateLine(idx, { copiesCount: parseInt(e.target.value) || 1 })}
-                                          className="h-11 text-center text-base sm:text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500"
-                                        />
-                                        <Button
-                                          type="button"
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleUpdateLine(idx, { copiesCount: copies + 1 })}
-                                          className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                                        >
-                                          +
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Dynamic Live Calculation Card */}
-                                  {(() => {
-                                    const isRectoVerso = (line.notes || '').toLowerCase().includes('recto-verso') || (line.notes || '').toLowerCase().includes('recto verso');
-                                    const sheetsPerCopy = isRectoVerso ? Math.ceil(pages / 2) : pages;
-                                    const totalSheets = sheetsPerCopy * copies;
-
-                                    return (
-                                      <div className="p-2.5 bg-brand-50/80 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <span className="font-extrabold text-brand-700 dark:text-brand-300 flex items-center gap-1">
-                                            🧮 Total à produire :
-                                          </span>
-                                          <span className="font-bold text-slate-800 dark:text-slate-200">
-                                            {pages} page(s) × {copies} ex. = <strong className="text-brand-600 dark:text-brand-400 font-black text-sm">{totalPages} {line.unit}s au total</strong>
-                                            {isRectoVerso && (
-                                              <span className="ml-1.5 px-2 py-0.5 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700 rounded-md font-extrabold text-[11px]">
-                                                📄 {totalSheets} feuille(s) en Recto-verso ({sheetsPerCopy} f./ex.)
-                                              </span>
-                                            )}
-                                          </span>
-                                        </div>
-                                        <div className="text-[11px] text-slate-500 font-medium">
-                                          Tarif : {totalPages} × {formatCurrency(line.appliedUnitPrice)} = <span className="font-black text-slate-900 dark:text-white">{formatCurrency(line.netTotal)}</span>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end pt-1">
-                                {/* Quantity Selection */}
-                                <div className="sm:col-span-12">
-                                  <label className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
-                                    Quantité ({line.unit}) *
-                                  </label>
-                                  <div className="flex items-center gap-1.5">
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleUpdateLine(idx, { quantity: Math.max(1, line.quantity - 1) })}
-                                      className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                                    >
-                                      -
-                                    </Button>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={line.quantity}
-                                      onChange={(e) => handleUpdateLine(idx, { quantity: parseInt(e.target.value) || 1 })}
-                                      className="h-11 text-center text-base sm:text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm focus:ring-2 focus:ring-emerald-500"
-                                    />
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleUpdateLine(idx, { quantity: line.quantity + 1 })}
-                                      className="h-11 w-11 p-0 shrink-0 text-lg font-black border-slate-300 dark:border-slate-700 shadow-sm hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
-                                    >
-                                      +
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="sm:col-span-6">
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                              Article de Stock / Boutique *
-                            </label>
-                            <Select
-                              value={line.productId}
-                              onChange={(e) => handleUpdateLine(idx, { productId: e.target.value })}
-                              className="text-xs"
-                            >
-                              {state.products.filter(p => p.isActive).map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} — Dispo : {p.currentStock} {p.unit}s
-                                </option>
-                              ))}
-                            </Select>
-                          </div>
-
-                          {/* Quantity & Unit Selection */}
-                          <div className="sm:col-span-3">
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                              Quantité ({line.unit}) *
-                            </label>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUpdateLine(idx, { quantity: Math.max(1, line.quantity - 1) })}
-                                className="h-8 w-8 p-0 shrink-0"
-                              >
-                                -
-                              </Button>
-                              <Input
-                                type="number"
-                                min="1"
-                                value={line.quantity}
-                                onChange={(e) => handleUpdateLine(idx, { quantity: parseInt(e.target.value) || 1 })}
-                                className="h-8 text-center text-xs font-bold"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUpdateLine(idx, { quantity: line.quantity + 1 })}
-                                className="h-8 w-8 p-0 shrink-0"
-                              >
-                                +
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* Packaging / Unit */}
-                          <div className="sm:col-span-3">
-                            <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                              Conditionnement
-                            </label>
-                            <div className="flex items-center gap-1 pt-1">
-                              <label className="text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={line.usePurchaseUnit}
-                                  onChange={(e) => handleUpdateLine(idx, { usePurchaseUnit: e.target.checked })}
-                                  className="rounded text-brand-600"
-                                />
-                                Vente en Carton
-                              </label>
-                            </div>
-                          </div>
-                        </>
-                      )}
-
-                      {/* Product Live Stock Status Pill */}
-                      {line.product && (() => {
-                        const evalItem = stockEvaluations.find(e => e.productId === line.productId);
-                        if (!evalItem) return null;
-
-                        return (
-                          <div className="sm:col-span-12">
-                            <div className="p-2 rounded-xl border text-xs flex flex-wrap items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50">
-                              <div className="flex items-center gap-2">
-                                <Boxes className="w-3.5 h-3.5 text-slate-500" />
-                                <span className="text-slate-600 dark:text-slate-400">
-                                  Stock actuel : <strong>{evalItem.currentStock} {evalItem.stockUnit}</strong>
-                                </span>
-                                <span>•</span>
-                                <span className="text-slate-600 dark:text-slate-400">
-                                  Sortie prévue : <strong>{line.stockDeduction || line.quantity} {evalItem.stockUnit}</strong>
-                                </span>
-                              </div>
-
-                              <div>
-                                {evalItem.status === 'INSUFFICIENT' && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Badge variant="danger" size="sm" className="font-bold text-[10px]">
-                                      🔴 Insuffisant (Manque {evalItem.missingQty} {evalItem.stockUnit})
-                                    </Badge>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenRestockPO([evalItem])}
-                                      className="text-[11px] text-rose-600 hover:underline font-bold flex items-center gap-0.5 ml-1"
-                                    >
-                                      <Truck className="w-3 h-3" /> Commander
-                                    </button>
-                                  </div>
-                                )}
-                                {evalItem.status === 'RESTOCK_IN_PROGRESS' && (
-                                  <Badge variant="warning" size="sm" className="font-bold text-[10px]">
-                                    ⚠️ Ravitaillement en cours (+{evalItem.pendingIncomingQty} attendus)
-                                  </Badge>
-                                )}
-                                {evalItem.status === 'LOW_STOCK' && (
-                                  <Badge variant="warning" size="sm" className="font-bold text-[10px]">
-                                    🟠 Stock faible après commande (Reste {evalItem.remainingStockAfter})
-                                  </Badge>
-                                )}
-                                {evalItem.status === 'SUFFICIENT' && (
-                                  <Badge variant="success" size="sm" className="font-bold text-[10px]">
-                                    🟢 Stock suffisant
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Service Internal Consumptions Pill */}
-                      {isService && (() => {
-                        const srv = line.service;
-                        if (!srv) return null;
-                        const consumableConfigs = srv.consumables && srv.consumables.length > 0
-                          ? srv.consumables.map(c => ({
-                              productId: c.productId,
-                              quantityPerUnit: c.quantityPerUnit,
-                              isClientSupplied: c.isClientSupplied
-                            }))
-                          : (srv.consumptions || []).map(c => ({
-                              productId: c.productId,
-                              quantityPerUnit: c.quantity,
-                              isClientSupplied: false
-                            }));
-
-                        if (consumableConfigs.length === 0) return null;
-
-                        return (
-                          <div className="sm:col-span-12">
-                            <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-900/50 space-y-1.5">
-                              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-semibold text-[11px]">
-                                <span className="flex items-center gap-1.5">
-                                  <Wrench className="w-3.5 h-3.5 text-brand-500" />
-                                  <span>Consommables internes requis pour {line.quantity} {line.unit} :</span>
-                                </span>
-                                <span className="text-[10px] text-brand-600 dark:text-brand-400 font-medium">
-                                  Stock Consommables Prestations
-                                </span>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                {consumableConfigs.map(c => {
-                                  if (c.isClientSupplied) return null;
-                                  const prod = state.products.find(p => p.id === c.productId);
-                                  if (!prod) return null;
-                                  const required = Number((line.quantity * c.quantityPerUnit).toFixed(4));
-                                  const evalItem = stockEvaluations.find(e => e.productId === prod.id);
-                                  const isMissing = evalItem?.status === 'INSUFFICIENT';
-
-                                  return (
-                                    <div
-                                      key={c.productId}
-                                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium border flex items-center gap-1.5 ${
-                                        isMissing
-                                          ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 font-bold'
-                                          : 'bg-white border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300 shadow-sm'
-                                      }`}
-                                    >
-                                      <span>{prod.name} : <strong>{required} {prod.stockUnit || prod.unit}</strong></span>
-                                      {isMissing ? (
-                                        <span className="text-rose-600 font-extrabold flex items-center gap-1">
-                                          (🔴 Manque {evalItem?.missingQty})
-                                          <button
-                                            type="button"
-                                            onClick={() => handleOpenRestockPO(evalItem ? [evalItem] : undefined)}
-                                            className="underline hover:text-rose-800"
-                                          >
-                                            BC
-                                          </button>
-                                        </span>
-                                      ) : (
-                                        <span className="text-emerald-600 font-bold">(🟢 Stock Atelier : {prod.prestationStock !== undefined ? prod.prestationStock : prod.currentStock})</span>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* Custom Unit Price & Discount Box */}
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-slate-500">Tarif normal de référence :</span>
-                          <strong className="text-slate-700 dark:text-slate-300">
-                            {formatCurrency(line.standardUnitPrice)} / {line.unit}
-                          </strong>
-                        </div>
-
-                        <label className="flex items-center gap-2 font-bold text-brand-600 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={line.isCustomPrice}
-                            onChange={(e) => {
-                              handleUpdateLine(idx, {
-                                isCustomPrice: e.target.checked,
-                                customUnitPrice: e.target.checked ? line.standardUnitPrice : undefined
-                              });
-                            }}
-                            className="rounded text-brand-600"
-                          />
-                          Appliquer un Tarif Personnalisé
-                        </label>
-                      </div>
-
-                      {/* Custom Price Fields */}
-                      {line.isCustomPrice && (
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                          <div className="sm:col-span-4">
-                            <label className="text-[10px] font-bold text-brand-700 dark:text-brand-300 block mb-1">
-                              Nouveau Tarif Unitaire Appliqué (GNF) *
-                            </label>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={line.customUnitPrice ?? line.standardUnitPrice}
-                              onChange={(e) => handleUpdateLine(idx, { customUnitPrice: parseInt(e.target.value) || 0 })}
-                              className="text-xs font-bold text-brand-600 h-8"
-                            />
-                          </div>
-
-                          <div className="sm:col-span-4">
-                            <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                              Motif Obligatoire de la Remise *
-                            </label>
-                            <Select
-                              value={line.discountReasonCategory}
-                              onChange={(e) => handleUpdateLine(idx, { discountReasonCategory: e.target.value as any })}
-                              className="text-xs h-8"
-                            >
-                              <option value="COMMERCIAL_NEGOTIATION">Négociation commerciale</option>
-                              <option value="VOLUME">Gros volume</option>
-                              <option value="LOYALTY">Client fidèle</option>
-                              <option value="INSTITUTIONAL">Client institutionnel / Partenaire</option>
-                              <option value="PROMOTION">Offre promotionnelle</option>
-                              <option value="OTHER">Autre motif</option>
-                            </Select>
-                          </div>
-
-                          {line.discountReasonCategory === 'OTHER' && (
-                            <div className="sm:col-span-4">
-                              <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                                Précisez le motif *
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="ex: Accord direction..."
-                                value={line.discountReasonCustom}
-                                onChange={(e) => handleUpdateLine(idx, { discountReasonCustom: e.target.value })}
-                                className="text-xs h-8"
-                              />
-                            </div>
-                          )}
-
-                          {line.discountAmount > 0 && (
-                            <div className="sm:col-span-12 flex items-center justify-between p-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-lg text-xs text-emerald-800 dark:text-emerald-300">
-                              <span>
-                                Remise calculée : <strong>{formatCurrency(line.discountAmount)}</strong> ({line.discountPercent}%)
-                              </span>
-                              {!line.permCheck.allowed && (
-                                <span className="font-bold text-amber-700 flex items-center gap-1">
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                  ⚠️ Remise importante &gt; limite autorisée
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 3. Global Financial Summary & Payment Configuration */}
-          <div className="p-4 bg-slate-900 text-white rounded-2xl space-y-4 shadow-xl border border-slate-800">
-            {/* Financial Totals Header */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs border-b border-slate-800 pb-3">
-              <div>
-                <span className="text-slate-400 block text-[11px]">Sous-Total Brut</span>
-                <strong className="text-slate-200">{formatCurrency(totals.grossSubtotal)}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[11px]">Total Remises</span>
-                <strong className="text-emerald-400">-{formatCurrency(totals.totalDiscount)}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[11px]">Total Net à Payer</span>
-                <strong className="text-base font-black text-brand-400">{formatCurrency(totals.totalAmount)}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[11px]">Reste à Payer (Créance)</span>
-                <strong className={`text-base font-black ${totals.dueAmount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {formatCurrency(totals.dueAmount)}
-                </strong>
-              </div>
-            </div>
-
-            {/* Payment Situation Choice: 3 Options */}
-            <div>
-              <label className="text-xs font-bold text-slate-300 block mb-2">
-                Situation du Paiement à la Création *
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* Option 1: NON PAYÉ */}
-                <div
-                  onClick={() => setPaymentOption('UNPAID')}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    paymentOption === 'UNPAID'
-                      ? 'bg-amber-950/40 border-amber-500 ring-1 ring-amber-500'
-                      : 'bg-slate-800/60 border-slate-700 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs text-amber-300">1. Non Payé</span>
-                    <input
-                      type="radio"
-                      name="paymentOption"
-                      checked={paymentOption === 'UNPAID'}
-                      onChange={() => setPaymentOption('UNPAID')}
-                      className="text-amber-500"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    0 GNF versé • Créance client intégrale ({formatCurrency(totals.totalAmount)})
-                  </p>
-                </div>
-
-                {/* Option 2: PAYÉ EN TOTALITÉ */}
-                <div
-                  onClick={() => setPaymentOption('FULL')}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    paymentOption === 'FULL'
-                      ? 'bg-emerald-950/40 border-emerald-500 ring-1 ring-emerald-500'
-                      : 'bg-slate-800/60 border-slate-700 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs text-emerald-300">2. Payé en Totalité</span>
-                    <input
-                      type="radio"
-                      name="paymentOption"
-                      checked={paymentOption === 'FULL'}
-                      onChange={() => setPaymentOption('FULL')}
-                      className="text-emerald-500"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    {formatCurrency(totals.totalAmount)} versé • 0 GNF de dette restante
-                  </p>
-                </div>
-
-                {/* Option 3: PAIEMENT PARTIEL */}
-                <div
-                  onClick={() => {
-                    setPaymentOption('PARTIAL');
-                    if (partialAmount === 0) {
-                      setPartialAmount(Math.round(totals.totalAmount / 2));
-                    }
-                  }}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    paymentOption === 'PARTIAL'
-                      ? 'bg-brand-950/40 border-brand-500 ring-1 ring-brand-500'
-                      : 'bg-slate-800/60 border-slate-700 hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs text-brand-300">3. Paiement Partiel</span>
-                    <input
-                      type="radio"
-                      name="paymentOption"
-                      checked={paymentOption === 'PARTIAL'}
-                      onChange={() => {
-                        setPaymentOption('PARTIAL');
-                        if (partialAmount === 0) {
-                          setPartialAmount(Math.round(totals.totalAmount / 2));
-                        }
-                      }}
-                      className="text-brand-500"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    Avance / Acompte • Reste dû en créance
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* If PARTIAL: Amount input with quick buttons */}
-            {paymentOption === 'PARTIAL' && (
-              <div className="p-3 bg-slate-800/90 rounded-xl border border-brand-500/40 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-brand-300">
-                    Montant Versé / Acompte (GNF) *
-                  </label>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setPartialAmount(Math.round(totals.totalAmount * 0.25))}
-                      className="px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-[10px] text-slate-300 font-bold"
-                    >
-                      25%
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPartialAmount(Math.round(totals.totalAmount * 0.50))}
-                      className="px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-[10px] text-slate-300 font-bold"
-                    >
-                      50%
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPartialAmount(Math.round(totals.totalAmount * 0.75))}
-                      className="px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-[10px] text-slate-300 font-bold"
-                    >
-                      75%
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-                  <Input
-                    type="number"
-                    min="0"
-                    max={totals.totalAmount}
-                    value={partialAmount}
-                    onChange={(e) => setPartialAmount(parseInt(e.target.value) || 0)}
-                    className="font-black text-base text-slate-900 bg-white"
-                  />
-                  <div className="text-xs text-slate-300 flex items-center justify-between p-2 bg-slate-900/60 rounded-lg">
-                    <span>Créance restante :</span>
-                    <strong className="text-amber-400 font-mono font-bold text-sm">
-                      {formatCurrency(totals.dueAmount)}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Payment Method & Destination Account (Only when paymentAmount > 0) */}
-            {paymentAmount > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800">
-                <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">
-                    Mode de Règlement *
-                  </label>
-                  <Select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                    className="text-xs font-semibold text-slate-900 bg-white"
-                  >
-                    <option value="CASH">💵 Espèces (Caisse physique)</option>
-                    <option value="ORANGE_MONEY">📱 Orange Money</option>
-                    <option value="MTN_MOMO">📱 MTN MoMo</option>
-                    <option value="BANK_TRANSFER">🏦 Virement Bancaire</option>
-                    <option value="CARD">💳 Carte Bancaire</option>
-                    <option value="CHECK">📑 Chèque</option>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">
-                    Compte Financier de Destination *
-                  </label>
-                  <Select
-                    value={effectiveFinancialAccountId}
-                    onChange={(e) => setSelectedFinancialAccountId(e.target.value)}
-                    className="text-xs font-semibold text-slate-900 bg-white"
-                  >
-                    {tenantAccounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({acc.type}) — Solde : {formatCurrency(acc.currentBalance || 0)}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            {/* Additional Details: Due Date & Instructions */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">
-                  Date de Livraison Prévue
-                </label>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="text-xs text-slate-900 bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">
-                  Référence / Note de Paiement (Facultatif)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="ex: Reçu OM #94827 / Chèque N°..."
-                  value={paymentReference}
-                  onChange={(e) => setPaymentReference(e.target.value)}
-                  className="text-xs text-slate-900 bg-white"
-                />
-              </div>
-            </div>
-
-            {/* Cash Warning if Closed */}
-            {paymentAmount > 0 && (paymentMethod === 'CASH' || effectiveFinancialAccount?.type === 'CASH') && !activeCashSession && (
-              <div className="p-2.5 bg-amber-500/20 border border-amber-500/40 rounded-xl flex items-center justify-between text-xs text-amber-200">
-                <span className="flex items-center gap-1.5 font-bold">
-                  <Lock className="w-4 h-4 text-amber-400" />
-                  Caisse principale fermée. Ouvrez la caisse pour enregistrer ce paiement en espèces.
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="primary"
-                  onClick={() => setIsOpenCashModalOpen(true)}
-                  className="bg-amber-600 hover:bg-amber-700 text-xs font-bold"
-                >
-                  Ouvrir Caisse
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* 4. Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Button variant="outline" type="button" onClick={handleModalClose}>
-              Annuler
-            </Button>
-            <Button
-              variant="primary"
-              icon={CheckCircle2}
-              type="submit"
-              disabled={isSubmitting || calculatedLines.some(l => l.permCheck?.allowed === false)}
-              className="bg-brand-600 hover:bg-brand-700 font-extrabold px-6"
-            >
-              {isSubmitting ? 'Création du dossier en cours...' : 'Créer le Dossier Commercial & Valider'}
-            </Button>
-          </div>
-        </form>
+          </form>
         )}
       </Modal>
 
-      {/* Modal: New Client Quick Creation */}
-      {isCreatingNewPerson && (
+      {/* 3. MODAL / PANNEAU D'ÉDITION DES PARAMÈTRES D'UNE LIGNE (OUVERT AU CLIC SUR MODIFIER) */}
+      {editingLineIndex !== null && currentEditingLine && (
         <Modal
-          isOpen={isCreatingNewPerson}
-          onClose={() => setIsCreatingNewPerson(false)}
-          title="Création Rapide d'un Client"
-          maxWidth="sm"
+          isOpen={editingLineIndex !== null}
+          onClose={() => setEditingLineIndex(null)}
+          title={`Paramètres Détaillés — ${currentEditingLine.name}`}
+          maxWidth="lg"
         >
-          <div className="space-y-4 pt-1">
-            <Input
-              label="Nom / Raison Sociale *"
-              placeholder="ex: Entreprise GSB / M. Bah"
-              value={newPersonName}
-              onChange={(e) => setNewPersonName(e.target.value)}
-              required
-            />
-            <PhoneInput
-              label="Téléphone"
-              placeholder="+224 ..."
-              value={newPersonPhone}
-              onChange={(e) => setNewPersonPhone(e.target.value)}
-            />
-            <Select
-              label="Type de Client"
-              value={newPersonType}
-              onChange={(e) => setNewPersonType(e.target.value as any)}
-            >
-              <option value="ALL">Particulier Standard</option>
-              <option value="COMPANY">Entreprise / Institution</option>
-              <option value="STUDENT">Étudiant / Apprenant</option>
-            </Select>
+          <div className="space-y-4 text-xs pt-1">
+            {/* Header info */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex justify-between items-center">
+              <div>
+                <Badge variant={currentEditingLine.itemType === 'SERVICE' ? 'primary' : 'warning'} size="sm" className="font-bold">
+                  {currentEditingLine.itemType === 'SERVICE' ? 'Prestation' : 'Article Stock Central'}
+                </Badge>
+                <strong className="text-slate-900 dark:text-white font-bold block text-sm mt-0.5">
+                  {currentEditingLine.name}
+                </strong>
+              </div>
+              <div className="text-right font-mono">
+                <span className="text-slate-400 block text-[10px]">P.U. Appliqué</span>
+                <span className="font-black text-sm text-brand-600">{formatCurrency(currentEditingLine.appliedUnitPrice)}</span>
+              </div>
+            </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setIsCreatingNewPerson(false)}>
-                Annuler
-              </Button>
-              <Button variant="primary" onClick={handleCreateNewPerson} className="font-bold">
-                Enregistrer Client
+            {/* PRESTATION SPECIFICATIONS & OPTIONS */}
+            {currentEditingLine.itemType === 'SERVICE' && currentEditingLine.service && (
+              <div className="space-y-3 p-3 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <h4 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <Settings2 className="w-4 h-4 text-brand-500" />
+                  Spécifications & Caractéristiques
+                </h4>
+
+                {/* Service Specs Groups */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {getServiceSpecificationGroups(currentEditingLine.service).map(group => {
+                    const currentSelectedOpt = getSelectedSpecOption(group, currentEditingLine.notes);
+                    const currentSelectedVal = currentSelectedOpt?.name || (typeof group.options[0] === 'string' ? group.options[0] : group.options[0]?.name) || '';
+                    return (
+                      <div key={group.name} className="space-y-1">
+                        <label className="font-semibold text-slate-700 dark:text-slate-300 block text-[11px]">
+                          {group.name}
+                        </label>
+                        <Select
+                          value={currentSelectedVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const prevNotes = currentEditingLine.notes || '';
+                            const parts = prevNotes.split(' | ').filter(p => !p.startsWith(`${group.name}:`));
+                            parts.push(`${group.name}: ${val}`);
+                            handleUpdateLine(editingLineIndex, { notes: parts.join(' | ') });
+                          }}
+                          className="text-xs font-medium"
+                        >
+                          {group.options.map(opt => {
+                            const resolved = resolveSpecOption(opt);
+                            return (
+                              <option key={resolved.name} value={resolved.name}>
+                                {resolved.name} {resolved.unitPrice ? `(${formatCurrency(resolved.unitPrice)})` : ''}
+                              </option>
+                            );
+                          })}
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Quantité Dynamique selon la prestation */}
+                {isPageServiceLine(currentEditingLine) ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <div>
+                        <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                          Nombre de pages doc original
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={currentEditingLine.pageCount || 1}
+                          onChange={(e) => handleUpdateLine(editingLineIndex, { pageCount: Number(e.target.value) })}
+                          className="text-xs font-bold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                          Nombre de tirages / exemplaires
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={currentEditingLine.copiesCount || 1}
+                          onChange={(e) => handleUpdateLine(editingLineIndex, { copiesCount: Number(e.target.value) })}
+                          className="text-xs font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-2 bg-brand-50/50 dark:bg-brand-950/30 rounded-lg text-center font-bold text-brand-700 dark:text-brand-300">
+                      Quantité Totale Facturée : {(currentEditingLine.pageCount || 1)} page(s) × {(currentEditingLine.copiesCount || 1)} tirage(s) = {currentEditingLine.quantity} {currentEditingLine.unit}s
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                        Quantité ({currentEditingLine.unit || 'unité'})
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={currentEditingLine.quantity || 1}
+                        onChange={(e) => handleUpdateLine(editingLineIndex, {
+                          quantity: Number(e.target.value),
+                          pageCount: 1,
+                          copiesCount: 1
+                        })}
+                        className="text-xs font-bold w-44"
+                      />
+                    </div>
+
+                    <div className="p-2 bg-brand-50/50 dark:bg-brand-950/30 rounded-lg text-center font-bold text-brand-700 dark:text-brand-300">
+                      Quantité Totale : {currentEditingLine.quantity} {currentEditingLine.unit || 'document'}s
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ARTICLE / PRODUCT OPTIONS */}
+            {currentEditingLine.itemType === 'PRODUCT' && currentEditingLine.product && (
+              <div className="space-y-3 p-3 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                <h4 className="font-extrabold text-slate-800 dark:text-slate-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <Store className="w-4 h-4 text-amber-500" />
+                  Paramètres de Vente Article
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Quantité Vendue ({currentEditingLine.unit})
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={currentEditingLine.currentStock || 9999}
+                      value={currentEditingLine.quantity}
+                      onChange={(e) => handleUpdateLine(editingLineIndex, { quantity: Math.max(1, Number(e.target.value)) })}
+                      className="text-xs font-bold"
+                    />
+                    <span className="text-[10px] text-slate-400 mt-0.5 block">Stock dispo : {currentEditingLine.currentStock} {currentEditingLine.stockUnit}</span>
+                  </div>
+
+                  {currentEditingLine.product.conversionFactor && currentEditingLine.product.conversionFactor > 1 && (
+                    <div>
+                      <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                        Unité de vente
+                      </label>
+                      <Select
+                        value={currentEditingLine.usePurchaseUnit ? 'PURCHASE' : 'UNIT'}
+                        onChange={(e) => handleUpdateLine(editingLineIndex, { usePurchaseUnit: e.target.value === 'PURCHASE' })}
+                        className="text-xs font-bold"
+                      >
+                        <option value="UNIT">À l'unité ({currentEditingLine.product.unit})</option>
+                        <option value="PURCHASE">Au carton/paquet ({currentEditingLine.product.purchaseUnit} × {currentEditingLine.product.conversionFactor})</option>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TARIFICATION SUR-MESURE & REMISE */}
+            <div className="space-y-3 p-3 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={currentEditingLine.isCustomPrice}
+                    onChange={(e) => handleUpdateLine(editingLineIndex, { isCustomPrice: e.target.checked })}
+                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span>Activer un prix unitaire sur-mesure</span>
+                </label>
+              </div>
+
+              {currentEditingLine.isCustomPrice && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Prix Unitaire Personnalisé (GNF)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={currentEditingLine.customUnitPrice !== undefined ? currentEditingLine.customUnitPrice : currentEditingLine.standardUnitPrice}
+                      onChange={(e) => handleUpdateLine(editingLineIndex, { customUnitPrice: Number(e.target.value) })}
+                      className="text-xs font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                      Catégorie de Remise / Négociation
+                    </label>
+                    <Select
+                      value={currentEditingLine.discountReasonCategory}
+                      onChange={(e) => handleUpdateLine(editingLineIndex, { discountReasonCategory: e.target.value as any })}
+                      className="text-xs"
+                    >
+                      <option value="COMMERCIAL_NEGOTIATION">Négociation Commerciale</option>
+                      <option value="VOLUME">Remise de Volume</option>
+                      <option value="LOYALTY">Fidélité Client</option>
+                      <option value="INSTITUTIONAL">Partenariat Institutionnel</option>
+                      <option value="PROMOTION">Offre Promotionnelle</option>
+                      <option value="OTHER">Autre motif</option>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* DEPARTEMENT & NOTES */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Département Affecté
+                </label>
+                <Select
+                  value={currentEditingLine.assignedDepartment}
+                  onChange={(e) => handleUpdateLine(editingLineIndex, { assignedDepartment: e.target.value as any })}
+                  className="text-xs"
+                >
+                  <option value="PHOTOCOPY">📄 Photocopie</option>
+                  <option value="PRINT">🖨️ Impression Numérique</option>
+                  <option value="FINISHING">📚 Reliure & Finition</option>
+                  <option value="DESIGN">🎨 Infographie / Graphisme</option>
+                  <option value="PHOTO">📸 Studio Photo</option>
+                  <option value="STORE">🛒 Magasin / Stock Central</option>
+                </Select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Notes & Instructions Spéciales
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Notes particulières..."
+                  value={currentEditingLine.notes}
+                  onChange={(e) => handleUpdateLine(editingLineIndex, { notes: e.target.value })}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Validation Button */}
+            <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="primary"
+                icon={Check}
+                onClick={() => setEditingLineIndex(null)}
+                className="bg-brand-600 hover:bg-brand-700 font-extrabold text-xs px-6 py-2"
+              >
+                Enregistrer les modifications
               </Button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Modal: Open Cash */}
-      {isOpenCashModalOpen && (
-        <OpenCashModal
-          isOpen={isOpenCashModalOpen}
-          onClose={() => setIsOpenCashModalOpen(false)}
-          onSuccess={() => {
-            setIsOpenCashModalOpen(false);
-            showToast('Caisse Ouverte', 'Vous pouvez maintenant valider le paiement.', 'SUCCESS');
-          }}
-        />
-      )}
+      {/* 4. MODAL COMPACT DE REMISE SUR UNE LIGNE */}
+      {remiseLineIndex !== null && calculatedLines[remiseLineIndex] && (() => {
+        const currentRemiseLine = calculatedLines[remiseLineIndex];
+        const grossTotal = currentRemiseLine.grossTotal;
+        const currentNewAmount = Number(remiseNewAmount) || 0;
+        const discountDiff = Math.max(0, grossTotal - currentNewAmount);
+        const discountPct = grossTotal > 0 ? Number(((discountDiff / grossTotal) * 100).toFixed(1)) : 0;
 
-      {/* Modal: Express Supplier Restock PO */}
-      {isRestockPOModalOpen && (
-        <Modal
-          isOpen={isRestockPOModalOpen}
-          onClose={() => setIsRestockPOModalOpen(false)}
-          title="Ravitaillement Express — Émettre un Bon de Commande Fournisseur"
-          maxWidth="3xl"
-        >
-          <form onSubmit={handleCreateRestockPO} className="space-y-4 pt-1">
-            <div className="p-3 bg-brand-50/50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-800 rounded-xl text-xs text-brand-900 dark:text-brand-200 flex items-start gap-2">
-              <Truck className="w-5 h-5 text-brand-600 shrink-0 mt-0.5" />
-              <div>
-                <strong className="font-bold block">Création d'un Bon de Commande Fournisseur (BC)</strong>
-                <p className="text-[11px] text-brand-800/80 dark:text-brand-300/80 mt-0.5">
-                  Les articles nécessaires pour exécuter la commande client ont été automatiquement préchargés ci-dessous avec leurs quantités et conditionnements d'achat recommandés. Votre commande client reste 100% conservée.
-                </p>
-              </div>
-            </div>
-
-            {/* Supplier & Department Selection Header */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Fournisseur Partenaire *
-                </label>
-                <Select
-                  value={restockSupplierId}
-                  onChange={(e) => setRestockSupplierId(e.target.value)}
-                  className="text-xs font-semibold"
-                  required
-                >
-                  <option value="">Sélectionner un fournisseur...</option>
-                  {state.suppliers.filter(s => s.isActive !== false).map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} {s.phone ? `(${s.phone})` : ''}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                  Service / Atelier Demandeur (Facultatif)
-                </label>
-                <Select
-                  value={restockDepartmentId}
-                  onChange={(e) => setRestockDepartmentId(e.target.value)}
-                  className="text-xs"
-                >
-                  <option value="">-- Aucun / Stock Général --</option>
-                  {(state.requestingDepartments || []).filter(d => d.isActive && !d.isArchived).map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.code})
-                    </option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            {/* Restock Lines Table */}
-            <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-              <div className="bg-slate-100 dark:bg-slate-800 px-3 py-2 text-xs font-black uppercase text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Articles à Commander ({restockLines.length})</span>
-                <span>Total Estimé : {formatCurrency(restockLines.reduce((sum, l) => sum + l.totalPrice, 0))}</span>
-              </div>
-
-              <div className="divide-y divide-slate-200 dark:divide-slate-800 max-h-[300px] overflow-y-auto">
-                {restockLines.map((line, idx) => (
-                  <div key={line.productId} className="p-3 bg-white dark:bg-slate-950 text-xs space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <strong className="text-slate-900 dark:text-white font-bold">{line.productName}</strong>
-                        <span className="text-[11px] text-slate-400 font-mono ml-2">({line.productCode})</span>
-                      </div>
-                      {restockLines.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setRestockLines(prev => prev.filter((_, i) => i !== idx))}
-                          className="text-rose-500 hover:text-rose-700 text-xs"
-                          title="Retirer cet article"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-center">
-                      <div>
-                        <label className="text-[10px] text-slate-500 block mb-0.5">Quantité Achat ({line.purchaseUnitName})</label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={line.orderedQuantityPurchaseUnit}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 1;
-                            setRestockLines(prev => {
-                              const copy = [...prev];
-                              copy[idx] = {
-                                ...copy[idx],
-                                orderedQuantityPurchaseUnit: val,
-                                quantityInStockUnit: val * copy[idx].conversionFactor,
-                                totalPrice: val * copy[idx].unitPricePurchaseUnit,
-                              };
-                              return copy;
-                            });
-                          }}
-                          className="h-7 text-xs font-bold"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] text-slate-500 block mb-0.5">Prix Achat / {line.purchaseUnitName} (GNF)</label>
-                        <Input
-                          type="number"
-                          min="0"
-                          value={line.unitPricePurchaseUnit}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value) || 0;
-                            setRestockLines(prev => {
-                              const copy = [...prev];
-                              copy[idx] = {
-                                ...copy[idx],
-                                unitPricePurchaseUnit: val,
-                                unitPriceStockUnit: copy[idx].conversionFactor > 0 ? val / copy[idx].conversionFactor : val,
-                                totalPrice: copy[idx].orderedQuantityPurchaseUnit * val,
-                              };
-                              return copy;
-                            });
-                          }}
-                          className="h-7 text-xs font-bold"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] text-slate-500 block mb-0.5">Entrée Stock Estimée</label>
-                        <div className="h-7 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center text-[11px] font-mono">
-                          {line.quantityInStockUnit} {line.baseUnit}s
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] text-slate-500 block mb-0.5">Sous-Total</label>
-                        <div className="h-7 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center text-[11px] font-bold text-brand-600">
-                          {formatCurrency(line.totalPrice)}
-                        </div>
-                      </div>
-                    </div>
+        return (
+          <Modal
+            isOpen={remiseLineIndex !== null}
+            onClose={() => setRemiseLineIndex(null)}
+            title={`Appliquer une Remise — ${currentRemiseLine.name}`}
+            maxWidth="sm"
+          >
+            <div className="space-y-4 text-xs pt-1">
+              {/* Détails du montant initial */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Prestation / Fourniture :</span>
+                  <strong className="text-slate-900 dark:text-white font-bold">{currentRemiseLine.name}</strong>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">Montant initial (Tarif configuré) :</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                    {formatCurrency(grossTotal)}
+                  </span>
+                </div>
+                {currentRemiseLine.isCustomPrice && (
+                  <div className="flex justify-between items-center text-emerald-600 font-semibold pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                    <span>Montant actuellement remisé :</span>
+                    <span className="font-mono font-bold">{formatCurrency(currentRemiseLine.netTotal)}</span>
                   </div>
-                ))}
+                )}
+              </div>
+
+              {/* Saisie du nouveau montant */}
+              <div className="space-y-1.5">
+                <label className="font-black text-slate-900 dark:text-white block text-xs">
+                  Nouveau montant souhaité (GNF) *
+                </label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    min={0}
+                    value={remiseNewAmount}
+                    onChange={(e) => setRemiseNewAmount(Math.max(0, Number(e.target.value)))}
+                    className="text-base font-black text-brand-600 dark:text-brand-400 h-10 pr-12"
+                    placeholder="ex: 8000"
+                    autoFocus
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
+                    GNF
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1">
+                  <span className="text-slate-400">
+                    P.U. effectif : {formatCurrency(currentRemiseLine.quantity > 0 ? Math.round(currentNewAmount / currentRemiseLine.quantity) : currentNewAmount)}
+                  </span>
+                  {discountDiff > 0 ? (
+                    <Badge variant="success" size="sm" className="font-bold">
+                      Remise : -{formatCurrency(discountDiff)} (-{discountPct}%)
+                    </Badge>
+                  ) : currentNewAmount > grossTotal ? (
+                    <Badge variant="warning" size="sm" className="font-bold">
+                      Majoration : +{formatCurrency(currentNewAmount - grossTotal)}
+                    </Badge>
+                  ) : (
+                    <span className="text-slate-400">Tarif standard</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Motif de la remise */}
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300 block text-[11px]">
+                  Motif de la remise / négociation
+                </label>
+                <Select
+                  value={remiseCategory}
+                  onChange={(e) => setRemiseCategory(e.target.value as any)}
+                  className="text-xs font-semibold"
+                >
+                  <option value="COMMERCIAL_NEGOTIATION">🤝 Négociation Commerciale</option>
+                  <option value="VOLUME">📦 Remise sur Volume / Quantité</option>
+                  <option value="LOYALTY">⭐ Fidélité Client Régulier</option>
+                  <option value="INSTITUTIONAL">🏛️ Partenariat Institutionnel / ONG</option>
+                  <option value="PROMOTION">🏷️ Offre Promotionnelle</option>
+                  <option value="OTHER">📝 Autre motif spécifique</option>
+                </Select>
+              </div>
+
+              {remiseCategory === 'OTHER' && (
+                <div>
+                  <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1 text-[11px]">
+                    Préciser le motif
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="ex: Accord verbal gérant..."
+                    value={remiseCustomReason}
+                    onChange={(e) => setRemiseCustomReason(e.target.value)}
+                    className="text-xs"
+                  />
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                <div>
+                  {currentRemiseLine.isCustomPrice && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        handleUpdateLine(remiseLineIndex, {
+                          isCustomPrice: false,
+                          customUnitPrice: undefined,
+                        });
+                        setRemiseLineIndex(null);
+                        showToast('Plein tarif rétabli', 'La remise a été retirée sur cette ligne.', 'INFO');
+                      }}
+                      className="text-slate-500 hover:text-slate-800 text-[11px]"
+                    >
+                      Rétablir plein tarif
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRemiseLineIndex(null)}
+                    className="text-xs"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    icon={Check}
+                    onClick={() => {
+                      const qty = currentRemiseLine.quantity || 1;
+                      const newTotal = Math.max(0, Number(remiseNewAmount));
+                      if (newTotal === grossTotal) {
+                        handleUpdateLine(remiseLineIndex, {
+                          isCustomPrice: false,
+                          customUnitPrice: undefined,
+                        });
+                      } else {
+                        const newUnitPrice = qty > 0 ? (newTotal / qty) : newTotal;
+                        handleUpdateLine(remiseLineIndex, {
+                          isCustomPrice: true,
+                          customUnitPrice: newUnitPrice,
+                          discountReasonCategory: remiseCategory,
+                          discountReasonCustom: remiseCustomReason,
+                        });
+                      }
+                      setRemiseLineIndex(null);
+                      showToast('Remise Appliquée', `Le montant de la ligne a été actualisé à ${formatCurrency(newTotal)}.`, 'SUCCESS');
+                    }}
+                    className="bg-brand-600 hover:bg-brand-700 font-bold text-xs"
+                  >
+                    Appliquer
+                  </Button>
+                </div>
               </div>
             </div>
+          </Modal>
+        );
+      })()}
 
-            {/* Notes */}
-            <div>
-              <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1">
-                Instructions ou Notes pour le Bon de Commande
-              </label>
-              <Input
-                type="text"
-                placeholder="ex: Livraison express urgente pour client..."
-                value={restockNotes}
-                onChange={(e) => setRestockNotes(e.target.value)}
-                className="text-xs"
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsRestockPOModalOpen(false)}
-                className="w-full sm:w-auto text-xs"
-              >
-                Retour à la commande client
-              </Button>
-
-              <Button
-                type="submit"
-                variant="primary"
-                icon={CheckCircle2}
-                className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 font-extrabold text-xs"
-              >
-                Émettre le Bon de Commande Fournisseur ({formatCurrency(restockLines.reduce((sum, l) => sum + l.totalPrice, 0))})
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* Modal: Receipt Printing */}
+      {/* 5. MODAL DE REÇU / FACTURE DÉTAILLÉ */}
       {receiptPayment && (
         <PaymentReceiptModal
           payment={receiptPayment}
           order={receiptOrder}
-          onClose={() => {
-            setReceiptPayment(null);
-            setReceiptOrder(null);
-          }}
+          onClose={() => setReceiptPayment(null)}
         />
+      )}
+
+      {/* QUICK CLIENT CREATION MODAL */}
+      {isCreatingNewPerson && (
+        <Modal
+          isOpen={isCreatingNewPerson}
+          onClose={() => setIsCreatingNewPerson(false)}
+          title="Nouveau Client Rapide"
+          maxWidth="sm"
+        >
+          <div className="space-y-4 pt-1 text-xs">
+            <div>
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                Nom complet ou Raison Sociale *
+              </label>
+              <Input
+                type="text"
+                placeholder="ex: Mohamed Sylla, SARL Konia..."
+                value={newPersonName}
+                onChange={(e) => setNewPersonName(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+
+            <PhoneInput
+              label="Téléphone *"
+              placeholder="ex: +224 6XX XX XX XX"
+              value={newPersonPhone}
+              onChange={(e) => setNewPersonPhone(e.target.value)}
+              className="text-xs"
+            />
+
+            <div>
+              <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                Type de client
+              </label>
+              <Select
+                value={newPersonType}
+                onChange={(e) => setNewPersonType(e.target.value as any)}
+                className="text-xs font-medium"
+              >
+                <option value="ALL">👤 Particulier</option>
+                <option value="COMPANY">🏢 Entreprise / Société</option>
+                <option value="STUDENT">🎓 Étudiant / Élève</option>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="outline" onClick={() => setIsCreatingNewPerson(false)}>
+                Annuler
+              </Button>
+              <Button variant="primary" onClick={handleCreateNewPerson} className="font-bold">
+                Enregistrer le client
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   );

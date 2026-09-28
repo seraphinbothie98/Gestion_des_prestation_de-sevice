@@ -21,6 +21,7 @@ import {
 import { OrderPaymentModal } from './OrderPaymentModal';
 import { OrderDeliveryModal } from './OrderDeliveryModal';
 import { PaymentReceiptModal } from './PaymentReceiptModal';
+import { formatReceiptItemDetails } from '../../lib/orderItemUtils';
 
 interface OrdersViewProps {
   onOpenQuickOrder: () => void;
@@ -256,12 +257,16 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder, onOpen
         officialStampUrl: stamp?.imageUrl,
         stampName: stamp?.signerName || 'Cachet Officiel',
         signatureVersion: dirSig?.version || 1,
-        items: order.items.map(item => ({
-          description: `${item.serviceName || item.productName} (${item.quantity} ${item.unit})`,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
-        }))
+        items: order.items.map(item => {
+          const details = formatReceiptItemDetails(item);
+          return {
+            description: details.fullDescription,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+            unit: item.publicUnit || item.unit,
+          };
+        })
       });
     });
 
@@ -944,8 +949,8 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder, onOpen
                                 </Badge>
                               )}
                               <div>
-                                <strong className="text-slate-900 dark:text-white block">
-                                  {item.serviceName || item.productName || item.description}
+                                <strong className="text-slate-900 dark:text-white block font-bold">
+                                  {formatReceiptItemDetails(item).title}
                                 </strong>
                               </div>
                             </div>
@@ -954,10 +959,24 @@ export const OrdersView: React.FC<OrdersViewProps> = ({ onOpenQuickOrder, onOpen
                                 « Motif: {item.discountReason} »
                               </span>
                             )}
-                            {item.notes && <span className="block text-[10px] text-slate-400">{item.notes}</span>}
+                            {formatReceiptItemDetails(item).specs && (
+                              <span className="block text-[10px] text-slate-500 font-medium">
+                                {formatReceiptItemDetails(item).specs}
+                              </span>
+                            )}
+                            {item.notes && !formatReceiptItemDetails(item).specs && <span className="block text-[10px] text-slate-400">{item.notes}</span>}
                           </td>
                           <td className="p-2.5 text-center font-bold">
-                            {item.requestedQuantity !== undefined && item.validatedQuantity !== undefined && item.requestedQuantity !== item.validatedQuantity ? (
+                            {item.pageCount && item.copiesCount && (item.pageCount > 1 || item.copiesCount > 1) ? (
+                              <div className="space-y-0.5">
+                                <span className="font-extrabold text-xs block text-slate-900 dark:text-white">
+                                  {item.pageCount} p. × {item.copiesCount} ex.
+                                </span>
+                                <span className="text-[10px] text-slate-400 block font-normal">
+                                  = {item.quantity} {item.unit || 'pages'}
+                                </span>
+                              </div>
+                            ) : item.requestedQuantity !== undefined && item.validatedQuantity !== undefined && item.requestedQuantity !== item.validatedQuantity ? (
                               <div className="space-y-0.5">
                                 <span className="text-slate-400 text-[10px] line-through block">
                                   Demandé : {item.requestedQuantity} {item.publicUnit || item.unit}

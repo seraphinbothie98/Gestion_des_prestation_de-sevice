@@ -541,6 +541,8 @@ export interface OrderItem {
   productImageUrl?: string; // Image miniature du produit commandé
   purchaseUnitName?: string;
   conversionFactor?: number;
+  pageCount?: number; // Nombre de pages document original
+  copiesCount?: number; // Nombre d'exemplaires / tirages
   
   // Tarification standard vs appliquée
   standardUnitPrice?: number;

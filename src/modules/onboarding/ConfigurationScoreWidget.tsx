@@ -22,7 +22,11 @@ export const ConfigurationScoreWidget: React.FC<ConfigurationScoreWidgetProps> =
   const scoreData = dbStore.getTenantOnboardingScore(currentTenant.id);
   const { score, completedItems, pendingItems, details } = scoreData;
 
-  // If 100% complete and acknowledged, we can keep it discreet or compact
+  // Si le niveau de configuration atteint 100%, la section se masque automatiquement
+  if (score >= 100) {
+    return null;
+  }
+
   const isComplete = score >= 100;
 
   return (

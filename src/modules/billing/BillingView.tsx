@@ -216,10 +216,10 @@ export const BillingView: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {selectedInvoice.items.map((it, idx) => (
+                  {selectedInvoice.items.map((it: any, idx) => (
                     <tr key={idx}>
                       <td className="p-3 font-medium text-slate-800">{it.description}</td>
-                      <td className="p-3 text-center text-slate-600">{it.quantity}</td>
+                      <td className="p-3 text-center text-slate-600 font-semibold">{it.quantity} {it.unit || ''}</td>
                       <td className="p-3 text-right text-slate-600">{formatCurrency(it.unitPrice)}</td>
                       <td className="p-3 text-right font-bold text-slate-900">{formatCurrency(it.totalPrice)}</td>
                     </tr>

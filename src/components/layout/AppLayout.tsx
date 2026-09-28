@@ -98,6 +98,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [currentSection]);
 
+  // Redirection automatique vers le tableau de bord à la connexion
+  useEffect(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (!hash || hash === 'login-superadmin' || hash === 'superadmin' || hash === 'saas-superadmin') {
+      handleNavigate('dashboard');
+    }
+  }, [currentUser?.id]);
+
   // Keyboard shortcut Ctrl+K / Cmd+K for global search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

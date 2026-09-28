@@ -517,6 +517,11 @@ export function calculateOrderStockRequirements(
         });
       }
 
+      if (consumablesToProcess.length === 0) {
+        const fallbacks = resolveSmartConsumableFallback(srv, products);
+        fallbacks.forEach(c => consumablesToProcess.push(c));
+      }
+
       consumablesToProcess.forEach(c => {
         const prod = products.find(p => p.id === c.productId);
         if (!prod) return;
@@ -808,6 +813,40 @@ export interface StockAvailabilityResult {
 }
 
 /**
+ * Intelligently resolves raw material/consumable products in stock
+ * for services (Photocopie, Reliure, Plastification, Impression, etc.) if no explicit mapping exists.
+ */
+export function resolveSmartConsumableFallback(
+  service: Service,
+  products: Product[]
+): Array<{ productId: string; productName?: string; quantityPerUnit: number; unit?: string; isClientSupplied?: boolean }> {
+  const result: Array<{ productId: string; productName?: string; quantityPerUnit: number; unit?: string; isClientSupplied?: boolean }> = [];
+  const srvNameLower = (service.name || '').toLowerCase();
+  const srvCodeLower = (service.code || '').toLowerCase();
+
+  if (srvNameLower.includes('photocopi') || srvNameLower.includes('impress') || srvNameLower.includes('copie') || srvCodeLower.includes('photo') || srvCodeLower.includes('print')) {
+    const paper = products.find(p => p.isConsumable !== false && (p.name.toLowerCase().includes('papier') || p.name.toLowerCase().includes('ramette') || p.name.toLowerCase().includes('a4')));
+    if (paper) {
+      result.push({ productId: paper.id, productName: paper.name, quantityPerUnit: 1, unit: paper.baseUnit || paper.unit || 'feuille', isClientSupplied: false });
+    }
+  } else if (srvNameLower.includes('reliur') || srvCodeLower.includes('reliure')) {
+    const spiral = products.find(p => p.isConsumable !== false && p.name.toLowerCase().includes('spirale'));
+    const pvc = products.find(p => p.isConsumable !== false && (p.name.toLowerCase().includes('pvc') || p.name.toLowerCase().includes('plat') || p.name.toLowerCase().includes('transparent')));
+    const bristol = products.find(p => p.isConsumable !== false && p.name.toLowerCase().includes('bristol'));
+    if (spiral) result.push({ productId: spiral.id, productName: spiral.name, quantityPerUnit: 1, unit: spiral.baseUnit || spiral.unit || 'unité', isClientSupplied: false });
+    if (pvc) result.push({ productId: pvc.id, productName: pvc.name, quantityPerUnit: 1, unit: pvc.baseUnit || pvc.unit || 'feuille', isClientSupplied: false });
+    if (bristol) result.push({ productId: bristol.id, productName: bristol.name, quantityPerUnit: 1, unit: bristol.baseUnit || bristol.unit || 'feuille', isClientSupplied: false });
+  } else if (srvNameLower.includes('plastif') || srvCodeLower.includes('plastif')) {
+    const plastif = products.find(p => p.isConsumable !== false && (p.name.toLowerCase().includes('plastif') || p.name.toLowerCase().includes('pochette')));
+    if (plastif) {
+      result.push({ productId: plastif.id, productName: plastif.name, quantityPerUnit: 1, unit: plastif.baseUnit || plastif.unit || 'pochette', isClientSupplied: false });
+    }
+  }
+
+  return result;
+}
+
+/**
  * Calculates generic required consumables across all items of an order,
  * respecting the service's consumableMode and client support flags.
  */
@@ -862,6 +901,10 @@ export function calculateOrderConsumablesRequirements(
         quantityPerUnit: c.quantity,
         isClientSupplied: false
       }));
+    }
+
+    if (consumablesToProcess.length === 0) {
+      consumablesToProcess = resolveSmartConsumableFallback(service, products);
     }
 
     for (const cons of consumablesToProcess) {

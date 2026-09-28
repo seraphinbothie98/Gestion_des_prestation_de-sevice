@@ -1,17 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Modal } from '../../components/ui/Modal';
 import { dbStore } from '../../server/db/mockStore';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatCurrency, formatDate, generateDocNumber } from '../../lib/utils';
 import {
   DollarSign, ShoppingBag, GraduationCap, AlertTriangle,
   TrendingUp, Clock, CheckCircle2, ArrowUpRight, ArrowDownRight,
   Boxes, Calendar, FileCheck2, Filter, Sparkles, User, Factory,
   Wallet, BookOpen, Users, CheckSquare, Award, ArrowRight, Plus, Eye, Play, Layout,
-  Monitor, Wrench, ShieldCheck, Truck, Printer
+  Monitor, Wrench, ShieldCheck, Truck, Printer, Minus, Lock, Unlock
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -20,6 +23,7 @@ import {
 import { NavSection } from '../../components/layout/Sidebar';
 import { ConfigurationScoreWidget } from '../onboarding/ConfigurationScoreWidget';
 import { OnboardingWizardModal } from '../onboarding/OnboardingWizardModal';
+import { OpenCashModal } from '../cash/OpenCashModal';
 
 interface DashboardViewProps {
   onNavigate: (section: NavSection) => void;
@@ -37,12 +41,131 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const { currentUser, currentTenant, currentBranch, isSuperAdmin } = useAuth();
   const { showToast } = useNotification();
   const [timeFilter, setTimeFilter] = useState<'TODAY' | 'WEEK' | 'MONTH' | 'YEAR'>('MONTH');
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(() => {
-    return Boolean(currentTenant && currentTenant.onboardingCompleted === false && !isSuperAdmin);
-  });
+  // L'utilisateur accède directement au tableau de bord sans popup bloquant
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
+
+  // State subscription to dbStore for real-time reactivity (e.g. Cash Open/Close)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const unsubscribe = dbStore.subscribe(() => {
+      setTick(t => t + 1);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const state = dbStore.getState();
 
   const roleCode = currentUser?.roles[0]?.code || 'ADMIN_CENTRE';
+
+  // Cash Action Modals State in Dashboard
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isCloseSessionModalOpen, setIsCloseSessionModalOpen] = useState(false);
+  const [isOpenCashModalOpen, setIsOpenCashModalOpen] = useState(false);
+
+  // Expense form state
+  const [expenseAmount, setExpenseAmount] = useState<number>(50000);
+  const [expenseCategory, setExpenseCategory] = useState<string>('Achats & Fournitures');
+  const [expenseRecipient, setExpenseRecipient] = useState<string>('');
+  const [expenseDescription, setExpenseDescription] = useState<string>('');
+
+  // Close session state
+  const [closingActualBalance, setClosingActualBalance] = useState<number>(0);
+  const [closingNotes, setClosingNotes] = useState<string>('');
+
+  const tenantId = currentTenant?.id || 't-001';
+  const activeCashSession = (state.cashSessions || []).find(
+    cs => (cs.tenantId === tenantId || cs.tenantId === 'global') && cs.status === 'OPEN'
+  );
+
+  const theoreticalBalance = activeCashSession ? (() => {
+    const opening = activeCashSession.openingBalance || 0;
+    const movements = activeCashSession.movements || [];
+    const inflows = movements.filter(m => m.movementType === 'INFLOW').reduce((sum, m) => sum + m.amount, 0);
+    const outflows = movements.filter(m => m.movementType === 'OUTFLOW' || m.movementType === 'EXPENSE').reduce((sum, m) => sum + m.amount, 0);
+    return opening + inflows - outflows;
+  })() : 0;
+
+  const handleRecordExpense = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (expenseAmount <= 0) {
+      showToast('Montant Invalide', 'Le montant de la sortie doit être supérieur à 0 GNF.', 'DANGER');
+      return;
+    }
+
+    const tenantId = currentTenant?.id || 't-001';
+    const performedBy = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Caissier';
+
+    dbStore.updateState(draft => {
+      // 1. Add Cash Movement if active session
+      if (activeCashSession) {
+        const sess = draft.cashSessions.find(s => s.id === activeCashSession.id);
+        if (sess) {
+          if (!sess.movements) sess.movements = [];
+          sess.movements.push({
+            id: `cmov-${Date.now()}`,
+            cashSessionId: activeCashSession.id,
+            movementType: 'EXPENSE',
+            amount: expenseAmount,
+            category: expenseCategory,
+            reason: `${expenseCategory} - ${expenseDescription || 'Sortie de Caisse'} ${expenseRecipient ? `(Bénéficiaire: ${expenseRecipient})` : ''}`,
+            performedByUserName: performedBy,
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
+
+      // 2. Add Expense record
+      if (!draft.expenses) draft.expenses = [];
+      draft.expenses.unshift({
+        id: `exp-${Date.now()}`,
+        tenantId,
+        expenseNumber: generateDocNumber('DEC', (draft.expenses || []).length + 1),
+        category: expenseCategory,
+        description: expenseDescription || expenseCategory,
+        amount: expenseAmount,
+        recipientName: expenseRecipient,
+        createdByName: performedBy,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    showToast('Sortie de Caisse Enregistrée 💸', `Décaissement de ${formatCurrency(expenseAmount)} enregistré avec succès.`, 'SUCCESS');
+    setExpenseAmount(50000);
+    setExpenseDescription('');
+    setExpenseRecipient('');
+    setIsExpenseModalOpen(false);
+  };
+
+  const handleCloseSession = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeCashSession) return;
+
+    const diff = closingActualBalance - theoreticalBalance;
+
+    dbStore.updateState(draft => {
+      const sess = draft.cashSessions.find(s => s.id === activeCashSession.id);
+      if (sess) {
+        sess.status = 'CLOSED';
+        sess.closedAt = new Date().toISOString();
+        sess.closingBalanceTheoretical = theoreticalBalance;
+        sess.closingBalanceActual = closingActualBalance;
+        sess.differenceAmount = diff;
+        if (closingNotes.trim()) {
+          sess.notes = `${sess.notes || ''} | Note clôture: ${closingNotes}`.trim();
+        }
+      }
+    });
+
+    dbStore.logAudit('CASH_SESSION_CLOSED', 'CASH_SESSION', activeCashSession.id, null, {
+      theoreticalBalance,
+      actualBalance: closingActualBalance,
+      difference: diff,
+      userName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Caissier'
+    });
+
+    showToast('Caisse Clôturée 🔒', `La session de caisse a été clôturée avec un solde final de ${formatCurrency(closingActualBalance)}.`, 'SUCCESS');
+    setIsCloseSessionModalOpen(false);
+  };
 
   // ============================================================================
   // 1. DASHBOARD: ADMIN DU CENTRE
@@ -718,24 +841,74 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
 
-          {/* MAIN ACTIONS: + COMMANDE PRESTATION / + VENDRE UN ARTICLE */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={onOpenQuickOrder}
-              className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 active:scale-[0.98] transition-transform min-h-[48px]"
-            >
-              <Plus className="w-5 h-5 stroke-[3]" />
-              <span>+ Commande Prestation</span>
-            </button>
-            <button
-              type="button"
-              onClick={onOpenQuickArticleSale}
-              className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-transform min-h-[48px]"
-            >
-              <ShoppingBag className="w-5 h-5 stroke-[2.5]" />
-              <span>+ Vendre un article</span>
-            </button>
+          {/* MAIN ACTIONS: 5 BUTTONS GRID ON MOBILE */}
+          <div className="mt-4">
+            {activeCashSession ? (
+              <div className="space-y-2">
+                {/* Row 1: Prestation & Vendre un article */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={onOpenQuickOrder}
+                    className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20 active:scale-[0.98] transition-transform min-h-[48px]"
+                  >
+                    <Plus className="w-5 h-5 stroke-[3]" />
+                    <span>+ Commande Prestation</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onOpenQuickArticleSale}
+                    className="w-full py-3 px-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-transform min-h-[48px]"
+                  >
+                    <ShoppingBag className="w-5 h-5 stroke-[2.5]" />
+                    <span>+ Vendre un article</span>
+                  </button>
+                </div>
+
+                {/* Row 2: Inscription Formation, Sortie Caisse, Clôturer la Caisse */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={onOpenQuickEnrollment}
+                    className="w-full py-2.5 px-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-extrabold text-xs flex items-center justify-center gap-2 min-h-[44px]"
+                  >
+                    <GraduationCap className="w-4 h-4 text-amber-400" />
+                    <span>Inscription Formation</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsExpenseModalOpen(true)}
+                    className="w-full py-2.5 px-3.5 rounded-full border border-rose-400/80 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-all min-h-[44px]"
+                  >
+                    <Minus className="w-4 h-4 text-rose-400 stroke-[3]" />
+                    <span>- Sortie Caisse</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClosingActualBalance(theoreticalBalance);
+                      setIsCloseSessionModalOpen(true);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-full bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-rose-600/30 transition-all min-h-[44px]"
+                  >
+                    <Lock className="w-4 h-4 text-white shrink-0" />
+                    <span>Clôturer la Caisse</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Single Button when session is CLOSED */
+              <button
+                type="button"
+                onClick={() => setIsOpenCashModalOpen(true)}
+                className="w-full py-3.5 px-4 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/30 transition-all border border-emerald-500/30 min-h-[48px]"
+              >
+                <Unlock className="w-5 h-5 text-white stroke-[2.5]" />
+                <span>Ouvrir la Caisse du Jour</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -830,38 +1003,78 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Global Quick Action Wizard */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {(roleCode === 'ADMIN_CENTRE' || roleCode === 'SUPER_ADMIN' || roleCode === 'CAISSIER') && (
-            <>
-              <Button
-                size="md"
-                variant="primary"
-                icon={Plus}
-                onClick={onOpenQuickOrder}
-                className="px-5 py-3 text-sm sm:text-base font-extrabold shadow-md hover:scale-[1.02] transition-all"
+        {/* Global Quick Action Wizard (5 Buttons Toolbar or Ouvrir Caisse) */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {(roleCode === 'ADMIN_CENTRE' || roleCode === 'SUPER_ADMIN' || roleCode === 'CAISSIER' || roleCode === 'GERANT') && (
+            activeCashSession ? (
+              <div className="flex flex-col gap-2 items-end">
+                {/* Row 1: Prestation & Vendre un article */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onOpenQuickOrder}
+                    className="px-4 py-2.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:scale-[1.02] transition-all"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>+ Commande Prestation</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={onOpenQuickArticleSale}
+                    className="px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm flex items-center gap-2 shadow-md hover:scale-[1.02] transition-all"
+                  >
+                    <ShoppingBag className="w-4 h-4 stroke-[2.5]" />
+                    <span>+ Vendre un article</span>
+                  </button>
+                </div>
+
+                {/* Row 2: Inscription Formation, Sortie Caisse, Clôturer la Caisse */}
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={onOpenQuickEnrollment}
+                    className="px-4 py-2 rounded-full bg-slate-800/60 border border-slate-700 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all hover:scale-[1.02]"
+                  >
+                    <GraduationCap className="w-4 h-4 text-amber-400" />
+                    <span>Inscription Formation</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsExpenseModalOpen(true)}
+                    className="px-4 py-2 rounded-full border border-rose-400/60 bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-xs hover:scale-[1.02] active:scale-[0.98]"
+                    title="Enregistrer un décaissement / dépense de caisse"
+                  >
+                    <Minus className="w-4 h-4 text-rose-400 stroke-[3]" />
+                    <span>- Sortie Caisse</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClosingActualBalance(theoreticalBalance);
+                      setIsCloseSessionModalOpen(true);
+                    }}
+                    className="px-5 py-2 rounded-full bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-rose-600/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    title="Clôturer définitivement la session de caisse en cours"
+                  >
+                    <Lock className="w-4 h-4 text-white shrink-0" />
+                    <span>Clôturer la Caisse</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Single Button when session is CLOSED */
+              <button
+                type="button"
+                onClick={() => setIsOpenCashModalOpen(true)}
+                className="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-extrabold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-600/30 transition-all border border-emerald-500/30 hover:scale-[1.02]"
               >
-                + Commande Prestation
-              </Button>
-              <Button
-                size="md"
-                variant="success"
-                icon={ShoppingBag}
-                onClick={onOpenQuickArticleSale}
-                className="px-5 py-3 text-sm sm:text-base font-extrabold shadow-md bg-emerald-600 hover:bg-emerald-700 text-white border-none hover:scale-[1.02] transition-all"
-              >
-                + Vendre un article
-              </Button>
-              <Button
-                size="md"
-                variant="outline"
-                icon={GraduationCap}
-                onClick={onOpenQuickEnrollment}
-                className="px-5 py-3 text-sm sm:text-base font-extrabold bg-white/10 text-white border-white/25 hover:bg-white/20 hover:scale-[1.02] transition-all"
-              >
-                Inscription Formation
-              </Button>
-            </>
+                <Unlock className="w-5 h-5 text-white stroke-[2.5]" />
+                <span>Ouvrir la Caisse du Jour</span>
+              </button>
+            )
           )}
         </div>
       </div>
@@ -880,6 +1093,185 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           isOpen={isOnboardingOpen}
           onClose={() => setIsOnboardingOpen(false)}
           onCompleted={() => setIsOnboardingOpen(false)}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 1: SORTIE DE CAISSE / DÉCAISSEMENT */}
+      {/* ========================================================================= */}
+      {isExpenseModalOpen && (
+        <Modal
+          isOpen={isExpenseModalOpen}
+          onClose={() => setIsExpenseModalOpen(false)}
+          title="Sortie de Caisse / Décaissement"
+          maxWidth="lg"
+        >
+          <form onSubmit={handleRecordExpense} className="space-y-4">
+            <div className="bg-rose-50 dark:bg-rose-950/40 p-3.5 rounded-2xl border border-rose-200 dark:border-rose-900/50 flex items-start gap-3">
+              <Minus className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-900 dark:text-rose-200">
+                <strong className="block font-bold mb-0.5">Décaissement de Fonds</strong>
+                Toute sortie de fonds réduit le solde théorique de la session de caisse en cours et génère une dépense enregistrée.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-900 dark:text-white block mb-1">
+                  Motif / Catégorie de sortie *
+                </label>
+                <Select
+                  value={expenseCategory}
+                  onChange={(e) => setExpenseCategory(e.target.value)}
+                  options={[
+                    { value: 'Achats & Fournitures', label: '📦 Achats & Fournitures' },
+                    { value: 'Transport & Carburant', label: '⛽ Transport & Carburant' },
+                    { value: 'Repas & Restauration', label: '🍲 Repas & Restauration' },
+                    { value: 'Maintenance & Entretien', label: '🛠️ Maintenance & Entretien' },
+                    { value: 'Factures & Loyer', label: '⚡ Factures (EDG, Eau, Loyer)' },
+                    { value: 'Avance sur salaire', label: '👤 Avance sur salaire / Personnel' },
+                    { value: 'Autre dépense', label: '🏷️ Autre dépense' }
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-900 dark:text-white block mb-1">
+                  Montant Décaissé (GNF) *
+                </label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="any"
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(parseInt(e.target.value) || 0)}
+                  required
+                  className="text-lg font-black text-rose-600"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  Bénéficiaire de la somme
+                </label>
+                <Input
+                  value={expenseRecipient}
+                  onChange={(e) => setExpenseRecipient(e.target.value)}
+                  placeholder="ex: Agent entretien, Livreur, Fournisseur..."
+                  className="text-xs"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  Description / Motif *
+                </label>
+                <Input
+                  value={expenseDescription}
+                  onChange={(e) => setExpenseDescription(e.target.value)}
+                  placeholder="ex: Achat de 2 ramettes papier A4..."
+                  required
+                  className="text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="outline" type="button" onClick={() => setIsExpenseModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button variant="danger" icon={Minus} type="submit" className="bg-rose-600 hover:bg-rose-700 font-bold">
+                Valider la Sortie ({formatCurrency(expenseAmount)})
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 2: CLÔTURE DE LA SESSION DE CAISSE */}
+      {/* ========================================================================= */}
+      {isCloseSessionModalOpen && (
+        <Modal
+          isOpen={isCloseSessionModalOpen}
+          onClose={() => setIsCloseSessionModalOpen(false)}
+          title="Clôture Définitive de la Session de Caisse"
+          maxWidth="md"
+        >
+          <form onSubmit={handleCloseSession} className="space-y-4">
+            <div className="bg-rose-50 dark:bg-rose-950/40 p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 flex items-start gap-3">
+              <Lock className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-900 dark:text-rose-200 leading-relaxed">
+                <strong className="block font-bold mb-0.5">Clôture de Caisse & Comptage Réel</strong>
+                Veuillez compter physiquement le montant total disponible dans le tiroir-caisse et saisir le solde compté.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl text-xs">
+              <div>
+                <span className="text-slate-400 block">Solde Théorique de Caisse</span>
+                <span className="font-extrabold text-brand-600 text-sm">{formatCurrency(theoreticalBalance)}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Fonds Initial d'Ouverture</span>
+                <span className="font-bold text-slate-700 dark:text-slate-300">{formatCurrency(activeCashSession?.openingBalance || 0)}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-900 dark:text-white block mb-1">
+                Solde Physique Réel Compté (GNF) *
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="any"
+                value={closingActualBalance}
+                onChange={(e) => setClosingActualBalance(Math.max(0, parseInt(e.target.value) || 0))}
+                required
+                className="text-lg font-black text-slate-900"
+              />
+              {closingActualBalance !== theoreticalBalance && (
+                <p className={`text-xs font-bold mt-1 ${closingActualBalance > theoreticalBalance ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  Écart constaté : {closingActualBalance > theoreticalBalance ? '+' : ''}{formatCurrency(closingActualBalance - theoreticalBalance)}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                Observation / Justification de clôture
+              </label>
+              <textarea
+                rows={2}
+                value={closingNotes}
+                onChange={(e) => setClosingNotes(e.target.value)}
+                placeholder="Ex: Clôture d'inventaire journalière effectuée sans incident..."
+                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="outline" type="button" onClick={() => setIsCloseSessionModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button variant="danger" icon={Lock} type="submit" className="bg-rose-600 hover:bg-rose-700 font-bold">
+                Confirmer la Clôture Définitive
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Open Cash Modal if triggered */}
+      {isOpenCashModalOpen && (
+        <OpenCashModal
+          isOpen={isOpenCashModalOpen}
+          onClose={() => setIsOpenCashModalOpen(false)}
+          onSuccess={() => {
+            setIsOpenCashModalOpen(false);
+          }}
         />
       )}
     </div>

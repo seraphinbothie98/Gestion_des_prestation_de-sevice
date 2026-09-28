@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { formatCurrency, formatDate } from '../../lib/utils';
 import { Printer, Download, CheckCircle2, Receipt, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { formatReceiptItemDetails } from '../../lib/orderItemUtils';
 
 interface PaymentReceiptModalProps {
   payment: Payment | null;
@@ -116,10 +117,45 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </div>
           </div>
 
+          {/* Detailed Order Lines Table (Prestations & Fournitures) */}
+          {linkedOrder && linkedOrder.items && linkedOrder.items.length > 0 && (
+            <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
+              <div className="p-2 bg-slate-100 grid grid-cols-12 text-[10px] font-bold uppercase text-slate-700 border-b border-slate-200">
+                <span className="col-span-6">Désignation des Prestations</span>
+                <span className="col-span-3 text-center">Quantité / Format</span>
+                <span className="col-span-3 text-right">Montant</span>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {linkedOrder.items.map((it, idx) => {
+                  const details = formatReceiptItemDetails(it);
+                  return (
+                    <div key={it.id || idx} className="p-2.5 grid grid-cols-12 gap-1 items-start text-xs">
+                      <div className="col-span-6 space-y-0.5">
+                        <strong className="text-slate-900 block font-bold text-xs">{details.title}</strong>
+                        {details.specs && (
+                          <span className="text-[10px] text-slate-500 block leading-tight">{details.specs}</span>
+                        )}
+                      </div>
+                      <div className="col-span-3 text-center">
+                        <span className="font-semibold text-slate-800 text-[11px] block">{details.quantityText}</span>
+                        {it.unitPrice !== undefined && (
+                          <span className="text-[9px] text-slate-400 block">{formatCurrency(it.unitPrice)} / {it.unit || 'u.'}</span>
+                        )}
+                      </div>
+                      <div className="col-span-3 text-right font-black text-slate-900 text-xs">
+                        {formatCurrency(it.totalPrice)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Financial Breakdown Table */}
           <div className="border border-slate-200 rounded-lg overflow-hidden text-xs">
             <div className="p-2 bg-slate-100 flex items-center justify-between text-[10px] font-bold uppercase text-slate-700">
-              <span>Désignation</span>
+              <span>Récapitulatif Financier</span>
               <span>Montant (GNF)</span>
             </div>
             <div className="divide-y divide-slate-100 text-xs">
@@ -127,6 +163,12 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 <span className="text-slate-600">Total initial de la commande :</span>
                 <span className="font-semibold">{formatCurrency(totalOrderAmount)}</span>
               </div>
+              {linkedOrder?.discountAmount && linkedOrder.discountAmount > 0 ? (
+                <div className="p-2 flex justify-between text-emerald-700 font-semibold bg-emerald-50/50">
+                  <span>Remise accordée :</span>
+                  <span>-{formatCurrency(linkedOrder.discountAmount)}</span>
+                </div>
+              ) : null}
               <div className="p-2 flex justify-between bg-slate-50/60">
                 <span className="text-slate-600">Solde avant ce versement :</span>
                 <span className="font-semibold">{formatCurrency(balanceBefore)}</span>
