@@ -824,7 +824,7 @@ export const INITIAL_STATE: DatabaseState = {
       categoryId: 'sc-01',
       categoryName: 'Impression & Photocopie',
       code: 'IMPRESSION-A4-COUL',
-      name: 'Impression Numérique',
+      name: 'Impression',
       description: 'Impression haute fidélité couleur / monochrome 80g à 250g',
       unit: 'page',
       baseCost: 500,
@@ -836,15 +836,25 @@ export const INITIAL_STATE: DatabaseState = {
       isClientSupportAllowed: false,
       options: [
         { id: 'opt-imp-format', name: 'Format', values: ['A4', 'A3'] },
-        { id: 'opt-imp-mode', name: 'Mode', values: ['Couleur HD', 'Noir & blanc Laser'] },
+        { id: 'opt-imp-mode', name: 'Couleur', values: ['Noir & Blanc', 'Couleur'] },
+        { id: 'opt-imp-type', name: 'Impression', values: ['Recto', 'Recto-verso'] },
         { id: 'opt-imp-papier', name: 'Papier', values: ['Standard', 'Bristol', 'Papier Photo'] }
       ],
       configurations: [
         {
           id: 'cfg-imp-1',
           serviceId: 'srv-02',
-          optionValues: { 'Format': 'A4', 'Mode': 'Couleur HD', 'Papier': 'Standard' },
+          optionValues: { 'Format': 'A4', 'Couleur': 'Couleur', 'Impression': 'Recto', 'Papier': 'Standard' },
           price: 2000,
+          billingUnit: 'page',
+          consumables: [{ productId: 'prod-01', productName: 'Papier Ramette A4 80g Double A', quantityPerUnit: 1, unit: 'feuille' }],
+          isActive: true
+        },
+        {
+          id: 'cfg-imp-1-rv',
+          serviceId: 'srv-02',
+          optionValues: { 'Format': 'A4', 'Couleur': 'Couleur', 'Impression': 'Recto-verso', 'Papier': 'Standard' },
+          price: 3500,
           billingUnit: 'page',
           consumables: [{ productId: 'prod-01', productName: 'Papier Ramette A4 80g Double A', quantityPerUnit: 1, unit: 'feuille' }],
           isActive: true
@@ -852,8 +862,17 @@ export const INITIAL_STATE: DatabaseState = {
         {
           id: 'cfg-imp-2',
           serviceId: 'srv-02',
-          optionValues: { 'Format': 'A4', 'Mode': 'Noir & blanc Laser', 'Papier': 'Standard' },
+          optionValues: { 'Format': 'A4', 'Couleur': 'Noir & Blanc', 'Impression': 'Recto', 'Papier': 'Standard' },
           price: 800,
+          billingUnit: 'page',
+          consumables: [{ productId: 'prod-01', productName: 'Papier Ramette A4 80g Double A', quantityPerUnit: 1, unit: 'feuille' }],
+          isActive: true
+        },
+        {
+          id: 'cfg-imp-2-rv',
+          serviceId: 'srv-02',
+          optionValues: { 'Format': 'A4', 'Couleur': 'Noir & Blanc', 'Impression': 'Recto-verso', 'Papier': 'Standard' },
+          price: 1200,
           billingUnit: 'page',
           consumables: [{ productId: 'prod-01', productName: 'Papier Ramette A4 80g Double A', quantityPerUnit: 1, unit: 'feuille' }],
           isActive: true
@@ -861,8 +880,17 @@ export const INITIAL_STATE: DatabaseState = {
         {
           id: 'cfg-imp-3',
           serviceId: 'srv-02',
-          optionValues: { 'Format': 'A3', 'Mode': 'Couleur HD', 'Papier': 'Standard' },
+          optionValues: { 'Format': 'A3', 'Couleur': 'Couleur', 'Impression': 'Recto', 'Papier': 'Standard' },
           price: 4000,
+          billingUnit: 'page',
+          consumables: [{ productId: 'prod-01', productName: 'Papier Ramette A4 80g Double A', quantityPerUnit: 2, unit: 'feuille' }],
+          isActive: true
+        },
+        {
+          id: 'cfg-imp-3-nb',
+          serviceId: 'srv-02',
+          optionValues: { 'Format': 'A3', 'Couleur': 'Noir & Blanc', 'Impression': 'Recto', 'Papier': 'Standard' },
+          price: 1600,
           billingUnit: 'page',
           consumables: [{ productId: 'prod-01', productName: 'Papier Ramette A4 80g Double A', quantityPerUnit: 2, unit: 'feuille' }],
           isActive: true
@@ -870,7 +898,7 @@ export const INITIAL_STATE: DatabaseState = {
         {
           id: 'cfg-imp-4',
           serviceId: 'srv-02',
-          optionValues: { 'Format': 'A4', 'Mode': 'Couleur HD', 'Papier': 'Bristol' },
+          optionValues: { 'Format': 'A4', 'Couleur': 'Couleur', 'Impression': 'Recto', 'Papier': 'Bristol' },
           price: 2500,
           billingUnit: 'page',
           consumables: [{ productId: 'prod-02', productName: 'Papier Bristol A4 180g Multi-Couleurs', quantityPerUnit: 1, unit: 'feuille' }],
@@ -1163,6 +1191,99 @@ export const INITIAL_STATE: DatabaseState = {
           optionValues: { 'Type de formation': 'Bureautique Word / Excel', 'Durée': 'Module complet (1 mois)' },
           price: 350000,
           billingUnit: 'forfait',
+          consumables: [],
+          isActive: true
+        }
+      ],
+      consumables: [],
+      pricingRules: []
+    },
+    {
+      id: 'srv-09',
+      tenantId: INITIAL_TENANT_ID,
+      categoryId: 'sc-04',
+      categoryName: 'Création & Graphisme',
+      code: 'CONCEPTION-GRAPHIQUE',
+      name: 'Conception',
+      description: 'Conception graphique, mise en page de documents, logos, affiches',
+      unit: 'document',
+      baseCost: 0,
+      basePrice: 50000,
+      requiresFile: false,
+      estimatedDurationMinutes: 60,
+      isActive: true,
+      options: [
+        { id: 'opt-conc-type', name: 'Type de document', values: ['Logo / Identité', 'Affiche / Flyer', 'Brochure / Rapport', 'Carte de visite'] }
+      ],
+      configurations: [
+        {
+          id: 'cfg-conc-1',
+          serviceId: 'srv-09',
+          optionValues: { 'Type de document': 'Affiche / Flyer' },
+          price: 50000,
+          billingUnit: 'document',
+          consumables: [],
+          isActive: true
+        }
+      ],
+      consumables: [],
+      pricingRules: []
+    },
+    {
+      id: 'srv-10',
+      tenantId: INITIAL_TENANT_ID,
+      categoryId: 'sc-04',
+      categoryName: 'Bureautique & Rédaction',
+      code: 'RECHERCHE-DOC',
+      name: 'Recherche',
+      description: 'Recherche documentaire sur internet, collecte de données et synthèse',
+      unit: 'prestation',
+      baseCost: 0,
+      basePrice: 20000,
+      requiresFile: false,
+      estimatedDurationMinutes: 30,
+      isActive: true,
+      options: [
+        { id: 'opt-rech-niveau', name: 'Niveau de complexité', values: ['Standard', 'Approfondie'] }
+      ],
+      configurations: [
+        {
+          id: 'cfg-rech-1',
+          serviceId: 'srv-10',
+          optionValues: { 'Niveau de complexité': 'Standard' },
+          price: 20000,
+          billingUnit: 'prestation',
+          consumables: [],
+          isActive: true
+        }
+      ],
+      consumables: [],
+      pricingRules: []
+    },
+    {
+      id: 'srv-11',
+      tenantId: INITIAL_TENANT_ID,
+      categoryId: 'sc-04',
+      categoryName: 'Bureautique & Rédaction',
+      code: 'EXPOSE-SAISIE',
+      name: 'Exposé',
+      description: 'Saisie, mise en page et préparation complète d\'exposés scolaires et universitaires',
+      unit: 'document',
+      baseCost: 0,
+      basePrice: 30000,
+      requiresFile: false,
+      estimatedDurationMinutes: 45,
+      isActive: true,
+      options: [
+        { id: 'opt-exp-format', name: 'Format', values: ['A4', 'Support numérique (PPT)'] }
+      ],
+      configurations: [
+        {
+          id: 'cfg-exp-1',
+          serviceId: 'srv-11',
+          optionValues: { 'Format': 'A4' },
+          price: 30000,
+          billingUnit: 'document',
           consumables: [],
           isActive: true
         }
@@ -2629,9 +2750,24 @@ class StoreManager {
           });
         }
 
-        // Ensure services have standard options and configurations hydrated
+        // Ensure services have standard options and configurations hydrated, with single Photocopie & Impression
         if (parsed.services) {
           parsed.services.forEach((s: Service) => {
+            if (s.id === 'srv-02' || (s.code === 'IMPRESSION-A4-COUL' && s.name.includes('Numérique'))) {
+              s.name = 'Impression';
+            }
+
+            // Flag legacy duplicate variants so they don't appear in "Type de service" catalogues
+            const n = (s.name || '').toLowerCase();
+            const isLegacyVariant = (
+              (n.includes('photocopie') && (n.includes('n&b') || n.includes('noir') || n.includes('couleur') || n.includes('a4') || n.includes('a3')) && s.id !== 'srv-01') ||
+              (n.includes('impression') && (n.includes('n&b') || n.includes('noir') || n.includes('couleur') || n.includes('a4') || n.includes('a3') || n.includes('numérique')) && s.id !== 'srv-02')
+            );
+            if (isLegacyVariant) {
+              (s as any).isLegacyVariant = true;
+              s.isActive = false;
+            }
+
             const initialSrv = INITIAL_STATE.services.find(init => init.id === s.id || init.code === s.code);
             if ((!s.options || s.options.length === 0) && initialSrv?.options && initialSrv.options.length > 0) {
               s.options = JSON.parse(JSON.stringify(initialSrv.options));
@@ -2661,6 +2797,17 @@ class StoreManager {
             }
             if (!s.options) {
               s.options = [];
+            }
+          });
+
+          // Ensure standard services like Conception, Recherche, Exposé exist in state
+          const existingServiceCodes = new Set(parsed.services.map((s: Service) => s.code));
+          ['CONCEPTION-GRAPHIQUE', 'RECHERCHE-DOC', 'EXPOSE-SAISIE'].forEach(code => {
+            if (!existingServiceCodes.has(code)) {
+              const toAdd = INITIAL_STATE.services.find(init => init.code === code);
+              if (toAdd) {
+                parsed.services.push(JSON.parse(JSON.stringify(toAdd)));
+              }
             }
           });
         }

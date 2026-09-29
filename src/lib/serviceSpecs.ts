@@ -28,15 +28,70 @@ export function resolveSpecOption(opt: string | ServiceSpecificationOption): Ser
 }
 
 /**
+ * Canonical option key normalizer to bridge synonyms between UI and configurations
+ * (e.g. "Couleur" vs "Mode", "Impression" vs "Type d'impression").
+ */
+export function canonicalOptionKey(key: string): string {
+  const k = (key || '').trim().toLowerCase();
+  if (k === 'couleur' || k === 'mode' || k === 'coloris' || k === 'type de couleur') return 'couleur';
+  if (k === 'impression' || k === "type d'impression" || k === "mode d'impression" || k === 'recto/verso' || k === 'recto-verso') return 'impression';
+  if (k === 'format' || k === 'taille') return 'format';
+  if (k === 'papier' || k === 'support' || k === 'type de papier') return 'papier';
+  if (k === 'type' || k === 'type de reliure') return 'type';
+  if (k === 'finition') return 'finition';
+  if (k === 'destination') return 'destination';
+  return k;
+}
+
+/**
+ * Canonical option value normalizer to bridge variations
+ * (e.g. "Noir & Blanc" vs "Noir & blanc" vs "N&B").
+ */
+export function canonicalOptionValue(val: string): string {
+  const v = (val || '').trim().toLowerCase();
+  if (v === 'noir & blanc' || v === 'noir et blanc' || v === 'n&b' || v === 'monochrome' || v === 'nb' || v === 'noir & blanc laser') {
+    return 'noir & blanc';
+  }
+  if (v === 'couleur' || v === 'couleur hd' || v === 'coul' || v === 'color') {
+    return 'couleur';
+  }
+  if (v === 'recto' || v === 'simple face') {
+    return 'recto';
+  }
+  if (v === 'recto-verso' || v === 'recto verso' || v === 'double face' || v === 'recto/verso') {
+    return 'recto-verso';
+  }
+  return v;
+}
+
+/**
  * Returns dynamic options for a service (Data-driven, zero hardcoding).
  */
 export function getServiceOptions(service?: Service): ServiceOption[] {
   if (!service) return [];
-  if (service.options && Array.isArray(service.options)) {
+  if (service.options && Array.isArray(service.options) && service.options.length > 0) {
     return service.options.map(opt => ({
       ...opt,
       values: Array.isArray(opt.values) ? opt.values.map(v => getOptionValueLabel(v)) : []
     }));
+  }
+  // Derived dynamically from configurations if options array is empty
+  if (service.configurations && Array.isArray(service.configurations) && service.configurations.length > 0) {
+    const valMap: Record<string, Set<string>> = {};
+    for (const cfg of service.configurations) {
+      if (cfg.optionValues) {
+        for (const [k, v] of Object.entries(cfg.optionValues)) {
+          if (!valMap[k]) valMap[k] = new Set();
+          if (v) valMap[k].add(v);
+        }
+      }
+    }
+    const derived = Object.entries(valMap).map(([k, set]) => ({
+      id: `opt-${k.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+      name: k,
+      values: Array.from(set)
+    }));
+    if (derived.length > 0) return derived;
   }
   // Backward compatibility: convert legacy specificationGroups if options is undefined
   if (service.specificationGroups && Array.isArray(service.specificationGroups)) {
@@ -94,18 +149,38 @@ export function parseSelectedOptionsFromNotes(
   }
 
   for (const opt of options) {
-    // Try matching "OptionName : SelectedValue"
+    const optCanon = canonicalOptionKey(opt.name);
+    const valList = Array.isArray(opt.values) ? opt.values.map(getOptionValueLabel) : [];
+
+    // Try matching exact "OptionName : SelectedValue"
     const escapedName = opt.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`${escapedName}\\s*:\\s*([^|\\n,;]+)`, 'i');
     const match = currentNotes.match(regex);
-    const valList = Array.isArray(opt.values) ? opt.values.map(getOptionValueLabel) : [];
 
     if (match && match[1]) {
       const val = match[1].trim();
-      // Match against known values case-insensitively
       const known = valList.find(v => v.toLowerCase() === val.toLowerCase());
       selected[opt.name] = known || val;
-    } else {
+      continue;
+    }
+
+    // Try matching synonym names in notes (e.g. "Mode:" when option is "Couleur", or "Type d'impression:" when option is "Impression")
+    let synonymMatchFound = false;
+    for (const part of currentNotes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim();
+        const v = part.slice(colonIdx + 1).trim();
+        if (canonicalOptionKey(k) === optCanon) {
+          const known = valList.find(knownV => canonicalOptionValue(knownV) === canonicalOptionValue(v));
+          selected[opt.name] = known || v;
+          synonymMatchFound = true;
+          break;
+        }
+      }
+    }
+
+    if (!synonymMatchFound) {
       // Default to first available value if defined
       selected[opt.name] = valList[0] || '';
     }
@@ -134,10 +209,18 @@ export function formatSelectedOptionsToNotes(
     return specString;
   }
 
-  // If existing notes already contained specs, replace the specs header
+  // If existing notes already contained specs, replace matching keys
+  const keys = Object.keys(selectedOptions).map(canonicalOptionKey);
   const cleaned = existingNotes
     .split('\n')
-    .filter(line => !line.includes(': ') || !pairs.some(([k]) => line.startsWith(k)))
+    .filter(line => {
+      const parts = line.split(':');
+      if (parts.length > 1) {
+        const lineKey = canonicalOptionKey(parts[0].trim());
+        return !keys.includes(lineKey);
+      }
+      return true;
+    })
     .join('\n')
     .trim();
 
@@ -146,6 +229,7 @@ export function formatSelectedOptionsToNotes(
 
 /**
  * Finds matching authorized configuration for a service based on selected option values.
+ * Uses exact matching first, then canonical scoring matching to support flexible options.
  */
 export function findMatchingConfiguration(
   service: Service,
@@ -156,11 +240,10 @@ export function findMatchingConfiguration(
 
   // If service has no options (simple service)
   if (serviceOpts.length === 0) {
-    // Return first active configuration or the only configuration
     return configs.find(c => c.isActive) || configs[0];
   }
 
-  // Exact matching across all required service options
+  // 1. Exact matching across all service options
   const exactMatch = configs.find(cfg => {
     return serviceOpts.every(opt => {
       const selectedVal = (selectedOptions[opt.name] || '').trim().toLowerCase();
@@ -171,12 +254,61 @@ export function findMatchingConfiguration(
 
   if (exactMatch) return exactMatch;
 
-  // Fallback: If only a single default configuration exists (common when service is newly created), match it
+  // 2. Canonical matching: bridges "Couleur" <-> "Mode", "Impression" <-> "Type d'impression", etc.
+  const canonicalSelected: Record<string, string> = {};
+  for (const [k, v] of Object.entries(selectedOptions)) {
+    if (v) {
+      canonicalSelected[canonicalOptionKey(k)] = canonicalOptionValue(v);
+    }
+  }
+
+  const scoredConfigs = configs.map(cfg => {
+    const cfgCanonical: Record<string, string> = {};
+    for (const [k, v] of Object.entries(cfg.optionValues || {})) {
+      if (v) {
+        cfgCanonical[canonicalOptionKey(k)] = canonicalOptionValue(v);
+      }
+    }
+
+    let matchCount = 0;
+    let mismatchCount = 0;
+
+    for (const [canonK, canonV] of Object.entries(canonicalSelected)) {
+      if (cfgCanonical[canonK] !== undefined) {
+        if (cfgCanonical[canonK] === canonV) {
+          matchCount++;
+        } else {
+          mismatchCount++;
+        }
+      }
+    }
+
+    return {
+      cfg,
+      matchCount,
+      mismatchCount,
+      isActive: cfg.isActive !== false
+    };
+  });
+
+  // Filter out any configs with active mismatches
+  const validConfigs = scoredConfigs.filter(sc => sc.mismatchCount === 0 && sc.matchCount > 0);
+  if (validConfigs.length > 0) {
+    // Sort by: active first, then highest matchCount
+    validConfigs.sort((a, b) => {
+      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+      return b.matchCount - a.matchCount;
+    });
+    return validConfigs[0].cfg;
+  }
+
+  // Fallback: If only a single default configuration exists
   if (configs.length === 1 && (!configs[0].optionValues || Object.keys(configs[0].optionValues).length === 0)) {
     return configs[0];
   }
 
-  return undefined;
+  // Fallback to first active configuration
+  return configs.find(c => c.isActive) || configs[0];
 }
 
 /**

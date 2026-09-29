@@ -22,12 +22,20 @@ import {
   Percent, Tag, ShieldAlert, Sparkles, Minus, AlertCircle, Info, FileText,
   Lock, Unlock, Store, Wrench, Layers, AlertTriangle, Paperclip,
   Users, Search, Truck, RotateCcw, Boxes, ArrowRight, Check, Settings2, Clock,
-  Printer, ShieldCheck, X
+  Printer, ShieldCheck, X, SlidersHorizontal
 } from 'lucide-react';
 import { OpenCashModal } from '../cash/OpenCashModal';
 import { PaymentReceiptModal } from './PaymentReceiptModal';
 import { calculateOrderStockRequirements, evaluateOrderStock, StockEvaluation, resolveProductPurchasePrice, calculateEffectiveServiceConsumableQty } from '../../lib/stockEngine';
-import { getServiceSpecificationGroups, resolveSpecOption, getSelectedSpecOption, resolveServiceSpecsImpact } from '../../lib/serviceSpecs';
+import {
+  getServiceSpecificationGroups,
+  resolveSpecOption,
+  getSelectedSpecOption,
+  resolveServiceSpecsImpact,
+  getServiceOptions,
+  canonicalOptionKey,
+  canonicalOptionValue
+} from '../../lib/serviceSpecs';
 import { formatReceiptItemDetails } from '../../lib/orderItemUtils';
 
 export { getServiceSpecificationGroups, resolveSpecOption, getSelectedSpecOption, resolveServiceSpecsImpact };
@@ -81,7 +89,7 @@ export const isPhotocopieLine = (line: CalculatedLine) => {
   if (line.itemType !== 'SERVICE') return false;
   const name = (line.name || '').toLowerCase();
   const code = (line.service?.code || '').toLowerCase();
-  return name.includes('photocopie') || code.includes('photo');
+  return (name.includes('photocopie') || code.includes('photo')) && !name.includes('planche') && !name.includes('identité');
 };
 
 export const isImpressionLine = (line: CalculatedLine) => {
@@ -91,17 +99,35 @@ export const isImpressionLine = (line: CalculatedLine) => {
   return (name.includes('impression') || code.includes('imp')) && !isPhotocopieLine(line);
 };
 
+export const isReliureLine = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = (line.name || '').toLowerCase();
+  const code = (line.service?.code || '').toLowerCase();
+  return name.includes('reliure') || code.includes('rel');
+};
+
+export const isPlastificationLine = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = (line.name || '').toLowerCase();
+  const code = (line.service?.code || '').toLowerCase();
+  return name.includes('plastif') || code.includes('plast');
+};
+
+export const isScanLine = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = (line.name || '').toLowerCase();
+  const code = (line.service?.code || '').toLowerCase();
+  return name.includes('numéris') || name.includes('numeris') || name.includes('scan');
+};
+
 export const isPageServiceLine = (line: CalculatedLine) => {
   if (line.itemType !== 'SERVICE') return false;
-  if (isPhotocopieLine(line) || isImpressionLine(line)) return true;
-  const unit = (line.unit || '').toLowerCase();
-  const cat = (line.category || '').toLowerCase();
-  return unit === 'page' || unit === 'feuille' || unit === 'tirage' || cat.includes('impression') || cat.includes('photocopie');
+  return isPhotocopieLine(line) || isImpressionLine(line);
 };
 
 export const getLineRectoVerso = (line: CalculatedLine) => {
   if (line.itemType !== 'SERVICE' || !line.service) return null;
-  const opts = line.service.options || [];
+  const opts = getServiceOptions(line.service);
 
   let targetOpt = opts.find(o =>
     (o.values || []).some((v: any) => {
@@ -112,11 +138,11 @@ export const getLineRectoVerso = (line: CalculatedLine) => {
   if (!targetOpt) {
     targetOpt = opts.find(o => {
       const n = o.name.toLowerCase();
-      return n.includes('recto') || n.includes('type d\'impression') || n.includes('mode d\'impression');
+      return n.includes('recto') || n.includes('impression') || n.includes('mode');
     });
   }
 
-  const optionName = targetOpt ? targetOpt.name : "Type d'impression";
+  const optionName = targetOpt ? targetOpt.name : "Impression";
   const rawValues = targetOpt?.values?.length
     ? (targetOpt.values as any[]).map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')))
     : ['Recto', 'Recto-verso'];
@@ -125,10 +151,28 @@ export const getLineRectoVerso = (line: CalculatedLine) => {
   const notes = line.notes || '';
   const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
   let currentVal = match && match[1] ? match[1].trim() : '';
+
+  if (!currentVal) {
+    for (const part of notes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim();
+        const v = part.slice(colonIdx + 1).trim();
+        if (canonicalOptionKey(k) === 'impression') {
+          currentVal = v;
+          break;
+        }
+      }
+    }
+  }
+
   if (!currentVal) {
     if (notes.toLowerCase().includes('recto-verso')) currentVal = 'Recto-verso';
     else currentVal = 'Recto';
   }
+
+  const matched = values.find(v => v.toLowerCase() === currentVal.toLowerCase());
+  if (matched) currentVal = matched;
 
   return {
     optionName,
@@ -137,23 +181,298 @@ export const getLineRectoVerso = (line: CalculatedLine) => {
   };
 };
 
-export const getLinePrimaryOption = (line: CalculatedLine) => {
+export const getLineColorOption = (line: CalculatedLine) => {
   if (line.itemType !== 'SERVICE' || !line.service) return null;
-  const opts = line.service.options || [];
+  const opts = getServiceOptions(line.service);
+
+  let targetOpt = opts.find(o => {
+    const k = canonicalOptionKey(o.name);
+    return k === 'couleur' || (o.values || []).some((v: any) => {
+      const s = (typeof v === 'string' ? v : (v.name || v.label || '')).toLowerCase();
+      return s.includes('noir') || s.includes('couleur') || s.includes('n&b');
+    });
+  });
+
+  const optionName = targetOpt ? targetOpt.name : 'Couleur';
+  const rawValues = targetOpt?.values?.length
+    ? targetOpt.values.map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')))
+    : ['Noir & Blanc', 'Couleur'];
+  const values = Array.from(new Set(rawValues));
+
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  let currentVal = match && match[1] ? match[1].trim() : '';
+
+  if (!currentVal) {
+    for (const part of notes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim();
+        const v = part.slice(colonIdx + 1).trim();
+        if (canonicalOptionKey(k) === 'couleur') {
+          currentVal = v;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!currentVal) {
+    if (notes.toLowerCase().includes('couleur')) {
+      currentVal = values.find(v => v.toLowerCase().includes('couleur')) || 'Couleur';
+    } else {
+      currentVal = values[0] || 'Noir & Blanc';
+    }
+  }
+
+  const matched = values.find(v => v.toLowerCase() === currentVal.toLowerCase());
+  if (matched) currentVal = matched;
+
+  return {
+    optionName,
+    values,
+    currentVal,
+  };
+};
+
+export const getLineFormatOption = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = getServiceOptions(line.service);
+  let targetOpt = opts.find(o => canonicalOptionKey(o.name) === 'format');
+
+  let values: string[] = [];
+  if (targetOpt && targetOpt.values.length > 0) {
+    values = targetOpt.values.map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
+  } else if (line.service.configurations && line.service.configurations.length > 0) {
+    const set = new Set<string>();
+    for (const cfg of line.service.configurations) {
+      for (const [k, v] of Object.entries(cfg.optionValues || {})) {
+        if (canonicalOptionKey(k) === 'format' && v) set.add(v);
+      }
+    }
+    values = Array.from(set);
+  }
+
+  if (values.length === 0) {
+    const isPhoto = isPhotocopieLine(line);
+    const isImp = isImpressionLine(line);
+    const isRel = isReliureLine(line);
+    const isPlast = isPlastificationLine(line);
+    const isScan = isScanLine(line);
+    if (isPhoto || isImp || isRel || isPlast || isScan) {
+      values = ['A4', 'A3'];
+    } else {
+      return null;
+    }
+  }
+
+  const optionName = targetOpt ? targetOpt.name : 'Format';
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  let currentVal = match && match[1] ? match[1].trim() : '';
+
+  if (!currentVal) {
+    for (const part of notes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim();
+        const v = part.slice(colonIdx + 1).trim();
+        if (canonicalOptionKey(k) === 'format') {
+          currentVal = v;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!currentVal) {
+    currentVal = values[0] || 'A4';
+  }
+
+  const matched = values.find(v => v.toLowerCase() === currentVal.toLowerCase());
+  if (matched) currentVal = matched;
+
+  return {
+    optionName,
+    values,
+    currentVal,
+  };
+};
+
+export const getLineReliureTypeOption = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = getServiceOptions(line.service);
+  let targetOpt = opts.find(o => {
+    const k = canonicalOptionKey(o.name);
+    return k === 'reliure' || k === 'type' || o.name.toLowerCase().includes('reliure') || o.name.toLowerCase().includes('type');
+  });
+
+  let values: string[] = [];
+  if (targetOpt && targetOpt.values.length > 0) {
+    values = targetOpt.values.map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
+  } else if (line.service.configurations && line.service.configurations.length > 0) {
+    const set = new Set<string>();
+    for (const cfg of line.service.configurations) {
+      for (const [k, v] of Object.entries(cfg.optionValues || {})) {
+        if (k.toLowerCase().includes('reliure') || k.toLowerCase().includes('type')) {
+          if (v) set.add(v);
+        }
+      }
+    }
+    values = Array.from(set);
+  }
+
+  if (values.length === 0) {
+    values = ['Spirale plastique', 'Spirale métallique', 'Baguette'];
+  }
+
+  const optionName = targetOpt ? targetOpt.name : 'Type de reliure';
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  let currentVal = match && match[1] ? match[1].trim() : '';
+
+  if (!currentVal) {
+    for (const part of notes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim().toLowerCase();
+        const v = part.slice(colonIdx + 1).trim();
+        if (k.includes('reliure') || k.includes('type')) {
+          currentVal = v;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!currentVal) currentVal = values[0] || 'Spirale plastique';
+  const matched = values.find(v => v.toLowerCase() === currentVal.toLowerCase());
+  if (matched) currentVal = matched;
+
+  return { optionName, values, currentVal };
+};
+
+export const getLinePlastifFinitionOption = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = getServiceOptions(line.service);
+  let targetOpt = opts.find(o => {
+    const k = canonicalOptionKey(o.name);
+    return k === 'finition' || k === 'epaisseur' || o.name.toLowerCase().includes('finition') || o.name.toLowerCase().includes('epaisseur');
+  });
+
+  let values: string[] = [];
+  if (targetOpt && targetOpt.values.length > 0) {
+    values = targetOpt.values.map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
+  } else if (line.service.configurations && line.service.configurations.length > 0) {
+    const set = new Set<string>();
+    for (const cfg of line.service.configurations) {
+      for (const [k, v] of Object.entries(cfg.optionValues || {})) {
+        if (k.toLowerCase().includes('finition') || k.toLowerCase().includes('epaisseur')) {
+          if (v) set.add(v);
+        }
+      }
+    }
+    values = Array.from(set);
+  }
+
+  if (values.length === 0) {
+    values = ['Brillant 80µ', 'Mat 125µ', 'Brillant 125µ'];
+  }
+
+  const optionName = targetOpt ? targetOpt.name : 'Finition';
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  let currentVal = match && match[1] ? match[1].trim() : '';
+
+  if (!currentVal) {
+    for (const part of notes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim().toLowerCase();
+        const v = part.slice(colonIdx + 1).trim();
+        if (k.includes('finition') || k.includes('epaisseur')) {
+          currentVal = v;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!currentVal) currentVal = values[0] || 'Brillant 80µ';
+  const matched = values.find(v => v.toLowerCase() === currentVal.toLowerCase());
+  if (matched) currentVal = matched;
+
+  return { optionName, values, currentVal };
+};
+
+export const getLineScanDestinationOption = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = getServiceOptions(line.service);
+  let targetOpt = opts.find(o => {
+    const k = canonicalOptionKey(o.name);
+    return k === 'destination' || k === 'support' || o.name.toLowerCase().includes('destination') || o.name.toLowerCase().includes('support');
+  });
+
+  let values: string[] = [];
+  if (targetOpt && targetOpt.values.length > 0) {
+    values = targetOpt.values.map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
+  } else if (line.service.configurations && line.service.configurations.length > 0) {
+    const set = new Set<string>();
+    for (const cfg of line.service.configurations) {
+      for (const [k, v] of Object.entries(cfg.optionValues || {})) {
+        if (k.toLowerCase().includes('destination') || k.toLowerCase().includes('support')) {
+          if (v) set.add(v);
+        }
+      }
+    }
+    values = Array.from(set);
+  }
+
+  if (values.length === 0) {
+    values = ['Email (PDF)', 'Clé USB (PDF)', 'Clé USB (JPEG)'];
+  }
+
+  const optionName = targetOpt ? targetOpt.name : 'Destination';
+  const notes = line.notes || '';
+  const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
+  let currentVal = match && match[1] ? match[1].trim() : '';
+
+  if (!currentVal) {
+    for (const part of notes.split(' | ')) {
+      const colonIdx = part.indexOf(':');
+      if (colonIdx > 0) {
+        const k = part.slice(0, colonIdx).trim().toLowerCase();
+        const v = part.slice(colonIdx + 1).trim();
+        if (k.includes('destination') || k.includes('support')) {
+          currentVal = v;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!currentVal) currentVal = values[0] || 'Email (PDF)';
+  const matched = values.find(v => v.toLowerCase() === currentVal.toLowerCase());
+  if (matched) currentVal = matched;
+
+  return { optionName, values, currentVal };
+};
+
+export const getLineSecondaryOption = (line: CalculatedLine) => {
+  if (line.itemType !== 'SERVICE' || !line.service) return null;
+  const opts = getServiceOptions(line.service);
   if (opts.length === 0) return null;
 
-  let primaryOpt = opts.find(o => o.name.toLowerCase() === 'mode' || o.name.toLowerCase().includes('couleur'));
-  if (!primaryOpt) {
-    primaryOpt = opts.find(o => o.name.toLowerCase().includes('type'));
-  }
-  if (!primaryOpt) {
-    primaryOpt = opts[0];
-  }
+  // Find secondary option that is NOT couleur, impression, or format
+  const secOpt = opts.find(o => {
+    const k = canonicalOptionKey(o.name);
+    return k !== 'couleur' && k !== 'impression' && k !== 'format';
+  });
 
-  if (!primaryOpt) return null;
+  if (!secOpt) return null;
 
-  const optionName = primaryOpt.name;
-  const values = ((primaryOpt.values as any[]) || []).map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
+  const optionName = secOpt.name;
+  const values = secOpt.values.map((v: any) => (typeof v === 'string' ? v : (v?.name || v?.label || '')));
   const notes = line.notes || '';
   const match = notes.match(new RegExp(`${optionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^|\\n]+)`, 'i'));
   const currentVal = match && match[1] ? match[1].trim() : (values[0] || '');
@@ -163,6 +482,10 @@ export const getLinePrimaryOption = (line: CalculatedLine) => {
     values,
     currentVal,
   };
+};
+
+export const getLinePrimaryOption = (line: CalculatedLine) => {
+  return getLineColorOption(line) || getLineSecondaryOption(line);
 };
 
 export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
@@ -184,6 +507,60 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const tenantServices = useMemo(() => {
     return (state.services || []).filter(s => s.tenantId === tenantId && s.isActive);
   }, [state.services, tenantId]);
+
+  // Clean deduplicated selectable services for "Type de service"
+  // Ensures only 1 "Photocopie" and 1 "Impression", while preserving all other services intact
+  const selectableServices = useMemo(() => {
+    if (!tenantServices || tenantServices.length === 0) return [];
+
+    const photoServices = tenantServices.filter(s => {
+      const n = (s.name || '').toLowerCase();
+      const c = (s.code || '').toLowerCase();
+      return (n.includes('photocopie') || c.includes('photo')) && !n.includes('planche') && !n.includes('identité') && !n.includes('photo-id');
+    });
+
+    const primaryPhoto = photoServices.find(s => s.name.trim().toLowerCase() === 'photocopie')
+      || photoServices.find(s => !s.name.toLowerCase().includes('n&b') && !s.name.toLowerCase().includes('couleur') && !s.name.toLowerCase().includes('a4'))
+      || photoServices[0];
+
+    const impServices = tenantServices.filter(s => {
+      const n = (s.name || '').toLowerCase();
+      const c = (s.code || '').toLowerCase();
+      return (n.includes('impression') || c.includes('imp')) && !photoServices.some(p => p.id === s.id);
+    });
+
+    const primaryImp = impServices.find(s => s.name.trim().toLowerCase() === 'impression')
+      || impServices.find(s => s.name.trim().toLowerCase() === 'impression numérique')
+      || impServices.find(s => !s.name.toLowerCase().includes('n&b') && !s.name.toLowerCase().includes('couleur') && !s.name.toLowerCase().includes('a4'))
+      || impServices[0];
+
+    const list: Service[] = [];
+
+    if (primaryPhoto) {
+      list.push({
+        ...primaryPhoto,
+        name: 'Photocopie'
+      });
+    }
+
+    if (primaryImp) {
+      list.push({
+        ...primaryImp,
+        name: 'Impression'
+      });
+    }
+
+    tenantServices.forEach(s => {
+      const isPhotoVar = photoServices.some(p => p.id === s.id);
+      const isImpVar = impServices.some(i => i.id === s.id);
+      const isFormation = (s.name || '').toLowerCase().includes('formation') || (s.code || '').toLowerCase().includes('formation') || (s.categoryName || '').toLowerCase().includes('formation');
+      if (!isPhotoVar && !isImpVar && !isFormation) {
+        list.push(s);
+      }
+    });
+
+    return list;
+  }, [tenantServices]);
 
   const tenantProducts = useMemo(() => {
     // Fournitures / Articles Magasin & Boutique (isSellable !== false)
@@ -244,28 +621,8 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   const [remiseCategory, setRemiseCategory] = useState<'VOLUME' | 'LOYALTY' | 'INSTITUTIONAL' | 'PROMOTION' | 'COMMERCIAL_NEGOTIATION' | 'OTHER'>('COMMERCIAL_NEGOTIATION');
   const [remiseCustomReason, setRemiseCustomReason] = useState<string>('');
 
-  // Form Lines State
-  const defaultInitialService = tenantServices[0] || state.services[0];
-  const initialSpecs = getServiceSpecificationGroups(defaultInitialService);
-  const initialNotes = initialSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
-
-  const [lines, setLines] = useState<OrderFormLine[]>([
-    {
-      id: `line-${Date.now()}-1`,
-      itemType: 'SERVICE',
-      serviceId: defaultInitialService?.id || '',
-      pageCount: 1,
-      copiesCount: 1,
-      quantity: 1,
-      unit: defaultInitialService?.unit || 'page',
-      isCustomPrice: false,
-      discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
-      discountReasonCustom: '',
-      assignedDepartment: 'PHOTOCOPY',
-      notes: initialNotes,
-      files: [],
-    }
-  ]);
+  // Form Lines State - Décoché par défaut : c'est à l'utilisateur de choisir ses prestations
+  const [lines, setLines] = useState<OrderFormLine[]>([]);
 
   const [priority, setPriority] = useState<OrderPriority>('NORMAL');
   const [instructions, setInstructions] = useState('');
@@ -353,27 +710,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
   // Reset Form
   const resetForm = () => {
-    const defaultSrv = tenantServices[0] || state.services[0];
-    const srvSpecs = getServiceSpecificationGroups(defaultSrv);
-    const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
-    setLines([
-      {
-        id: `line-${Date.now()}-1`,
-        itemType: 'SERVICE',
-        serviceId: defaultSrv?.id || '',
-        pageCount: 1,
-        copiesCount: 1,
-        quantity: 1,
-        unit: defaultSrv?.unit || 'page',
-        isCustomPrice: false,
-        customUnitPrice: undefined,
-        discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
-        discountReasonCustom: '',
-        assignedDepartment: 'PHOTOCOPY',
-        notes: defaultNotes,
-        files: [],
-      }
-    ]);
+    setLines([]);
     setClientMode('WALK_IN');
     setSelectedPersonId((state.persons || []).find(p => p.tenantId === tenantId)?.id || state.persons[0]?.id || '');
     setClientSearchQuery('');
@@ -601,18 +938,22 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       const copy = [...prev];
       const current = copy[index];
       if (!current) return prev;
-      let newPageCount = updates.pageCount !== undefined ? updates.pageCount : current.pageCount;
-      let newCopiesCount = updates.copiesCount !== undefined ? updates.copiesCount : current.copiesCount;
-      let newQuantity = updates.quantity !== undefined ? updates.quantity : current.quantity;
+      let newPageCount = updates.pageCount !== undefined ? updates.pageCount : (current.pageCount || 1);
+      let newCopiesCount = updates.copiesCount !== undefined ? updates.copiesCount : (current.copiesCount || 1);
+      let newQuantity = updates.quantity !== undefined ? updates.quantity : (current.quantity || 1);
 
-      if (updates.pageCount !== undefined || updates.copiesCount !== undefined) {
-        const p = Math.max(1, newPageCount !== undefined ? Number(newPageCount) : 1);
-        const c = Math.max(1, newCopiesCount !== undefined ? Number(newCopiesCount) : 1);
+      if (updates.quantity !== undefined && updates.pageCount === undefined && updates.copiesCount === undefined) {
+        newQuantity = Math.max(1, Number(updates.quantity) || 1);
+        newPageCount = newQuantity;
+        newCopiesCount = 1;
+      } else if (updates.pageCount !== undefined || updates.copiesCount !== undefined) {
+        const p = Math.max(1, Number(newPageCount) || 1);
+        const c = Math.max(1, Number(newCopiesCount) || 1);
         newPageCount = p;
         newCopiesCount = c;
         newQuantity = p * c;
       } else if (updates.quantity !== undefined) {
-        newQuantity = Math.max(1, Number(updates.quantity));
+        newQuantity = Math.max(1, Number(updates.quantity) || 1);
       }
 
       copy[index] = {
@@ -634,16 +975,31 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       if (!current) return prev;
 
       const currentNotes = current.notes || '';
+      const canonTarget = canonicalOptionKey(optionName);
+
       const parts = currentNotes
         .split(' | ')
         .map(p => p.trim())
-        .filter(p => p && !p.toLowerCase().startsWith(optionName.toLowerCase() + ':'));
+        .filter(p => {
+          if (!p) return false;
+          const colonIdx = p.indexOf(':');
+          if (colonIdx > 0) {
+            const k = p.slice(0, colonIdx).trim();
+            if (canonicalOptionKey(k) === canonTarget || k.toLowerCase() === optionName.toLowerCase()) {
+              return false;
+            }
+          }
+          return true;
+        });
+
       parts.push(`${optionName}: ${newValue}`);
       const updatedNotes = parts.join(' | ');
 
       copy[index] = {
         ...current,
         notes: updatedNotes,
+        isCustomPrice: false,
+        customUnitPrice: undefined,
       };
       return copy;
     });
@@ -994,12 +1350,19 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   };
 
   const handleModalClose = () => {
+    resetForm();
     setCreatedOrderSummary(null);
     setReceiptPayment(null);
     setReceiptOrder(null);
     setEditingLineIndex(null);
     onClose();
   };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
 
   const handleValidateAndDeliver = () => {
     if (!createdOrderSummary) return;
@@ -1248,7 +1611,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
                 {/* Checkboxes Grid of Services */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-                  {tenantServices.map(service => {
+                  {selectableServices.map(service => {
                     const isChecked = lines.some(l => l.itemType === 'SERVICE' && l.serviceId === service.id);
 
                     return (
@@ -1265,8 +1628,34 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                           checked={isChecked}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              const srvSpecs = getServiceSpecificationGroups(service);
-                              const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
+                              const isPhoto = isPhotocopieLine({ itemType: 'SERVICE', service } as any);
+                              const isImp = isImpressionLine({ itemType: 'SERVICE', service } as any);
+                              const srvOpts = getServiceOptions(service);
+                              const defaultPairs: string[] = [];
+
+                              if (isPhoto || isImp) {
+                                const colorOpt = srvOpts.find(o => canonicalOptionKey(o.name) === 'couleur');
+                                const modeOpt = srvOpts.find(o => canonicalOptionKey(o.name) === 'impression');
+                                const formatOpt = srvOpts.find(o => canonicalOptionKey(o.name) === 'format');
+
+                                defaultPairs.push(`${colorOpt ? colorOpt.name : 'Couleur'}: Noir & Blanc`);
+                                defaultPairs.push(`${modeOpt ? modeOpt.name : 'Impression'}: Recto`);
+                                defaultPairs.push(`${formatOpt ? formatOpt.name : 'Format'}: ${formatOpt?.values?.[0] || 'A4'}`);
+
+                                srvOpts.forEach(o => {
+                                  const k = canonicalOptionKey(o.name);
+                                  if (k !== 'couleur' && k !== 'impression' && k !== 'format') {
+                                    defaultPairs.push(`${o.name}: ${o.values[0] || 'Standard'}`);
+                                  }
+                                });
+                              } else {
+                                srvOpts.forEach(o => {
+                                  defaultPairs.push(`${o.name}: ${o.values[0] || ''}`);
+                                });
+                              }
+
+                              const defaultNotes = defaultPairs.filter(Boolean).join(' | ');
+
                               setLines(prev => [
                                 ...prev,
                                 {
@@ -1280,7 +1669,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                   isCustomPrice: false,
                                   discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
                                   discountReasonCustom: '',
-                                  assignedDepartment: 'PRINT',
+                                  assignedDepartment: isPhoto ? 'PHOTOCOPY' : isImp ? 'PRINT' : 'FINISHING',
                                   notes: defaultNotes,
                                   files: [],
                                 }
@@ -1364,264 +1753,333 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                     </div>
                   ) : (
                     <table className="w-full text-left text-xs border-collapse">
-                      <thead className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 font-extrabold">
+                      <thead className="bg-slate-50/80 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold">
                         <tr>
-                          <th className="p-2.5 min-w-[140px] sm:w-1/4">Désignation</th>
-                          <th className="p-2.5 sm:w-2/5">Paramètres & Quantité</th>
-                          <th className="p-2.5 text-right whitespace-nowrap">Prix unitaire</th>
-                          <th className="p-2.5 text-right whitespace-nowrap">Total</th>
-                          <th className="p-2.5 text-center whitespace-nowrap">Actions</th>
+                          <th className="py-3 px-3 min-w-[150px]">Désignation</th>
+                          <th className="py-3 px-3 min-w-[140px]">Paramètre</th>
+                          <th className="py-3 px-3 min-w-[140px]">Quantité</th>
+                          <th className="py-3 px-3 text-center whitespace-nowrap">Prix unitaire</th>
+                          <th className="py-3 px-3 text-center whitespace-nowrap">Total</th>
+                          <th className="py-3 px-3 text-center whitespace-nowrap">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {calculatedLines.map((line, idx) => {
                           const isPhoto = isPhotocopieLine(line);
                           const isImp = isImpressionLine(line);
+                          const isRel = isReliureLine(line);
+                          const isPlast = isPlastificationLine(line);
+                          const isScan = isScanLine(line);
                           const isPage = isPhoto || isImp || isPageServiceLine(line);
-                          const rectoVersoInfo = getLineRectoVerso(line);
-                          const primaryOptInfo = getLinePrimaryOption(line);
+
+                          const colorOpt = getLineColorOption(line);
+                          const rectoVersoOpt = getLineRectoVerso(line);
+                          const formatOpt = getLineFormatOption(line);
+                          const reliureTypeOpt = getLineReliureTypeOption(line);
+                          const plastifFinitionOpt = getLinePlastifFinitionOption(line);
+                          const scanDestOpt = getLineScanDestinationOption(line);
+                          const secOpt = getLineSecondaryOption(line);
 
                           return (
                             <tr key={line.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors">
-                              {/* 1. DÉSIGNATION (Pas de Type encombrant) */}
-                              <td className="p-2.5 align-middle">
+                              {/* 1. DÉSIGNATION */}
+                              <td className="py-3 px-3 align-middle">
                                 <div className="flex flex-col">
-                                  <strong className="text-slate-900 dark:text-white font-bold text-xs">
+                                  <strong className="text-slate-900 dark:text-white font-bold text-xs sm:text-sm">
                                     {line.name}
                                   </strong>
                                   {line.itemType === 'PRODUCT' ? (
-                                    <span className="text-[10px] text-slate-400 font-medium">
+                                    <span className="text-[11px] text-slate-400 font-medium">
                                       Article stock (Dispo: {line.currentStock})
                                     </span>
                                   ) : (
                                     line.notes && (
-                                      <span className="text-[10px] text-slate-400 truncate max-w-[180px] sm:max-w-xs" title={line.notes}>
-                                        {line.notes
-                                          .split(' | ')
-                                          .filter(p => !p.toLowerCase().includes('type d\'impression') && !p.toLowerCase().includes('recto'))
-                                          .join(' · ') || line.notes}
+                                      <span className="text-[11px] text-slate-400 font-normal leading-relaxed line-clamp-2 max-w-[220px]" title={line.notes}>
+                                        {line.notes.split(' | ').join(' · ')}
                                       </span>
                                     )
                                   )}
                                 </div>
                               </td>
 
-                              {/* 2. PARAMÈTRES DYNAMIQUES SELON LA PRESTATION */}
-                              <td className="p-2.5 align-middle">
-                                {isPhoto ? (
-                                  /* PHOTOCOPIE : Recto/Verso ▼ | [10] pages | [2] ex. */
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    {rectoVersoInfo && (
+                              {/* 2. PARAMÈTRE (SELECTS EMPILÉS VERTICALEMENT) */}
+                              <td className="py-3 px-3 align-middle">
+                                {isPhoto || isImp ? (
+                                  <div className="flex flex-col gap-1.5 w-fit min-w-[130px] max-w-[160px]">
+                                    {colorOpt && (
                                       <select
-                                        value={rectoVersoInfo.currentVal}
-                                        onChange={(e) => handleUpdateLineOption(idx, rectoVersoInfo.optionName, e.target.value)}
-                                        className="h-7 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500 shadow-sm"
-                                        title="Mode Recto ou Recto-verso"
+                                        value={colorOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, colorOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Couleur"
                                       >
-                                        {rectoVersoInfo.values.map(val => (
+                                        {colorOpt.values.map(val => (
                                           <option key={val} value={val}>{val}</option>
                                         ))}
                                       </select>
                                     )}
-
-                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={line.pageCount || 1}
-                                        onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-11 sm:w-12 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
-                                        title="Nombre de pages du document original"
-                                      />
-                                      <span className="text-[11px] text-slate-500 font-semibold">pages</span>
-                                    </div>
-
-                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={line.copiesCount || 1}
-                                        onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-10 sm:w-11 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
-                                        title="Nombre d'exemplaires / reproductions"
-                                      />
-                                      <span className="text-[11px] text-slate-500 font-semibold">ex.</span>
-                                    </div>
-
-                                    {(line.copiesCount || 1) > 1 && (
-                                      <span className="text-[10px] text-slate-400 font-mono hidden md:inline">
-                                        = {line.quantity} pages
-                                      </span>
+                                    {rectoVersoOpt && (
+                                      <select
+                                        value={rectoVersoOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, rectoVersoOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Type d'impression"
+                                      >
+                                        {rectoVersoOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
                                     )}
                                   </div>
-                                ) : isImp ? (
-                                  /* IMPRESSION : [Mode / Recto-Verso] | [10] pages | [1] ex. */
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    {rectoVersoInfo ? (
+                                ) : isRel ? (
+                                  <div className="flex flex-col gap-1.5 w-fit min-w-[130px] max-w-[160px]">
+                                    {reliureTypeOpt && (
                                       <select
-                                        value={rectoVersoInfo.currentVal}
-                                        onChange={(e) => handleUpdateLineOption(idx, rectoVersoInfo.optionName, e.target.value)}
-                                        className="h-7 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500 shadow-sm"
-                                        title="Mode Recto ou Recto-verso"
+                                        value={reliureTypeOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, reliureTypeOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Type de reliure"
                                       >
-                                        {rectoVersoInfo.values.map(val => (
+                                        {reliureTypeOpt.values.map(val => (
                                           <option key={val} value={val}>{val}</option>
                                         ))}
                                       </select>
-                                    ) : primaryOptInfo ? (
+                                    )}
+                                    {formatOpt && (
                                       <select
-                                        value={primaryOptInfo.currentVal}
-                                        onChange={(e) => handleUpdateLineOption(idx, primaryOptInfo.optionName, e.target.value)}
-                                        className="h-7 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-0.5 text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-sky-500 shadow-sm"
-                                        title={primaryOptInfo.optionName}
+                                        value={formatOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, formatOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Format"
                                       >
-                                        {primaryOptInfo.values.map(val => (
+                                        {formatOpt.values.map(val => (
                                           <option key={val} value={val}>{val}</option>
                                         ))}
                                       </select>
-                                    ) : null}
+                                    )}
+                                  </div>
+                                ) : isPlast ? (
+                                  <div className="flex flex-col gap-1.5 w-fit min-w-[130px] max-w-[160px]">
+                                    {formatOpt && (
+                                      <select
+                                        value={formatOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, formatOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Format"
+                                      >
+                                        {formatOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    {plastifFinitionOpt && (
+                                      <select
+                                        value={plastifFinitionOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, plastifFinitionOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Finition"
+                                      >
+                                        {plastifFinitionOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                ) : isScan ? (
+                                  <div className="flex flex-col gap-1.5 w-fit min-w-[130px] max-w-[160px]">
+                                    {formatOpt && (
+                                      <select
+                                        value={formatOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, formatOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Format"
+                                      >
+                                        {formatOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    {scanDestOpt && (
+                                      <select
+                                        value={scanDestOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, scanDestOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Destination"
+                                      >
+                                        {scanDestOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-1.5 w-fit min-w-[130px] max-w-[160px]">
+                                    {formatOpt && (
+                                      <select
+                                        value={formatOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, formatOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title="Format"
+                                      >
+                                        {formatOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    {secOpt && (
+                                      <select
+                                        value={secOpt.currentVal}
+                                        onChange={(e) => handleUpdateLineOption(idx, secOpt.optionName, e.target.value)}
+                                        className="h-8 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1 text-slate-800 dark:text-slate-100 shadow-xs focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                                        title={secOpt.optionName}
+                                      >
+                                        {secOpt.values.map(val => (
+                                          <option key={val} value={val}>{val}</option>
+                                        ))}
+                                      </select>
+                                    )}
+                                    {!formatOpt && !secOpt && (
+                                      <span className="text-xs text-slate-400 italic">Standard</span>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
 
-                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                              {/* 3. QUANTITÉ (INPUTS EMPILÉS VERTICALEMENT AVEC DIMENSIONS CONFORTABLES) */}
+                              <td className="py-3 px-3 align-middle">
+                                {isPage ? (
+                                  <div className="flex flex-col gap-2 w-fit">
+                                    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 shadow-xs">
                                       <input
                                         type="number"
                                         min={1}
                                         value={line.pageCount || 1}
                                         onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-11 sm:w-12 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
+                                        className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
                                         title="Nombre de pages du document original"
                                       />
-                                      <span className="text-[11px] text-slate-500 font-semibold">pages</span>
+                                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">pages</span>
                                     </div>
 
-                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
+                                    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 shadow-xs">
                                       <input
                                         type="number"
                                         min={1}
                                         value={line.copiesCount || 1}
                                         onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-10 sm:w-11 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
-                                        title="Nombre d'exemplaires / tirages"
+                                        className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                                        title="Nombre d'exemplaires"
                                       />
-                                      <span className="text-[11px] text-slate-500 font-semibold">ex.</span>
-                                    </div>
-                                  </div>
-                                ) : isPage ? (
-                                  /* AUTRES SERVICES DE TYPE PAGE */
-                                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={line.pageCount || 1}
-                                        onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-11 sm:w-12 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
-                                      />
-                                      <span className="text-[11px] text-slate-500 font-semibold">pages</span>
-                                    </div>
-                                    <div className="inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-800">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={line.copiesCount || 1}
-                                        onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-10 sm:w-11 h-6 text-xs font-black text-center rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-1"
-                                      />
-                                      <span className="text-[11px] text-slate-500 font-semibold">ex.</span>
+                                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">ex.</span>
                                     </div>
                                   </div>
                                 ) : (
-                                  /* RELIURE, PLASTIFICATION, AUTRES PRESTATIONS, FOURNITURES */
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[11px] text-slate-500 font-semibold">Quantité :</span>
+                                  <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs w-fit">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateLine(idx, { quantity: Math.max(1, (line.quantity || 1) - 1) })}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                      title="Diminuer la quantité"
+                                    >
+                                      -
+                                    </button>
                                     <input
                                       type="number"
                                       min={1}
                                       max={line.itemType === 'PRODUCT' ? (line.currentStock || 9999) : 9999}
                                       value={line.quantity}
-                                      onChange={(e) => handleUpdateLine(idx, {
-                                        quantity: Math.max(1, parseInt(e.target.value) || 1),
-                                        pageCount: 1,
-                                        copiesCount: 1
-                                      })}
-                                      className="w-14 h-7 text-xs font-black text-center rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-1 shadow-sm"
+                                      onChange={(e) => {
+                                        const v = parseInt(e.target.value);
+                                        handleUpdateLine(idx, { quantity: isNaN(v) ? 1 : Math.max(1, v) });
+                                      }}
+                                      className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                                      title="Quantité"
                                     />
-                                    {line.unit && line.unit !== 'unité' && (
-                                      <span className="text-[11px] text-slate-500 font-medium">
-                                        {line.unit}
-                                      </span>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateLine(idx, { quantity: (line.quantity || 1) + 1 })}
+                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                      title="Augmenter la quantité"
+                                    >
+                                      +
+                                    </button>
+                                    <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">
+                                      {line.unit || 'doc'}
+                                    </span>
                                   </div>
                                 )}
                               </td>
 
-                              {/* 3. PRIX UNITAIRE */}
-                              <td className="p-2.5 text-right align-middle text-slate-700 dark:text-slate-300 font-medium">
-                                <span className="font-mono text-xs">{formatCurrency(line.appliedUnitPrice)}</span>
+                              {/* 4. PRIX UNITAIRE */}
+                              <td className="py-3 px-3 align-middle text-center whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <span>{formatCurrency(line.appliedUnitPrice)}</span>
                                 {line.isCustomPrice && line.standardUnitPrice !== line.appliedUnitPrice && (
-                                  <span className="text-[9px] text-slate-400 line-through block font-mono">
+                                  <span className="text-[10px] text-slate-400 line-through block">
                                     {formatCurrency(line.standardUnitPrice)}
                                   </span>
                                 )}
                               </td>
 
-                              {/* 4. TOTAL */}
-                              <td className="p-2.5 text-right align-middle">
-                                {line.discountAmount > 0 ? (
-                                  <div className="space-y-0.5">
-                                    <span className="text-[10px] text-slate-400 line-through block font-mono">
-                                      {formatCurrency(line.grossTotal)}
-                                    </span>
-                                    <span className="font-mono font-black text-emerald-600 dark:text-emerald-400 text-xs block">
-                                      {formatCurrency(line.netTotal)}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="font-mono font-black text-brand-600 dark:text-brand-400 text-xs">
-                                    {formatCurrency(line.netTotal)}
+                              {/* 5. TOTAL (DOUBLE LIGNE EN VERT) */}
+                              <td className="py-3 px-3 align-middle text-center whitespace-nowrap">
+                                {line.discountAmount > 0 && (
+                                  <span className="text-[10px] text-slate-400 line-through block">
+                                    {formatCurrency(line.grossTotal)}
                                   </span>
                                 )}
+                                <div className="text-emerald-700 dark:text-emerald-400 font-bold text-xs leading-tight flex flex-col items-center">
+                                  {(() => {
+                                    const parts = formatCurrency(line.netTotal).trim().split(/\s+/);
+                                    if (parts.length >= 2) {
+                                      const unit = parts.pop();
+                                      const amount = parts.join(' ');
+                                      return (
+                                        <>
+                                          <span>{amount}</span>
+                                          <span className="text-[10px] font-semibold">{unit}</span>
+                                        </>
+                                      );
+                                    }
+                                    return <span>{formatCurrency(line.netTotal)}</span>;
+                                  })()}
+                                </div>
                               </td>
 
-                              {/* 5. ACTIONS : [Modifier] [Remise] [Supprimer] */}
-                              <td className="p-2.5 text-center align-middle">
-                                <div className="flex items-center justify-center gap-1">
-                                  <Button
+                              {/* 6. ACTIONS (PILULES MODIFIER + REMISE + POUBELLE ROUGE) */}
+                              <td className="py-3 px-3 align-middle whitespace-nowrap text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
                                     type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    icon={Settings2}
                                     onClick={() => setEditingLineIndex(idx)}
-                                    className="h-7 px-2 text-[11px] font-bold text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition-colors"
                                     title="Modifier tous les paramètres de cette prestation"
                                   >
-                                    Modifier
-                                  </Button>
+                                    <SlidersHorizontal className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                                    <span>Modifier</span>
+                                  </button>
 
-                                  <Button
+                                  <button
                                     type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    icon={Tag}
                                     onClick={() => handleOpenRemiseModal(idx)}
-                                    className={`h-7 px-2 text-[11px] font-bold transition-all ${
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold shadow-2xs transition-colors ${
                                       line.discountAmount > 0
-                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-sm'
-                                        : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-xs'
+                                        : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
                                     }`}
                                     title="Appliquer ou modifier une remise sur cette ligne"
                                   >
-                                    Remise
-                                  </Button>
+                                    <Tag className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                                    <span>Remise</span>
+                                  </button>
 
-                                  <Button
+                                  <button
                                     type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    icon={Trash2}
                                     onClick={() => handleRemoveLine(idx)}
-                                    className="h-7 w-7 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition-colors ml-0.5"
                                     title="Supprimer la ligne"
-                                  />
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -1774,10 +2232,9 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                           value={currentSelectedVal}
                           onChange={(e) => {
                             const val = e.target.value;
-                            const prevNotes = currentEditingLine.notes || '';
-                            const parts = prevNotes.split(' | ').filter(p => !p.startsWith(`${group.name}:`));
-                            parts.push(`${group.name}: ${val}`);
-                            handleUpdateLine(editingLineIndex, { notes: parts.join(' | ') });
+                            if (editingLineIndex !== null) {
+                              handleUpdateLineOption(editingLineIndex, group.name, val);
+                            }
                           }}
                           className="text-xs font-medium"
                         >
@@ -1808,7 +2265,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                           min={1}
                           value={currentEditingLine.pageCount || 1}
                           onChange={(e) => handleUpdateLine(editingLineIndex, { pageCount: Number(e.target.value) })}
-                          className="text-xs font-bold"
+                          className="text-sm font-bold h-10"
                         />
                       </div>
 
@@ -1821,7 +2278,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                           min={1}
                           value={currentEditingLine.copiesCount || 1}
                           onChange={(e) => handleUpdateLine(editingLineIndex, { copiesCount: Number(e.target.value) })}
-                          className="text-xs font-bold"
+                          className="text-sm font-bold h-10"
                         />
                       </div>
                     </div>
@@ -1834,19 +2291,41 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                   <>
                     <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
                       <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                        Quantité ({currentEditingLine.unit || 'unité'})
+                        Quantité ({currentEditingLine.unit || 'document'})
                       </label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={currentEditingLine.quantity || 1}
-                        onChange={(e) => handleUpdateLine(editingLineIndex, {
-                          quantity: Number(e.target.value),
-                          pageCount: 1,
-                          copiesCount: 1
-                        })}
-                        className="text-xs font-bold w-44"
-                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateLine(editingLineIndex, { quantity: Math.max(1, (currentEditingLine.quantity || 1) - 1) })}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-black text-lg transition-colors border border-slate-300 dark:border-slate-700 select-none"
+                          title="Diminuer"
+                        >
+                          -
+                        </button>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={currentEditingLine.quantity || 1}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            handleUpdateLine(editingLineIndex, {
+                              quantity: isNaN(val) ? 1 : Math.max(1, val)
+                            });
+                          }}
+                          className="text-sm font-bold h-10 w-28 text-center"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateLine(editingLineIndex, { quantity: (currentEditingLine.quantity || 1) + 1 })}
+                          className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-black text-lg transition-colors border border-slate-300 dark:border-slate-700 select-none"
+                          title="Augmenter"
+                        >
+                          +
+                        </button>
+                        <span className="font-semibold text-slate-600 dark:text-slate-300 text-sm">
+                          {currentEditingLine.unit || 'document'}(s)
+                        </span>
+                      </div>
                     </div>
 
                     <div className="p-2 bg-brand-50/50 dark:bg-brand-950/30 rounded-lg text-center font-bold text-brand-700 dark:text-brand-300">

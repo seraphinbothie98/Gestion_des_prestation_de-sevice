@@ -8,6 +8,7 @@ import { dbStore } from '../../server/db/mockStore';
 import { useAuth } from '../../context/AuthContext';
 import { Invoice } from '../../types';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { formatReceiptItemDetails } from '../../lib/orderItemUtils';
 import { Receipt, Printer, Eye, FileText, Download, CheckCircle2 } from 'lucide-react';
 
 export const BillingView: React.FC = () => {
@@ -209,21 +210,42 @@ export const BillingView: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-100 border-b border-slate-200">
                   <tr>
-                    <th className="p-3 font-bold text-slate-700">Désignation des Prestations / Articles</th>
+                    <th className="p-3 font-bold text-slate-700">Désignation</th>
+                    <th className="p-3 font-bold text-slate-700">Détails & Variantes</th>
                     <th className="p-3 text-center font-bold text-slate-700">Quantité</th>
                     <th className="p-3 text-right font-bold text-slate-700">Prix Unitaire</th>
                     <th className="p-3 text-right font-bold text-slate-700">Total HT</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {selectedInvoice.items.map((it: any, idx) => (
-                    <tr key={idx}>
-                      <td className="p-3 font-medium text-slate-800">{it.description}</td>
-                      <td className="p-3 text-center text-slate-600 font-semibold">{it.quantity} {it.unit || ''}</td>
-                      <td className="p-3 text-right text-slate-600">{formatCurrency(it.unitPrice)}</td>
-                      <td className="p-3 text-right font-bold text-slate-900">{formatCurrency(it.totalPrice)}</td>
-                    </tr>
-                  ))}
+                  {selectedInvoice.items.map((it: any, idx) => {
+                    const details = formatReceiptItemDetails(it);
+                    return (
+                      <tr key={idx} className="hover:bg-slate-50/50">
+                        <td className="p-3 font-bold text-slate-800">
+                          <div>{details.designation}</div>
+                        </td>
+                        <td className="p-3 text-slate-600 text-[11px]">
+                          {details.detailsSummary ? (
+                            <span className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
+                              {details.detailsSummary}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic">—</span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center text-slate-700 font-semibold whitespace-nowrap">
+                          {details.quantityLabel}
+                        </td>
+                        <td className="p-3 text-right text-slate-600 font-mono">
+                          {formatCurrency(it.unitPrice)}
+                        </td>
+                        <td className="p-3 text-right font-bold text-slate-900 font-mono">
+                          {formatCurrency(it.totalPrice)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -150,16 +150,15 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
   // ÉTAPE 4 : SERVICES & ACTIVITÉS (DYNAMIQUE)
   // -------------------------------------------------------------------------
   const defaultServices = [
-    { code: 'PHOTO-A4-NB', name: 'Photocopie Noir & Blanc A4', category: 'Impression & Photocopie', unit: 'page', basePrice: 500, baseCost: 150, isSelected: true },
-    { code: 'PHOTO-A4-COL', name: 'Photocopie Couleur A4', category: 'Impression & Photocopie', unit: 'page', basePrice: 2000, baseCost: 600, isSelected: true },
-    { code: 'IMP-A4-NB', name: 'Impression Document A4 N&B', category: 'Impression & Photocopie', unit: 'page', basePrice: 1000, baseCost: 200, isSelected: true },
-    { code: 'IMP-A4-COL', name: 'Impression Document A4 Couleur', category: 'Impression & Photocopie', unit: 'page', basePrice: 2500, baseCost: 800, isSelected: true },
-    { code: 'SCAN-DOC', name: 'Numérisation / Scan Document', category: 'Secrétariat & Saisie', unit: 'document', basePrice: 1500, baseCost: 100, isSelected: true },
-    { code: 'REL-SPIR-A4', name: 'Reliure Spirale Plastique A4', category: 'Finition & Reliure', unit: 'document', basePrice: 10000, baseCost: 3000, isSelected: true },
-    { code: 'PLAST-A4', name: 'Plastification Pochette A4', category: 'Finition & Reliure', unit: 'document', basePrice: 5000, baseCost: 1500, isSelected: true },
-    { code: 'PRESS-A4', name: 'Pressage & Transfert Textile', category: 'Design & Multimédia', unit: 'unité', basePrice: 25000, baseCost: 8000, isSelected: true },
-    { code: 'SAISIE-TXT', name: 'Saisie Informatique de Texte', category: 'Secrétariat & Saisie', unit: 'page', basePrice: 5000, baseCost: 1000, isSelected: true },
-    { code: 'PAO-DESIGN', name: 'Conception Graphique / Affiche', category: 'Design & Multimédia', unit: 'forfait', basePrice: 50000, baseCost: 5000, isSelected: true }
+    { code: 'PHOTOCOPIE', name: 'Photocopie', category: 'Impression & Photocopie', unit: 'page', basePrice: 500, baseCost: 150, isSelected: true },
+    { code: 'IMPRESSION', name: 'Impression', category: 'Impression & Photocopie', unit: 'page', basePrice: 1000, baseCost: 200, isSelected: true },
+    { code: 'SCAN-DOC', name: 'Numérisation / Scan', category: 'Secrétariat & Saisie', unit: 'page', basePrice: 1500, baseCost: 100, isSelected: true },
+    { code: 'REL-SPIR-A4', name: 'Reliure', category: 'Finition & Reliure', unit: 'document', basePrice: 10000, baseCost: 3000, isSelected: true },
+    { code: 'PLAST-A4', name: 'Plastification', category: 'Finition & Reliure', unit: 'document', basePrice: 5000, baseCost: 1500, isSelected: true },
+    { code: 'PHOTO-ID', name: 'Planche photo', category: 'Design & Multimédia', unit: 'planche', basePrice: 15000, baseCost: 2500, isSelected: true },
+    { code: 'CONCEPTION-GRAPHIQUE', name: 'Conception', category: 'Design & Multimédia', unit: 'document', basePrice: 50000, baseCost: 5000, isSelected: true },
+    { code: 'RECHERCHE-DOC', name: 'Recherche', category: 'Secrétariat & Saisie', unit: 'prestation', basePrice: 20000, baseCost: 0, isSelected: true },
+    { code: 'EXPOSE-SAISIE', name: 'Exposé', category: 'Secrétariat & Saisie', unit: 'document', basePrice: 30000, baseCost: 0, isSelected: true }
   ];
   const [servicesList, setServicesList] = useState<any[]>(() => {
     return savedData.services || defaultServices;
