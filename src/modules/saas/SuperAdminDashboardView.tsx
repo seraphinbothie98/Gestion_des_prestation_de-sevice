@@ -820,7 +820,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
                     <XAxis dataKey="period" stroke="#888888" fontSize={11} />
                     <YAxis stroke="#888888" fontSize={11} tickFormatter={(v) => `${v / 1000}k`} />
                     <Tooltip />
-                    <Area type="monotone" dataKey="agenceA" name="Agence A (CPEP)" stroke="#16a34a" fill="#16a34a" fillOpacity={0.2} />
+                    <Area type="monotone" dataKey="agenceA" name="Agence A (NICOST)" stroke="#16a34a" fill="#16a34a" fillOpacity={0.2} />
                     <Area type="monotone" dataKey="agenceB" name="Agence B (Horizon)" stroke="#eab308" fill="#eab308" fillOpacity={0.2} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -1955,7 +1955,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="p-4">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">CA Agence A (CPEP)</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">CA Agence A (NICOST)</span>
               <strong className="text-xl font-black text-brand-600 block mt-1">
                 {formatCurrency(globalMetrics.revenueByAgency.find(a => a.agencyId === 't-001')?.revenue || 0)}
               </strong>

@@ -20,12 +20,12 @@ export interface TrialEvaluationResult {
 }
 
 export const DEFAULT_SUPPORT_CONTACT: SupportContactConfig = {
-  name: 'Direction Commerciale & Support Client CPEP',
-  phone: '+224 620 00 11 22',
-  whatsapp: '+224 620 00 11 22',
-  email: 'licences@cpep-guinee.com',
-  address: 'Avenue de la République, Kaloum, Conakry (Guinée)',
-  customMessage: 'Nos conseillers sont disponibles du Lundi au Samedi pour activer votre licence définitive ou répondre à vos questions techniques.'
+  name: 'Direction Commerciale & Support Technique NICOST',
+  phone: '+224 621 58 05 92',
+  whatsapp: '+224 621 58 05 92',
+  email: 'support@nicost-guinee.com',
+  address: 'Kindia-Republique de Guinée',
+  customMessage: 'Nos conseillers et techniciens NICOST sont à votre écoute pour vos prestations, formations et support technique.'
 };
 
 /**

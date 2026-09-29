@@ -466,7 +466,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
         trainerSignerTitle: trainerSig?.signerTitle || 'Formateur Référent',
         officialStampUrl: stamp?.imageUrl,
         signatureVersion: dirSig?.version || 1,
-        qrCodeData: `https://cms.cpep-guinee.com/verify/certificate/${certNumber}`,
+        qrCodeData: `https://cms.nicost-guinee.com/verify/certificate/${certNumber}`,
         isValid: true
       });
 

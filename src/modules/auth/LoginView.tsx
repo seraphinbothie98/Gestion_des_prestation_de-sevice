@@ -363,7 +363,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <div className="flex items-center justify-between w-full">
                       <strong className="text-xs text-white truncate">{u.firstName} {u.lastName}</strong>
                       <Badge variant={isAgencyA ? 'primary' : 'success'} size="sm" className="text-[9px] py-0 px-1 font-bold">
-                        {isAgencyA ? 'CPEP' : 'Horizon'}
+                        {isAgencyA ? 'NICOST' : 'Horizon'}
                       </Badge>
                     </div>
                     <span className="text-[10px] text-brand-300 font-medium truncate mt-0.5">
@@ -385,7 +385,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <Briefcase className="w-3.5 h-3.5" />
                 NIVEAU 3 — POSTES MÉTIER (CAISSE, ATELIER, FORMATION)
               </span>
-              <span className="text-[9px] text-slate-400 font-mono">CPEP (t-001)</span>
+              <span className="text-[9px] text-slate-400 font-mono">NICOST (t-001)</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               {staffUsers.filter(u => u.tenantId === 't-001').map(u => (

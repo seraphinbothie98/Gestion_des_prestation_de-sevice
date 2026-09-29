@@ -99,12 +99,12 @@ export const INITIAL_STORES: Store[] = [
     id: 'store-cpep-main',
     tenantId: 't-001',
     branchId: 'b-001',
-    name: 'Magasin Principal (Kaloum)',
-    code: 'MAG-KAL-01',
+    name: 'Magasin Principal (Kindia)',
+    code: 'MAG-KIN-01',
     type: 'MAIN',
-    location: 'Bâtiment Principal, RDC - Kaloum',
+    location: 'Bâtiment Principal, RDC - Kindia',
     responsibleUserId: 'u-admin-01',
-    responsibleUserName: 'Ibrahima Sory Camara',
+    responsibleUserName: 'Henry Kona DORE',
     isDefault: true,
     isActive: true,
     createdAt: '2026-01-01T00:00:00Z',
@@ -119,7 +119,7 @@ export const INITIAL_STORES: Store[] = [
     type: 'WORKSHOP',
     location: 'Salle des Machines & Façonnage',
     responsibleUserId: 'u-op-01',
-    responsibleUserName: 'Mamadou Oury Bah',
+    responsibleUserName: 'Seraphin BOTHIE',
     isDefault: false,
     isActive: true,
     createdAt: '2026-01-01T00:00:00Z',
@@ -134,7 +134,7 @@ export const INITIAL_STORES: Store[] = [
     type: 'POINT_OF_SALE',
     location: 'Comptoir d\'Accueil & Vente directe',
     responsibleUserId: 'u-caissier-01',
-    responsibleUserName: 'Fatoumata Binta Barry',
+    responsibleUserName: 'Blaise BOTHIE',
     isDefault: false,
     isActive: true,
     createdAt: '2026-01-01T00:00:00Z',
@@ -216,12 +216,12 @@ export const INITIAL_STATE: DatabaseState = {
   tenants: [
     {
       id: INITIAL_TENANT_ID,
-      name: "Centre Polyvalent d'Excellence & Prestations (CPEP)",
-      code: "CPEP-01",
-      slug: "cpep-conakry",
-      phone: "+224 620 00 11 22",
-      email: "contact@cpep-guinee.com",
-      address: "Avenue de la République, Kaloum, Conakry",
+      name: "Nimba Consulting & Supports Technologique",
+      code: "NICOST-01",
+      slug: "nicost-kindia",
+      phone: "+224 621 58 05 92",
+      email: "contact@nicost-guinee.com",
+      address: "Kindia-Republique de Guinée",
       currency: "GNF",
       taxRate: 0,
       isActive: true,
@@ -231,31 +231,31 @@ export const INITIAL_STATE: DatabaseState = {
       trialDaysTotal: 45,
       activationRequests: [],
       supportContact: {
-        name: "Direction Commerciale & Support Client CPEP",
-        phone: "+224 620 00 11 22",
-        whatsapp: "+224 620 00 11 22",
-        email: "licences@cpep-guinee.com",
-        address: "Avenue de la République, Kaloum, Conakry (Guinée)",
-        customMessage: "Nos conseillers sont disponibles du Lundi au Samedi pour activer votre licence définitive ou répondre à vos questions techniques."
+        name: "Direction Commerciale & Support Technique NICOST",
+        phone: "+224 621 58 05 92",
+        whatsapp: "+224 621 58 05 92",
+        email: "support@nicost-guinee.com",
+        address: "Kindia-Republique de Guinée",
+        customMessage: "Nos conseillers et experts NICOST sont disponibles pour vous accompagner dans vos prestations informatiques, développements et déploiements réseaux."
       },
       settings: {
-        companyHeader: "CPEP SARL - RCCM: GN.TCC.2024.B.01234 - NIF: 009876543K",
-        invoiceFooter: "Merci pour votre confiance. Les marchandises vendues ne sont ni reprises ni échangées.",
-        certificateSignerName: "Dr. Alpha Mamadou Diallo",
-        certificateSignerTitle: "Directeur Général du Centre",
+        companyHeader: "NICOST - Nimba Consulting & Supports Technologique - Kindia-Republique de Guinée - Tél: +224 621 58 05 92",
+        invoiceFooter: "Merci pour votre confiance. Nimba Consulting & Supports Technologique à votre service.",
+        certificateSignerName: "Henry Kona DORE",
+        certificateSignerTitle: "Directeur Général",
         branding: {
-          logoUrl: "https://images.unsplash.com/photo-1562774053-701939374585?w=150&auto=format&fit=crop&q=80",
+          logoUrl: "/nicost-logo.png",
           logoPosition: 'center',
           logoSize: 'md',
           showLogo: true,
-          slogan: "L'Excellence au Service de Vos Impressions & Formations d'Avenir",
-          website: "https://www.cpep-guinee.com",
+          slogan: "Informatique, Developpement & Installation Reseaux",
+          website: "https://www.nicost-guinee.com",
           headerAlignment: 'center',
           showPhone: true,
           showEmail: true,
           showAddress: true,
           showWebsite: true,
-          footerText: "CPEP SARL • Agrément Ministériel N° 2024/098/METFP • Centre d'Excellence Professionnel",
+          footerText: "NICOST • Nimba Consulting & Supports Technologique • Kindia-Republique de Guinée",
           footerAlignment: 'center',
           showFooter: true,
         },
@@ -264,11 +264,11 @@ export const INITIAL_STATE: DatabaseState = {
             id: 'sig-dir-01',
             tenantId: INITIAL_TENANT_ID,
             type: 'DIRECTOR',
-            signerName: 'Dr. Alpha Mamadou Diallo',
-            signerTitle: 'Directeur Général du Centre',
-            imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><path d="M 30 75 Q 70 20 110 50 Q 140 80 180 35 Q 210 10 240 60 Q 260 80 290 55 M 60 70 Q 130 95 270 65" fill="none" stroke="%231e3a8a" stroke-width="3.5" stroke-linecap="round"/><text x="140" y="105" font-family="cursive, sans-serif" font-size="16" font-style="italic" fill="%231e3a8a">Alpha M. Diallo</text></svg>',
+            signerName: 'Henry Kona DORE',
+            signerTitle: 'Directeur Général',
+            imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><path d="M 30 75 Q 70 20 110 50 Q 140 80 180 35 Q 210 10 240 60 Q 260 80 290 55 M 60 70 Q 130 95 270 65" fill="none" stroke="%231e3a8a" stroke-width="3.5" stroke-linecap="round"/><text x="130" y="105" font-family="cursive, sans-serif" font-size="16" font-style="italic" fill="%231e3a8a">Henry K. Dore</text></svg>',
             version: 1,
-            description: 'Signature officielle du Directeur Général en exercice',
+            description: 'Signature officielle de la Direction Générale NICOST',
             widthPx: 180,
             heightPx: 70,
             alignment: 'center',
@@ -279,11 +279,11 @@ export const INITIAL_STATE: DatabaseState = {
             id: 'sig-train-01',
             tenantId: INITIAL_TENANT_ID,
             type: 'TRAINER',
-            signerName: 'M. Ousmane Soumah',
-            signerTitle: 'Formateur Référent Informatique & Bureautique',
-            imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><path d="M 40 60 Q 80 15 120 70 Q 150 100 190 40 Q 220 15 260 75 M 80 85 Q 160 50 250 80" fill="none" stroke="%23047857" stroke-width="3" stroke-linecap="round"/><text x="130" y="105" font-family="cursive, sans-serif" font-size="15" font-style="italic" fill="%23047857">O. Soumah</text></svg>',
+            signerName: 'Vincent GAMY',
+            signerTitle: 'Responsable Formation & Développement',
+            imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120"><path d="M 40 60 Q 80 15 120 70 Q 150 100 190 40 Q 220 15 260 75 M 80 85 Q 160 50 250 80" fill="none" stroke="%23047857" stroke-width="3" stroke-linecap="round"/><text x="130" y="105" font-family="cursive, sans-serif" font-size="15" font-style="italic" fill="%23047857">V. Gamy</text></svg>',
             version: 1,
-            description: 'Signature pédagogique du Formateur Principal',
+            description: 'Signature pédagogique du Responsable Formation',
             widthPx: 170,
             heightPx: 65,
             alignment: 'center',
@@ -294,11 +294,11 @@ export const INITIAL_STATE: DatabaseState = {
             id: 'stamp-01',
             tenantId: INITIAL_TENANT_ID,
             type: 'STAMP',
-            signerName: 'Cachet Officiel CPEP',
+            signerName: 'Cachet Officiel NICOST',
             signerTitle: 'Sceau Officiel de Direction',
-            imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="92" fill="none" stroke="%23b91c1c" stroke-width="4.5" stroke-dasharray="8 4"/><circle cx="100" cy="100" r="82" fill="none" stroke="%23b91c1c" stroke-width="2"/><circle cx="100" cy="100" r="54" fill="none" stroke="%23b91c1c" stroke-width="1.8"/><path id="topCurve" d="M 30 100 A 70 70 0 0 1 170 100" fill="none"/><path id="bottomCurve" d="M 170 100 A 70 70 0 0 1 30 100" fill="none"/><text fill="%23b91c1c" font-size="9.5" font-weight="900" font-family="sans-serif" letter-spacing="1.5"><textPath href="%23topCurve" startOffset="50%" text-anchor="middle">★ CENTRE CPEP GUINÉE ★</textPath></text><text fill="%23b91c1c" font-size="9" font-weight="900" font-family="sans-serif" letter-spacing="1.2"><textPath href="%23bottomCurve" startOffset="50%" text-anchor="middle">DIRECTION GÉNÉRALE</textPath></text><text x="100" y="93" text-anchor="middle" fill="%23b91c1c" font-size="12" font-weight="900" font-family="sans-serif">SCEAU</text><text x="100" y="112" text-anchor="middle" fill="%23b91c1c" font-size="10.5" font-weight="800" font-family="sans-serif">OFFICIEL</text></svg>',
+            imageUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><circle cx="100" cy="100" r="92" fill="none" stroke="%23b91c1c" stroke-width="4.5" stroke-dasharray="8 4"/><circle cx="100" cy="100" r="82" fill="none" stroke="%23b91c1c" stroke-width="2"/><circle cx="100" cy="100" r="54" fill="none" stroke="%23b91c1c" stroke-width="1.8"/><path id="topCurve" d="M 30 100 A 70 70 0 0 1 170 100" fill="none"/><path id="bottomCurve" d="M 170 100 A 70 70 0 0 1 30 100" fill="none"/><text fill="%23b91c1c" font-size="9.5" font-weight="900" font-family="sans-serif" letter-spacing="1.5"><textPath href="%23topCurve" startOffset="50%" text-anchor="middle">★ NICOST GUINÉE ★</textPath></text><text fill="%23b91c1c" font-size="8.5" font-weight="900" font-family="sans-serif" letter-spacing="1.1"><textPath href="%23bottomCurve" startOffset="50%" text-anchor="middle">KINDIA - DIRECTION</textPath></text><text x="100" y="93" text-anchor="middle" fill="%23b91c1c" font-size="12" font-weight="900" font-family="sans-serif">SCEAU</text><text x="100" y="112" text-anchor="middle" fill="%23b91c1c" font-size="10.5" font-weight="800" font-family="sans-serif">OFFICIEL</text></svg>',
             version: 1,
-            description: 'Cachet d\'authentification circulaire officiel du centre',
+            description: 'Cachet d\'authentification circulaire officiel NICOST',
             widthPx: 130,
             heightPx: 130,
             alignment: 'center',
@@ -429,11 +429,11 @@ export const INITIAL_STATE: DatabaseState = {
     {
       id: INITIAL_BRANCH_ID,
       tenantId: INITIAL_TENANT_ID,
-      name: "Agence Principale - Kaloum",
-      code: "AG-KALOUM",
-      phone: "+224 620 00 11 22",
-      email: "kaloum@cpep-guinee.com",
-      address: "Avenue de la République, Kaloum",
+      name: "Agence Principale - Kindia",
+      code: "AG-KINDIA",
+      phone: "+224 621 58 05 92",
+      email: "kindia@nicost-guinee.com",
+      address: "Kindia-Republique de Guinée",
       isMain: true,
       isActive: true
     },
@@ -443,7 +443,7 @@ export const INITIAL_STATE: DatabaseState = {
       name: "Annexe Campus - Dixinn",
       code: "AG-DIXINN",
       phone: "+224 622 33 44 55",
-      email: "dixinn@cpep-guinee.com",
+      email: "dixinn@nicost-guinee.com",
       address: "Face Université Gamal Abdel Nasser, Dixinn",
       isMain: false,
       isActive: true
@@ -502,11 +502,11 @@ export const INITIAL_STATE: DatabaseState = {
       id: 'u-admin-01',
       tenantId: INITIAL_TENANT_ID,
       branchId: INITIAL_BRANCH_ID,
-      firstName: 'Ibrahima Sory',
-      lastName: 'Camara',
+      firstName: 'Henry Kona',
+      lastName: 'DORE',
       username: 'admin',
-      email: 'directeur@cpep.com',
-      phone: '+224 621 11 22 33',
+      email: 'directeur@nicost-guinee.com',
+      phone: '+224 621 58 05 92',
       passwordHash: 'admin123',
       department: 'ADMINISTRATION',
       isActive: true,
@@ -518,11 +518,11 @@ export const INITIAL_STATE: DatabaseState = {
       id: 'u-caissier-01',
       tenantId: INITIAL_TENANT_ID,
       branchId: INITIAL_BRANCH_ID,
-      firstName: 'Fatoumata Binta',
-      lastName: 'Barry',
+      firstName: 'Blaise',
+      lastName: 'BOTHIE',
       username: 'caissier',
-      email: 'caisse@cpep.com',
-      phone: '+224 622 99 88 77',
+      email: 'caisse@nicost-guinee.com',
+      phone: '+224 621 58 05 92',
       passwordHash: 'caisse123',
       department: 'ACCUEIL_CAISSE_STOCK',
       isActive: true,
@@ -534,11 +534,11 @@ export const INITIAL_STATE: DatabaseState = {
       id: 'u-op-01',
       tenantId: INITIAL_TENANT_ID,
       branchId: INITIAL_BRANCH_ID,
-      firstName: 'Mamadou Oury',
-      lastName: 'Bah',
+      firstName: 'Seraphin',
+      lastName: 'BOTHIE',
       username: 'operateur',
-      email: 'production@cpep.com',
-      phone: '+224 624 55 66 77',
+      email: 'production@nicost-guinee.com',
+      phone: '+224 621 58 05 92',
       passwordHash: 'prod123',
       department: 'PRODUCTION_MATERIEL',
       isActive: true,
@@ -550,10 +550,11 @@ export const INITIAL_STATE: DatabaseState = {
       id: 'u-form-resp-01',
       tenantId: INITIAL_TENANT_ID,
       branchId: INITIAL_BRANCH_ID,
-      firstName: 'Aissatou',
-      lastName: 'Diallo',
+      firstName: 'Vincent',
+      lastName: 'GAMY',
       username: 'resp-formation',
-      email: 'formation@cpep.com',
+      email: 'formation@nicost-guinee.com',
+      phone: '+224 621 58 05 92',
       passwordHash: 'formation123',
       department: 'FORMATION',
       isActive: true,
@@ -1300,7 +1301,7 @@ export const INITIAL_STATE: DatabaseState = {
       serviceName: 'Photocopie A4 Noir & Blanc',
       oldPrice: 500,
       newPrice: 700,
-      changedBy: 'Ibrahima Sory Camara (Admin)',
+      changedBy: 'Henry Kona DORE (Admin)',
       changeDate: '2026-02-15T09:00:00Z',
       reason: 'Ajustement suite à la hausse du prix du papier 80g',
       createdAt: '2026-02-15T09:00:00Z'
@@ -1312,7 +1313,7 @@ export const INITIAL_STATE: DatabaseState = {
       serviceName: 'Impression Laser Couleur A4',
       oldPrice: 2000,
       newPrice: 2500,
-      changedBy: 'Ibrahima Sory Camara (Admin)',
+      changedBy: 'Henry Kona DORE (Admin)',
       changeDate: '2026-02-01T14:30:00Z',
       reason: 'Indexation tarifaire et toners haute capacité',
       createdAt: '2026-02-01T14:30:00Z'
@@ -1563,7 +1564,7 @@ export const INITIAL_STATE: DatabaseState = {
       code: 'OM-01',
       name: 'Orange Money Agence',
       type: 'MOBILE_MONEY',
-      accountNumber: '+224 620 00 11 22',
+      accountNumber: '+224 621 58 05 92',
       description: 'Compte marchand Orange Money pour encaissements et règlements rapides',
       initialBalance: 0,
       currentBalance: 0,
@@ -1673,7 +1674,7 @@ export const INITIAL_STATE: DatabaseState = {
       endDate: '2026-12-31',
       status: 'ACTIVE',
       isCurrentYear: true,
-      notes: 'Exercice financier standard en cours (CPEP)',
+      notes: 'Exercice financier standard en cours (NICOST)',
       createdAt: '2026-01-01T00:00:00Z',
       updatedAt: '2026-01-01T00:00:00Z'
     },
@@ -2411,18 +2412,18 @@ export const INITIAL_STATE: DatabaseState = {
       id: 'log-01',
       tenantId: INITIAL_TENANT_ID,
       userId: 'u-admin-01',
-      userName: 'Ibrahima Sory Camara',
+      userName: 'Henry Kona DORE',
       action: 'SYSTEM_INITIALIZED',
       entityType: 'SYSTEM',
       entityId: INITIAL_TENANT_ID,
-      newValues: { message: 'Initialisation du centre CPEP et des configurations multi-tenant' },
+      newValues: { message: 'Initialisation du centre NICOST et des configurations multi-tenant' },
       createdAt: '2026-01-01T00:00:00Z'
     },
     {
       id: 'log-02',
       tenantId: INITIAL_TENANT_ID,
       userId: 'u-caissier-01',
-      userName: 'Fatoumata Binta Barry',
+      userName: 'Blaise BOTHIE',
       action: 'CASH_SESSION_OPENED',
       entityType: 'CASH_SESSION',
       entityId: 'cs-01',
@@ -2433,7 +2434,7 @@ export const INITIAL_STATE: DatabaseState = {
       id: 'log-03',
       tenantId: INITIAL_TENANT_ID,
       userId: 'u-caissier-01',
-      userName: 'Fatoumata Binta Barry',
+      userName: 'Blaise BOTHIE',
       action: 'ORDER_PAYMENT_PROCESSED',
       entityType: 'PAYMENT',
       entityId: 'pay-001',
@@ -2458,7 +2459,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 8500000,
       location: 'Atelier Impression - Poste 1',
       department: 'PRODUCTION_MATERIEL',
-      responsiblePersonName: 'Mamadou Oury Bah',
+      responsiblePersonName: 'Seraphin BOTHIE',
       condition: 'EXCELLENT',
       status: 'EN_SERVICE',
       warrantyEndDate: '2027-01-15',
@@ -2481,7 +2482,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 28000000,
       location: 'Atelier Reprographie',
       department: 'PRODUCTION_MATERIEL',
-      responsiblePersonName: 'Mamadou Oury Bah',
+      responsiblePersonName: 'Seraphin BOTHIE',
       condition: 'BON',
       status: 'EN_SERVICE',
       warrantyEndDate: '2026-06-10',
@@ -2504,7 +2505,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 4200000,
       location: 'Atelier Façonnage - Table F1',
       department: 'PRODUCTION_MATERIEL',
-      responsiblePersonName: 'Mamadou Oury Bah',
+      responsiblePersonName: 'Seraphin BOTHIE',
       condition: 'EXCELLENT',
       status: 'EN_SERVICE',
       warrantyEndDate: '2027-03-20',
@@ -2526,7 +2527,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 32000000,
       location: 'Atelier Façonnage - Zone Coupe',
       department: 'PRODUCTION_MATERIEL',
-      responsiblePersonName: 'Mamadou Oury Bah',
+      responsiblePersonName: 'Seraphin BOTHIE',
       condition: 'MOYEN',
       status: 'EN_MAINTENANCE',
       notes: 'Lame envoyée à l’affûtage et révision du capteur optique.',
@@ -2548,7 +2549,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 14500000,
       location: 'Bureau PAO & Numérisation',
       department: 'PRODUCTION_MATERIEL',
-      responsiblePersonName: 'Mamadou Oury Bah',
+      responsiblePersonName: 'Seraphin BOTHIE',
       condition: 'EXCELLENT',
       status: 'EN_SERVICE',
       warrantyEndDate: '2028-02-12',
@@ -2570,7 +2571,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 19500000,
       location: 'Atelier Grand Format',
       department: 'PRODUCTION_MATERIEL',
-      responsiblePersonName: 'Mamadou Oury Bah',
+      responsiblePersonName: 'Seraphin BOTHIE',
       condition: 'MOYEN',
       status: 'EN_PANNE',
       notes: 'Tête d’impression magenta à purger ou remplacer.',
@@ -2592,7 +2593,7 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 9800000,
       location: 'Salle Technique Énergie',
       department: 'ADMINISTRATION',
-      responsiblePersonName: 'Ibrahima Sory Camara',
+      responsiblePersonName: 'Henry Kona DORE',
       condition: 'EXCELLENT',
       status: 'EN_SERVICE',
       createdAt: '2026-01-01T00:00:00Z'
@@ -2921,12 +2922,39 @@ class StoreManager {
             }
             if (!t.supportContact) {
               t.supportContact = {
-                name: "Direction Commerciale & Support Client CPEP",
-                phone: "+224 620 00 11 22",
-                whatsapp: "+224 620 00 11 22",
-                email: "licences@cpep-guinee.com",
-                address: "Avenue de la République, Kaloum, Conakry (Guinée)",
-                customMessage: "Nos conseillers sont disponibles du Lundi au Samedi pour activer votre licence définitive ou répondre à vos questions techniques."
+                name: "Direction Commerciale & Support Technique NICOST",
+                phone: "+224 621 58 05 92",
+                whatsapp: "+224 621 58 05 92",
+                email: "support@nicost-guinee.com",
+                address: "Kindia-Republique de Guinée",
+                customMessage: "Nos conseillers et techniciens NICOST sont à votre écoute pour vos prestations, formations et support technique."
+              };
+            }
+            if (t.id === 't-001' && (t.name?.includes('CPEP') || t.name?.includes('Polyvalent') || !t.settings?.branding?.logoUrl?.includes('nicost'))) {
+              t.name = "Nimba Consulting & Supports Technologique";
+              t.code = "NICOST-01";
+              t.slug = "nicost-kindia";
+              t.phone = "+224 621 58 05 92";
+              t.email = "contact@nicost-guinee.com";
+              t.address = "Kindia-Republique de Guinée";
+              if (!t.settings) t.settings = {} as any;
+              t.settings.companyHeader = "NICOST - Nimba Consulting & Supports Technologique - Kindia-Republique de Guinée - Tél: +224 621 58 05 92";
+              t.settings.invoiceFooter = "Merci pour votre confiance. Nimba Consulting & Supports Technologique à votre service.";
+              t.settings.certificateSignerName = "Henry Kona DORE";
+              t.settings.certificateSignerTitle = "Directeur Général";
+              const branding = (t.settings.branding || {}) as any;
+              branding.logoUrl = "/nicost-logo.png";
+              branding.slogan = "Informatique, Developpement & Installation Reseaux";
+              branding.website = "https://www.nicost-guinee.com";
+              branding.footerText = "NICOST • Nimba Consulting & Supports Technologique • Kindia-Republique de Guinée";
+              t.settings.branding = branding;
+              t.supportContact = {
+                name: "Direction Commerciale & Support Technique NICOST",
+                phone: "+224 621 58 05 92",
+                whatsapp: "+224 621 58 05 92",
+                email: "support@nicost-guinee.com",
+                address: "Kindia-Republique de Guinée",
+                customMessage: "Nos conseillers et techniciens NICOST sont à votre écoute pour vos prestations, formations et support technique."
               };
             }
           });
@@ -2938,8 +2966,60 @@ class StoreManager {
           }
         }
 
-        // Ensure users have Super Admin (u-superadmin) and Admin Agence B (u-admin-b)
+        if (parsed.branches) {
+          parsed.branches.forEach((b: Branch) => {
+            if (b.id === 'b-001' && (b.name?.includes('Kaloum') || b.code === 'AG-KALOUM')) {
+              b.name = "Agence Principale - Kindia";
+              b.code = "AG-KINDIA";
+              b.phone = "+224 621 58 05 92";
+              b.email = "kindia@nicost-guinee.com";
+              b.address = "Kindia-Republique de Guinée";
+            }
+          });
+        }
+
+        if (parsed.stores) {
+          parsed.stores.forEach((s: Store) => {
+            if (s.id === 'store-cpep-main') {
+              s.name = 'Magasin Principal (Kindia)';
+              s.location = 'Bâtiment Principal, RDC - Kindia';
+              s.responsibleUserName = 'Henry Kona DORE';
+            } else if (s.id === 'store-cpep-workshop') {
+              s.responsibleUserName = 'Seraphin BOTHIE';
+            } else if (s.id === 'store-cpep-boutique') {
+              s.responsibleUserName = 'Blaise BOTHIE';
+            }
+          });
+        }
+
+        // Ensure users have Super Admin (u-superadmin) and Admin Agence B (u-admin-b) and updated names
         if (parsed.users) {
+          parsed.users.forEach((u: User) => {
+            if (u.id === 'u-admin-01' || (u.username === 'admin' && u.tenantId === 't-001')) {
+              u.firstName = 'Henry Kona';
+              u.lastName = 'DORE';
+              u.email = 'directeur@nicost-guinee.com';
+              u.phone = '+224 621 58 05 92';
+            }
+            if (u.id === 'u-caissier-01' || (u.username === 'caissier' && u.tenantId === 't-001')) {
+              u.firstName = 'Blaise';
+              u.lastName = 'BOTHIE';
+              u.email = 'caisse@nicost-guinee.com';
+              u.phone = '+224 621 58 05 92';
+            }
+            if (u.id === 'u-op-01' || (u.username === 'operateur' && u.tenantId === 't-001')) {
+              u.firstName = 'Seraphin';
+              u.lastName = 'BOTHIE';
+              u.email = 'production@nicost-guinee.com';
+              u.phone = '+224 621 58 05 92';
+            }
+            if (u.id === 'u-form-resp-01' || (u.username === 'resp-formation' && u.tenantId === 't-001')) {
+              u.firstName = 'Vincent';
+              u.lastName = 'GAMY';
+              u.email = 'formation@nicost-guinee.com';
+              u.phone = '+224 621 58 05 92';
+            }
+          });
           if (!parsed.users.some((u: User) => u.id === 'u-superadmin' || u.username === 'superadmin')) {
             const su = INITIAL_STATE.users.find(u => u.id === 'u-superadmin');
             if (su) parsed.users.push(JSON.parse(JSON.stringify(su)));

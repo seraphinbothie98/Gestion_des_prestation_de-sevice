@@ -778,7 +778,7 @@ export const UsersRbacView: React.FC = () => {
               </label>
               <Input
                 type="email"
-                placeholder="ex: f.barry@cpep.com"
+                placeholder="ex: b.bothie@nicost-guinee.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

@@ -81,7 +81,7 @@ export const SignaturesSettingsView: React.FC = () => {
   const [trainIsActive, setTrainIsActive] = useState(true);
 
   // 3. Stamp Form State
-  const [stampName, setStampName] = useState(officialStamp?.signerName || 'Cachet Officiel CPEP');
+  const [stampName, setStampName] = useState(officialStamp?.signerName || 'Cachet Officiel NICOST');
   const [stampTitle, setStampTitle] = useState(officialStamp?.signerTitle || 'Sceau Officiel de Direction');
   const [stampImage, setStampImage] = useState(officialStamp?.imageUrl || '');
   const [stampDesc, setStampDesc] = useState(officialStamp?.description || 'Cachet d\'authentification circulaire officiel');

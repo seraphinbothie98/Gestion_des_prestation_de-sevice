@@ -21,8 +21,8 @@ export const NotificationsView: React.FC = () => {
   const state = dbStore.getState();
 
   const [testChannel, setTestChannel] = useState<'SMS' | 'EMAIL' | 'WHATSAPP'>('SMS');
-  const [testRecipient, setTestRecipient] = useState('+224 620 00 11 22');
-  const [testMessage, setTestMessage] = useState('Bonjour ! Votre commande est prête au centre CPEP.');
+  const [testRecipient, setTestRecipient] = useState('+224 621 58 05 92');
+  const [testMessage, setTestMessage] = useState('Bonjour ! Votre commande est prête chez Nimba Consulting & Supports Technologique (NICOST).');
 
   const handleSendTestNotification = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,9 +81,9 @@ export const NotificationsView: React.FC = () => {
                     onClick={() => {
                       setTestChannel(ch);
                       if (ch === 'EMAIL' && !testRecipient.includes('@')) {
-                        setTestRecipient('contact@cpep-guinee.com');
+                        setTestRecipient('contact@nicost-guinee.com');
                       } else if ((ch === 'SMS' || ch === 'WHATSAPP') && testRecipient.includes('@')) {
-                        setTestRecipient('+224 620 00 11 22');
+                        setTestRecipient('+224 621 58 05 92');
                       }
                     }}
                     className={`py-2 text-xs font-bold rounded-xl border transition-colors ${

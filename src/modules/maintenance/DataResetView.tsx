@@ -60,7 +60,7 @@ export const DataResetView: React.FC = () => {
     const a = document.createElement('a');
     const now = new Date().toISOString().replace(/[:.]/g, '-');
     a.href = url;
-    a.download = `backup_cms_${currentTenant?.code || 'cpep'}_${now}.json`;
+    a.download = `backup_cms_${currentTenant?.code || 'nicost'}_${now}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

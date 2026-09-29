@@ -76,7 +76,7 @@ export const TrialExpiredScreen: React.FC<TrialExpiredScreenProps> = ({ onGoToLi
             </div>
             <div className="flex justify-between items-center py-1 border-b border-slate-800">
               <span className="text-slate-400">Référence du compte :</span>
-              <span className="font-mono text-brand-400 font-bold">{currentTenant?.code || 'CPEP-01'}</span>
+              <span className="font-mono text-brand-400 font-bold">{currentTenant?.code || 'NICOST-01'}</span>
             </div>
             <div className="flex justify-between items-center py-1 border-b border-slate-800">
               <span className="text-slate-400">Fin de l'essai :</span>

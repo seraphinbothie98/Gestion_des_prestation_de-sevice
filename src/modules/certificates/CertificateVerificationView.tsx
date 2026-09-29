@@ -139,7 +139,7 @@ export const CertificateVerificationView: React.FC<CertificateVerificationViewPr
         </Card>
 
         <p className="text-center text-[11px] text-slate-500">
-          Centre Polyvalent d'Excellence & Prestations • Système Sécurisé de Traçabilité
+          Nimba Consulting & Supports Technologique • Système Sécurisé de Traçabilité
         </p>
       </div>
     </div>

@@ -20,18 +20,18 @@ export const BrandingSettingsView: React.FC = () => {
   const { showToast } = useNotification();
 
   const defaultBranding: BrandingConfig = {
-    logoUrl: currentTenant?.settings?.branding?.logoUrl || "https://images.unsplash.com/photo-1562774053-701939374585?w=150&auto=format&fit=crop&q=80",
+    logoUrl: currentTenant?.settings?.branding?.logoUrl || "/nicost-logo.png",
     logoPosition: currentTenant?.settings?.branding?.logoPosition || 'center',
     logoSize: currentTenant?.settings?.branding?.logoSize || 'md',
     showLogo: currentTenant?.settings?.branding?.showLogo ?? true,
-    slogan: currentTenant?.settings?.branding?.slogan || "L'Excellence au Service de Vos Impressions & Formations",
-    website: currentTenant?.settings?.branding?.website || "https://www.cpep-guinee.com",
+    slogan: currentTenant?.settings?.branding?.slogan || "Informatique, Developpement & Installation Reseaux",
+    website: currentTenant?.settings?.branding?.website || "https://www.nicost-guinee.com",
     headerAlignment: currentTenant?.settings?.branding?.headerAlignment || 'center',
     showPhone: currentTenant?.settings?.branding?.showPhone ?? true,
     showEmail: currentTenant?.settings?.branding?.showEmail ?? true,
     showAddress: currentTenant?.settings?.branding?.showAddress ?? true,
     showWebsite: currentTenant?.settings?.branding?.showWebsite ?? true,
-    footerText: currentTenant?.settings?.branding?.footerText || "CPEP SARL • Agrément Ministériel N° 2024/098/METFP • RCCM: GN.TCC.2024.B.01234",
+    footerText: currentTenant?.settings?.branding?.footerText || "NICOST • Nimba Consulting & Supports Technologique • Kindia-Republique de Guinée",
     footerAlignment: currentTenant?.settings?.branding?.footerAlignment || 'center',
     showFooter: currentTenant?.settings?.branding?.showFooter ?? true,
   };
@@ -44,18 +44,18 @@ export const BrandingSettingsView: React.FC = () => {
 
   React.useEffect(() => {
     setBranding({
-      logoUrl: currentTenant?.settings?.branding?.logoUrl || currentTenant?.logoUrl || "https://images.unsplash.com/photo-1562774053-701939374585?w=150&auto=format&fit=crop&q=80",
+      logoUrl: currentTenant?.settings?.branding?.logoUrl || currentTenant?.logoUrl || "/nicost-logo.png",
       logoPosition: currentTenant?.settings?.branding?.logoPosition || 'center',
       logoSize: currentTenant?.settings?.branding?.logoSize || 'md',
       showLogo: currentTenant?.settings?.branding?.showLogo ?? true,
-      slogan: currentTenant?.settings?.branding?.slogan || currentTenant?.slogan || "L'Excellence au Service de Vos Impressions & Formations",
-      website: currentTenant?.settings?.branding?.website || currentTenant?.website || "https://www.cpep-guinee.com",
+      slogan: currentTenant?.settings?.branding?.slogan || currentTenant?.slogan || "Informatique, Developpement & Installation Reseaux",
+      website: currentTenant?.settings?.branding?.website || currentTenant?.website || "https://www.nicost-guinee.com",
       headerAlignment: currentTenant?.settings?.branding?.headerAlignment || 'center',
       showPhone: currentTenant?.settings?.branding?.showPhone ?? true,
       showEmail: currentTenant?.settings?.branding?.showEmail ?? true,
       showAddress: currentTenant?.settings?.branding?.showAddress ?? true,
       showWebsite: currentTenant?.settings?.branding?.showWebsite ?? true,
-      footerText: currentTenant?.settings?.branding?.footerText || currentTenant?.footerText || "CPEP SARL • Agrément Ministériel N° 2024/098/METFP • RCCM: GN.TCC.2024.B.01234",
+      footerText: currentTenant?.settings?.branding?.footerText || currentTenant?.footerText || "NICOST • Nimba Consulting & Supports Technologique • Kindia-Republique de Guinée",
       footerAlignment: currentTenant?.settings?.branding?.footerAlignment || 'center',
       showFooter: currentTenant?.settings?.branding?.showFooter ?? true,
     });
@@ -268,7 +268,7 @@ export const BrandingSettingsView: React.FC = () => {
 
             <Input
               label="Slogan / Devise d'Excellence"
-              placeholder="ex: L'Excellence au Service de Vos Impressions & Formations"
+              placeholder="ex: Informatique, Developpement & Installation Reseaux"
               value={branding.slogan || ''}
               onChange={(e) => setBranding({ ...branding, slogan: e.target.value })}
             />
