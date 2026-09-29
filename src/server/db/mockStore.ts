@@ -368,7 +368,7 @@ export const INITIAL_STATE: DatabaseState = {
       },
       activityType: "SERVICE_CENTER",
       status: "ACTIVE",
-      responsibleName: "Dr. Alpha Mamadou Diallo",
+      responsibleName: "M. Eric BOTHIE",
       createdAt: "2026-01-01T00:00:00Z"
     },
     {
@@ -1812,7 +1812,7 @@ export const INITIAL_STATE: DatabaseState = {
       unit: 'feuille',
       defaultSaleUnit: 'feuille',
       defaultPurchaseUnit: 'carton',
-      costPrice: 120, // 120 GNF / feuille (60 000 GNF / paquet de 500)
+      costPrice: 80, // 80 GNF / feuille (40 000 GNF / paquet de 500)
       salePrice: 500, // 500 GNF / feuille au détail
       wholesalePrice: 400,
       initialStock: 25000, // 10 cartons = 50 paquets = 25 000 feuilles
@@ -1829,9 +1829,9 @@ export const INITIAL_STATE: DatabaseState = {
           containedQuantity: 500,
           subUnitName: 'feuille',
           factorToBase: 500,
-          salePrice: 70000,
-          purchasePrice: 60000,
-          wholesalePrice: 65000,
+          salePrice: 45000,
+          purchasePrice: 40000,
+          wholesalePrice: 42000,
           isAllowedForSale: true,
           isAllowedForPurchase: true,
           isDefaultSaleUnit: false,
@@ -1844,9 +1844,9 @@ export const INITIAL_STATE: DatabaseState = {
           containedQuantity: 5,
           subUnitName: 'paquet',
           factorToBase: 2500,
-          salePrice: 330000,
-          purchasePrice: 300000,
-          wholesalePrice: 315000,
+          salePrice: 225000,
+          purchasePrice: 200000,
+          wholesalePrice: 215000,
           isAllowedForSale: true,
           isAllowedForPurchase: true,
           isDefaultSaleUnit: false,
@@ -1877,7 +1877,7 @@ export const INITIAL_STATE: DatabaseState = {
       unit: 'feuille',
       defaultSaleUnit: 'feuille',
       defaultPurchaseUnit: 'carton',
-      costPrice: 400, // 400 GNF / feuille (40 000 GNF / paquet de 100)
+      costPrice: 270, // 270 GNF / feuille (27 000 GNF / paquet de 100)
       salePrice: 1000, // 1 000 GNF / feuille au détail
       wholesalePrice: 800,
       initialStock: 2000, // 2 cartons = 20 paquets = 2 000 feuilles
@@ -1892,9 +1892,9 @@ export const INITIAL_STATE: DatabaseState = {
           containedQuantity: 100,
           subUnitName: 'feuille',
           factorToBase: 100,
-          salePrice: 50000,
-          purchasePrice: 40000,
-          wholesalePrice: 45000,
+          salePrice: 30000,
+          purchasePrice: 27000,
+          wholesalePrice: 28500,
           isAllowedForSale: true,
           isAllowedForPurchase: true,
           isDefaultSaleUnit: false,
@@ -1907,9 +1907,9 @@ export const INITIAL_STATE: DatabaseState = {
           containedQuantity: 10,
           subUnitName: 'paquet',
           factorToBase: 1000,
-          salePrice: 480000,
-          purchasePrice: 400000,
-          wholesalePrice: 450000,
+          salePrice: 300000,
+          purchasePrice: 270000,
+          wholesalePrice: 285000,
           isAllowedForSale: true,
           isAllowedForPurchase: true,
           isDefaultSaleUnit: false,
@@ -2047,7 +2047,7 @@ export const INITIAL_STATE: DatabaseState = {
       unit: 'unité',
       defaultSaleUnit: 'unité',
       defaultPurchaseUnit: 'paquet',
-      costPrice: 650, // 650 GNF / boudin (65 000 GNF / boîte de 100)
+      costPrice: 300, // 300 GNF / boudin (30 000 GNF / boîte de 100)
       salePrice: 1000,
       initialStock: 2500, // 25 boîtes = 2 500 unités
       currentStock: 1800, // 18 boîtes = 1 800 unités
@@ -2061,9 +2061,9 @@ export const INITIAL_STATE: DatabaseState = {
           containedQuantity: 100,
           subUnitName: 'unité',
           factorToBase: 100,
-          salePrice: 85000,
-          purchasePrice: 65000,
-          wholesalePrice: 75000,
+          salePrice: 50000,
+          purchasePrice: 30000,
+          wholesalePrice: 40000,
           isAllowedForSale: true,
           isAllowedForPurchase: true,
           isDefaultSaleUnit: false,
@@ -2093,7 +2093,7 @@ export const INITIAL_STATE: DatabaseState = {
       unit: 'feuille',
       defaultSaleUnit: 'feuille',
       defaultPurchaseUnit: 'paquet',
-      costPrice: 500,
+      costPrice: 900, // 900 GNF / feuille (90 000 GNF / paquet de 100)
       salePrice: 1000,
       initialStock: 2000,
       currentStock: 1400,
@@ -2107,9 +2107,9 @@ export const INITIAL_STATE: DatabaseState = {
           containedQuantity: 100,
           subUnitName: 'feuille',
           factorToBase: 100,
-          salePrice: 65000,
-          purchasePrice: 50000,
-          wholesalePrice: 58000,
+          salePrice: 100000,
+          purchasePrice: 90000,
+          wholesalePrice: 95000,
           isAllowedForSale: true,
           isAllowedForPurchase: true,
           isDefaultSaleUnit: false,
@@ -2890,6 +2890,29 @@ class StoreManager {
             p.prestationStock = p.currentStock;
             p.stockByLocation = { CENTRAL: p.currentStock, MAIN_STORE: p.currentStock, PRESTATION: p.currentStock };
             p.stockByStore = { CENTRAL: p.currentStock };
+
+            // Synchronize preconfigured prices for key consumables
+            if (p.id === 'prod-01') {
+              p.costPrice = 80;
+              const p1 = p.packagings?.find((x: any) => x.id === 'pkg-01-1');
+              if (p1) { p1.salePrice = 45000; p1.purchasePrice = 40000; }
+              const p2 = p.packagings?.find((x: any) => x.id === 'pkg-01-2');
+              if (p2) { p2.salePrice = 225000; p2.purchasePrice = 200000; }
+            } else if (p.id === 'prod-02') {
+              p.costPrice = 270;
+              const p1 = p.packagings?.find((x: any) => x.id === 'pkg-02-1');
+              if (p1) { p1.salePrice = 30000; p1.purchasePrice = 27000; }
+              const p2 = p.packagings?.find((x: any) => x.id === 'pkg-02-2');
+              if (p2) { p2.salePrice = 300000; p2.purchasePrice = 270000; }
+            } else if (p.id === 'prod-06') {
+              p.costPrice = 300;
+              const p1 = p.packagings?.find((x: any) => x.id === 'pkg-06-1');
+              if (p1) { p1.salePrice = 50000; p1.purchasePrice = 30000; }
+            } else if (p.id === 'prod-07') {
+              p.costPrice = 900;
+              const p1 = p.packagings?.find((x: any) => x.id === 'pkg-07-1');
+              if (p1) { p1.salePrice = 100000; p1.purchasePrice = 90000; }
+            }
           });
         }
 
@@ -2930,6 +2953,9 @@ class StoreManager {
                 customMessage: "Nos conseillers et techniciens NICOST sont à votre écoute pour vos prestations, formations et support technique."
               };
             }
+            if (t.id === 't-001') {
+              t.responsibleName = "M. Eric BOTHIE";
+            }
             if (t.id === 't-001' && (t.name?.includes('CPEP') || t.name?.includes('Polyvalent') || !t.settings?.branding?.logoUrl?.includes('nicost'))) {
               t.name = "Nimba Consulting & Supports Technologique";
               t.code = "NICOST-01";
@@ -2937,6 +2963,7 @@ class StoreManager {
               t.phone = "+224 621 58 05 92";
               t.email = "contact@nicost-guinee.com";
               t.address = "Kindia-Republique de Guinée";
+              t.responsibleName = "M. Eric BOTHIE";
               if (!t.settings) t.settings = {} as any;
               t.settings.companyHeader = "NICOST - Nimba Consulting & Supports Technologique - Kindia-Republique de Guinée - Tél: +224 621 58 05 92";
               t.settings.invoiceFooter = "Merci pour votre confiance. Nimba Consulting & Supports Technologique à votre service.";

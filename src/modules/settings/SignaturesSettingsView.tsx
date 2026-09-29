@@ -62,7 +62,7 @@ export const SignaturesSettingsView: React.FC = () => {
   }, [signatures]);
 
   // 1. Director Form State
-  const [dirName, setDirName] = useState(directorSignature?.signerName || 'Dr. Alpha Mamadou Diallo');
+  const [dirName, setDirName] = useState(directorSignature?.signerName || 'M. Eric BOTHIE');
   const [dirTitle, setDirTitle] = useState(directorSignature?.signerTitle || 'Directeur Général du Centre');
   const [dirImage, setDirImage] = useState(directorSignature?.imageUrl || '');
   const [dirWidth, setDirWidth] = useState(directorSignature?.widthPx || 180);

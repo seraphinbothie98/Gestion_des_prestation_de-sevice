@@ -456,7 +456,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
         issueDate: new Date().toISOString().split('T')[0],
         finalScore: 18,
         mention: 'TRES_BIEN',
-        signatureName: dirSig?.signerName || currentTenant?.settings?.certificateSignerName || 'Dr. Alpha Mamadou Diallo',
+        signatureName: dirSig?.signerName || currentTenant?.settings?.certificateSignerName || 'M. Eric BOTHIE',
         signatureTitle: dirSig?.signerTitle || currentTenant?.settings?.certificateSignerTitle || 'Directeur Général du Centre',
         directorSignatureUrl: dirSig?.imageUrl,
         directorSignerName: dirSig?.signerName,
@@ -1638,7 +1638,7 @@ export const TrainingView: React.FC<TrainingViewProps> = ({
                 const dirImg = selectedCertificate.directorSignatureUrl || dirSig?.imageUrl;
                 const trainerImg = selectedCertificate.trainerSignatureUrl || trainerSig?.imageUrl;
                 const stampImg = selectedCertificate.officialStampUrl || stamp?.imageUrl;
-                const dirName = selectedCertificate.directorSignerName || selectedCertificate.signatureName || 'Dr. Alpha Mamadou Diallo';
+                const dirName = selectedCertificate.directorSignerName || selectedCertificate.signatureName || 'M. Eric BOTHIE';
                 const dirTitle = selectedCertificate.directorSignerTitle || selectedCertificate.signatureTitle || 'Directeur Général';
                 const trainerName = selectedCertificate.trainerSignerName || 'M. Ousmane Soumah';
                 const trainerTitle = selectedCertificate.trainerSignerTitle || 'Formateur Référent';
