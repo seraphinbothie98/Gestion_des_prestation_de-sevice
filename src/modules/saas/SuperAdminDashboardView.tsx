@@ -1180,6 +1180,20 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
                                   <RefreshCw className="w-3.5 h-3.5" />
                                 </Button>
 
+                                {/* Supprimer l'agence */}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setDeleteAgencyTarget(agency);
+                                    setDeleteConfirmationName('');
+                                  }}
+                                  className="text-xs p-1.5 h-auto text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                  title="Supprimer l'agence"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
+
                                 {/* Positionner Administrer */}
                                 <Button
                                   size="sm"
@@ -2866,7 +2880,22 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
               </div>
             )}
 
-            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const target = viewAgencyTarget;
+                  setViewAgencyTarget(null);
+                  setDeleteAgencyTarget(target);
+                  setDeleteConfirmationName('');
+                }}
+                className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                title="Supprimer définitivement cette agence"
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" />
+                Supprimer l'agence
+              </Button>
               <Button variant="outline" onClick={() => setViewAgencyTarget(null)}>
                 Fermer
               </Button>
