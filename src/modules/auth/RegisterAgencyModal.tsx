@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -10,9 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { ActivityType, Currency } from '../../types';
 import {
-  Building2, User as UserIcon, Lock, Mail, Phone, MapPin,
   Sparkles, CheckCircle2, ArrowRight, ArrowLeft, ShieldCheck,
-  Store, Briefcase, UtensilsCrossed, ShoppingBag, Eye, EyeOff, AlertCircle
+  Eye, EyeOff, AlertCircle, Mail, Send, Clock, ExternalLink
 } from 'lucide-react';
 
 interface RegisterAgencyModalProps {
@@ -21,10 +20,10 @@ interface RegisterAgencyModalProps {
 }
 
 export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen, onClose }) => {
-  const { registerAgency } = useAuth();
+  const { registerAgency, resendEmailVerification } = useAuth();
   const { showToast } = useNotification();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -44,6 +43,23 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
   const [agencyAddress, setAgencyAddress] = useState('');
   const [agencyCity, setAgencyCity] = useState('');
   const [currency, setCurrency] = useState<Currency>('GNF');
+
+  // STEP 3: Email confirmation waiting
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
+  const [verificationUrl, setVerificationUrl] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatusMsg, setResendStatusMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isResending, setIsResending] = useState(false);
+
+  // Cooldown countdown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,12 +121,19 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
       });
 
       if (res.success) {
-        showToast(
-          "Agence Créée avec Succès !",
-          `Bienvenue dans ${res.tenant?.name}. Votre période d'essai gratuite de 15 jours est immédiatement activée.`,
-          "SUCCESS"
-        );
-        onClose();
+        if (res.requiresEmailVerification) {
+          setRegisteredEmail(email.trim());
+          setVerificationToken(res.verificationToken || '');
+          setVerificationUrl(res.verificationUrl || `/verify-email?token=${res.verificationToken}`);
+          setStep(3);
+        } else {
+          showToast(
+            "Agence Créée avec Succès !",
+            `Bienvenue dans ${res.tenant?.name}. Votre période d'essai gratuite de 15 jours est immédiatement activée.`,
+            "SUCCESS"
+          );
+          onClose();
+        }
       } else {
         setErrorMsg(res.message);
       }
@@ -121,11 +144,48 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
     }
   };
 
+  const handleResendEmail = () => {
+    if (!registeredEmail) return;
+    setIsResending(true);
+    setResendStatusMsg(null);
+
+    try {
+      const res = resendEmailVerification(registeredEmail);
+      if (res.success) {
+        setResendStatusMsg({ text: res.message, type: 'success' });
+        setResendCooldown(60);
+        if (res.verificationToken) {
+          setVerificationToken(res.verificationToken);
+        }
+        if (res.verificationUrl) {
+          setVerificationUrl(res.verificationUrl);
+        }
+      } else {
+        setResendStatusMsg({ text: res.message, type: 'error' });
+        if (res.remainingSeconds) {
+          setResendCooldown(res.remainingSeconds);
+        }
+      }
+    } catch (err: any) {
+      setResendStatusMsg({ text: err?.message || "Erreur lors du renvoi.", type: 'error' });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleGoToVerificationPage = () => {
+    if (verificationUrl) {
+      window.location.href = verificationUrl;
+    } else {
+      window.location.href = `/verify-email?token=${verificationToken}`;
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Création Autonome d'une Nouvelle Agence"
+      title={step === 3 ? "Confirmation de votre adresse e-mail" : "Création Autonome d'un Centre de Prestations"}
       maxWidth="xl"
     >
       <div className="space-y-6">
@@ -137,10 +197,10 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
             </div>
             <div>
               <strong className="text-xs font-black text-slate-900 dark:text-white block">
-                Licence d'Essai Gratuite de 15 Jours Incluse
+                Licence d'Essai Gratuite de 15 Jours
               </strong>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Accès immédiat et sans engagement à toutes les fonctionnalités
+                La période d'essai de 15 jours démarre dès confirmation de votre e-mail
               </span>
             </div>
           </div>
@@ -150,22 +210,33 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-3">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+        <div className="flex items-center justify-center gap-2">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
             step === 1
               ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
               : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
           }`}>
             <span>1. Responsable</span>
-            {step === 2 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+            {step > 1 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
           </div>
-          <div className="w-6 h-0.5 bg-slate-200 dark:bg-slate-700" />
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+          <div className="w-4 h-0.5 bg-slate-200 dark:bg-slate-700" />
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
             step === 2
+              ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
+              : step === 3
+              ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+          }`}>
+            <span>2. Centre</span>
+            {step > 2 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+          </div>
+          <div className="w-4 h-0.5 bg-slate-200 dark:bg-slate-700" />
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all ${
+            step === 3
               ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
               : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
           }`}>
-            <span>2. Établissement</span>
+            <span>3. Confirmation</span>
           </div>
         </div>
 
@@ -276,18 +347,18 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
                 icon={ArrowRight}
                 className="w-full sm:w-auto font-bold bg-brand-600 hover:bg-brand-700"
               >
-                Suivant : Configurer l'Agence
+                Suivant : Configurer le Centre
               </Button>
             </div>
           </form>
         )}
 
-        {/* STEP 2: FORMULAIRE AGENCE */}
+        {/* STEP 2: FORMULAIRE CENTRE */}
         {step === 2 && (
           <form onSubmit={handleFinalSubmit} className="space-y-4">
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                Nom de l'Agence ou de l'Entreprise *
+                Nom du Centre ou de l'Agence *
               </label>
               <Input
                 type="text"
@@ -371,10 +442,10 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1 text-slate-600 dark:text-slate-300">
               <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                Activation Instantanée
+                Confirmation par e-mail requise
               </div>
               <p className="text-[11px]">
-                En validant, votre agence sera immédiatement active avec un rôle Administrateur et 15 jours d'essai sans frais.
+                Pour sécuriser votre compte, un e-mail de confirmation vous sera envoyé. Votre période d'essai gratuit de 15 jours débutera au moment exact de la confirmation.
               </p>
             </div>
 
@@ -395,10 +466,103 @@ export const RegisterAgencyModal: React.FC<RegisterAgencyModalProps> = ({ isOpen
                 disabled={isSubmitting}
                 className="font-extrabold bg-brand-600 hover:bg-brand-700"
               >
-                {isSubmitting ? "Création en cours..." : "Créer mon Agence & Démarrer l'Essai (15j)"}
+                {isSubmitting ? "Création en cours..." : "Créer mon centre de prestations (Essai 15 jours)"}
               </Button>
             </div>
           </form>
+        )}
+
+        {/* STEP 3: VÉRIFIEZ VOTRE ADRESSE E-MAIL */}
+        {step === 3 && (
+          <div className="space-y-5 py-1">
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 rounded-2xl bg-brand-500/15 border border-brand-500/30 text-brand-400 flex items-center justify-center mx-auto shadow-lg shadow-brand-950/40">
+                <Mail className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                Vérifiez votre adresse e-mail
+              </h2>
+              <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto leading-relaxed">
+                Un e-mail de confirmation contenant votre lien d'activation sécurisé a été envoyé à :
+              </p>
+              <div className="inline-block px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 font-extrabold text-sm">
+                {registeredEmail}
+              </div>
+            </div>
+
+            {/* Information Callout */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 space-y-2 text-xs text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+                <Clock className="w-4 h-4 text-amber-500" />
+                Démarrage de l'essai après confirmation
+              </div>
+              <p className="text-[11px] leading-relaxed">
+                Votre période d'essai gratuit de <strong>15 jours</strong> commencera dès que vous aurez confirmé votre adresse e-mail en cliquant sur le lien reçu. Le lien est valable pendant 24 heures.
+              </p>
+            </div>
+
+            {/* Test Simulation Box (Facilite les tests en local) */}
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-brand-500/10 border border-emerald-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Mode Démonstration / Test Rapide
+                </span>
+                <Badge variant="success" size="sm">Prêt</Badge>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                Vous pouvez cliquer directement ci-dessous pour confirmer immédiatement votre e-mail et activer vos 15 jours d'essai :
+              </p>
+              <Button
+                type="button"
+                variant="primary"
+                icon={ExternalLink}
+                onClick={handleGoToVerificationPage}
+                className="w-full text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                Confirmer l'e-mail & Démarrer les 15 jours
+              </Button>
+            </div>
+
+            {/* Resend status message */}
+            {resendStatusMsg && (
+              <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                resendStatusMsg.type === 'success'
+                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                  : 'bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300'
+              }`}>
+                {resendStatusMsg.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                <span>{resendStatusMsg.text}</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                icon={Send}
+                disabled={isResending || resendCooldown > 0}
+                onClick={handleResendEmail}
+                className="w-full sm:w-auto font-bold text-xs"
+              >
+                {isResending
+                  ? "Envoi en cours..."
+                  : resendCooldown > 0
+                  ? `Renvoyer (${resendCooldown}s)`
+                  : "Renvoyer l'e-mail de confirmation"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                className="w-full sm:w-auto text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              >
+                Retour à la page de connexion
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </Modal>

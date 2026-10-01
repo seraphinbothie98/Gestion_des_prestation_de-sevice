@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -7,7 +7,7 @@ import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { RegisterAgencyModal } from './RegisterAgencyModal';
 import {
   Lock, User as UserIcon, LogIn, Sparkles, Building2,
-  AlertCircle, Eye, EyeOff, Crown, ShieldAlert
+  AlertCircle, Eye, EyeOff, Crown, ShieldAlert, Mail, Send, CheckCircle2
 } from 'lucide-react';
 
 interface LoginViewProps {
@@ -17,7 +17,7 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({ 
   initialMode = 'AGENCY'
 }) => {
-  const { login, currentTenant } = useAuth();
+  const { login, currentTenant, resendEmailVerification } = useAuth();
 
   const [authMode, setAuthMode] = useState<'AGENCY' | 'SUPER_ADMIN'>(() => {
     if (window.location.hash === '#login-superadmin' || window.location.hash === '#superadmin' || window.location.hash === '#saas-superadmin') return 'SUPER_ADMIN';
@@ -29,13 +29,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLockedError, setIsLockedError] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendMsg, setResendMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setIsLockedError(false);
+    setUnverifiedEmail(null);
+    setResendMsg(null);
 
     if (!identifier.trim()) {
       setErrorMsg("Veuillez saisir votre identifiant, email ou numéro de téléphone.");
@@ -53,6 +67,31 @@ export const LoginView: React.FC<LoginViewProps> = ({
       if (res.isLocked) {
         setIsLockedError(true);
       }
+      if (res.requiresEmailVerification) {
+        setUnverifiedEmail(res.email || identifier.trim());
+      }
+    }
+  };
+
+  const handleResendVerificationFromLogin = () => {
+    if (!unverifiedEmail) return;
+    setIsResending(true);
+    setResendMsg(null);
+    try {
+      const res = resendEmailVerification(unverifiedEmail);
+      if (res.success) {
+        setResendMsg({ text: res.message, type: 'success' });
+        setResendCooldown(60);
+      } else {
+        setResendMsg({ text: res.message, type: 'error' });
+        if (res.remainingSeconds) {
+          setResendCooldown(res.remainingSeconds);
+        }
+      }
+    } catch (err: any) {
+      setResendMsg({ text: err?.message || "Erreur lors du renvoi.", type: 'error' });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -151,7 +190,50 @@ export const LoginView: React.FC<LoginViewProps> = ({
             )}
           </div>
 
-          {errorMsg && (
+          {unverifiedEmail ? (
+            <div className="p-4 rounded-2xl border border-amber-500/40 bg-amber-500/10 text-amber-200 space-y-2.5 animate-shake">
+              <div className="flex items-center gap-2 font-bold text-amber-300">
+                <Mail className="w-4 h-4 text-amber-400" />
+                Confirmation d'adresse e-mail requise
+              </div>
+              <p className="text-xs text-amber-200/90 leading-relaxed">
+                Veuillez confirmer votre adresse e-mail avant de vous connecter. Un lien de confirmation a été envoyé à <strong>{unverifiedEmail}</strong>. Votre période d'essai de 15 jours démarrera dès confirmation.
+              </p>
+              {resendMsg && (
+                <div className={`p-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                  resendMsg.type === 'success'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                }`}>
+                  {resendMsg.type === 'success' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                  <span>{resendMsg.text}</span>
+                </div>
+              )}
+              <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  icon={Send}
+                  disabled={isResending || resendCooldown > 0}
+                  onClick={handleResendVerificationFromLogin}
+                  className="text-xs bg-amber-500/20 border-amber-500/40 text-amber-200 hover:text-white"
+                >
+                  {isResending
+                    ? "Envoi..."
+                    : resendCooldown > 0
+                    ? `Patienter ${resendCooldown}s`
+                    : "Renvoyer l'e-mail de confirmation"}
+                </Button>
+                <a
+                  href="/verify-email"
+                  className="text-xs text-amber-300 hover:text-amber-100 underline"
+                >
+                  Valider avec un jeton
+                </a>
+              </div>
+            </div>
+          ) : errorMsg && (
             <div className={`p-4 rounded-2xl border text-xs font-semibold flex items-start gap-3 animate-shake ${
               isLockedError
                 ? 'bg-rose-950/80 border-rose-500/80 text-rose-200 shadow-lg shadow-rose-950/50'

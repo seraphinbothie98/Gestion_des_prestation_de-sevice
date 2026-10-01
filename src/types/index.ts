@@ -21,7 +21,7 @@ export interface BrandingConfig {
   showFooter: boolean;
 }
 
-export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'DEMO';
+export type SubscriptionStatus = 'NOT_STARTED' | 'TRIAL' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED' | 'DEMO';
 
 export type ActivationRequestStatus = 'PENDING' | 'CONTACTED' | 'ACTIVATED' | 'REJECTED';
 
@@ -72,9 +72,10 @@ export type ActivityType =
 
 export type AgencyStatus = 
   | 'PENDING' 
+  | 'PENDING_EMAIL_VERIFICATION'
   | 'ACTIVE' 
   | 'SUSPENDED' 
-  | 'ARCHIVED'
+  | 'ARCHIVED' 
   | 'EXPIRED' 
   | 'CLOSED';
 
@@ -135,8 +136,9 @@ export interface Tenant {
   
   // Subscription & Trial Mode
   subscriptionStatus: SubscriptionStatus;
-  trialStartedAt: string;
-  trialEndsAt: string;
+  trialStatus?: 'NOT_STARTED' | 'ACTIVE' | 'EXPIRED';
+  trialStartedAt?: string;
+  trialEndsAt?: string;
   trialDaysTotal: number;
   lastSeenAt?: string;
   licenseKey?: string;
@@ -267,6 +269,15 @@ export interface User {
   lastLoginAt?: string;
   resetPasswordCode?: string;
   resetPasswordExpiresAt?: string;
+
+  // Validation d'adresse e-mail & Activation de compte
+  emailVerified?: boolean;
+  accountStatus?: 'PENDING_EMAIL_VERIFICATION' | 'ACTIVE' | 'SUSPENDED';
+  emailVerificationToken?: string;
+  emailVerificationExpiresAt?: string;
+  emailVerificationSentAt?: string;
+  emailVerificationUsedAt?: string;
+  emailVerificationAttempts?: number;
 
   // Politiques de Sécurité Globale (Anti-Brute-Force & Verrouillage)
   failedLoginAttempts?: number;

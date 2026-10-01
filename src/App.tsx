@@ -4,11 +4,33 @@ import { NotificationProvider } from './context/NotificationContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginView } from './modules/auth/LoginView';
 import { CertificateVerificationView } from './modules/certificates/CertificateVerificationView';
+import { EmailVerificationView } from './modules/auth/EmailVerificationView';
 
 const MainAppRouter: React.FC<{
+  currentPath: string;
+  currentHash: string;
   onOpenCertificateVerification: (code?: string) => void;
-}> = ({ onOpenCertificateVerification }) => {
+  onNavigateHome: () => void;
+  onNavigateDashboard: () => void;
+}> = ({
+  currentPath,
+  currentHash,
+  onOpenCertificateVerification,
+  onNavigateHome,
+  onNavigateDashboard
+}) => {
   const { isAuthenticated } = useAuth();
+
+  // If email verification route is visited (/verify-email or #verify-email)
+  const isVerifyEmailRoute = currentPath.startsWith('/verify-email') || currentHash.startsWith('#verify-email');
+  if (isVerifyEmailRoute) {
+    return (
+      <EmailVerificationView
+        onNavigateToLogin={onNavigateHome}
+        onNavigateToDashboard={onNavigateDashboard}
+      />
+    );
+  }
 
   if (isAuthenticated) {
     return (
@@ -23,14 +45,20 @@ const MainAppRouter: React.FC<{
 
 export const App: React.FC = () => {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentHash, setCurrentHash] = useState(window.location.hash);
   const [verifyCertCode, setVerifyCertCode] = useState<string>('CERT-2026-000001');
 
   useEffect(() => {
-    const handlePopState = () => {
+    const handleNavigationChange = () => {
       setCurrentPath(window.location.pathname);
+      setCurrentHash(window.location.hash);
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleNavigationChange);
+    window.addEventListener('hashchange', handleNavigationChange);
+    return () => {
+      window.removeEventListener('popstate', handleNavigationChange);
+      window.removeEventListener('hashchange', handleNavigationChange);
+    };
   }, []);
 
   // Check if public certificate verification route is requested
@@ -44,6 +72,7 @@ export const App: React.FC = () => {
         onBackToApp={() => {
           window.history.pushState({}, '', '/');
           setCurrentPath('/');
+          setCurrentHash('');
         }}
       />
     );
@@ -53,6 +82,21 @@ export const App: React.FC = () => {
     <AuthProvider>
       <NotificationProvider>
         <MainAppRouter
+          currentPath={currentPath}
+          currentHash={currentHash}
+          onNavigateHome={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPath('/');
+            setCurrentHash('');
+            window.location.hash = '';
+          }}
+          onNavigateDashboard={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentPath('/');
+            setCurrentHash('dashboard');
+            window.location.hash = 'dashboard';
+            localStorage.setItem('cms_active_section', 'dashboard');
+          }}
           onOpenCertificateVerification={(code) => {
             setVerifyCertCode(code || 'CERT-2026-000001');
             window.history.pushState({}, '', `/verify/certificate/${code || 'CERT-2026-000001'}`);

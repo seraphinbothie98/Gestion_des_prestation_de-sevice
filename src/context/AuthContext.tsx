@@ -29,9 +29,45 @@ interface AuthContextType {
   switchTenant: (tenantId: string) => void;
   switchAgency: (agencyId: string) => void;
   switchBranch: (branchId: string) => void;
-  login: (identifier: string, password?: string) => { success: boolean; message?: string; isLocked?: boolean; remainingMinutes?: number; user?: User };
+  login: (identifier: string, password?: string) => {
+    success: boolean;
+    message?: string;
+    isLocked?: boolean;
+    remainingMinutes?: number;
+    requiresEmailVerification?: boolean;
+    email?: string;
+    user?: User;
+  };
   unlockUserAccount: (targetUserId: string, reason?: string) => { success: boolean; message: string };
-  registerAgency: (data: any) => { success: boolean; message: string; user?: User; tenant?: Tenant };
+  registerAgency: (data: any) => {
+    success: boolean;
+    message: string;
+    requiresEmailVerification?: boolean;
+    verificationToken?: string;
+    verificationUrl?: string;
+    email?: string;
+    user?: User;
+    tenant?: Tenant;
+  };
+  resendEmailVerification: (email: string) => {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    remainingSeconds?: number;
+    verificationToken?: string;
+    verificationUrl?: string;
+  };
+  verifyEmailAndActivate: (token: string) => {
+    success: boolean;
+    statusCode: number;
+    reason?: 'INVALID' | 'ALREADY_USED' | 'EXPIRED';
+    message: string;
+    email?: string;
+    user?: User;
+    tenant?: Tenant;
+    trialStartedAt?: string;
+    trialEndsAt?: string;
+  };
   logout: () => void;
   updateProfile: (data: UserProfileUpdateData) => { success: boolean; message: string; user?: User };
   updateAvatar: (avatarUrl: string | null) => { success: boolean; message: string; user?: User };
@@ -173,7 +209,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const login = (identifier: string, password?: string): { success: boolean; message?: string; isLocked?: boolean; remainingMinutes?: number; user?: User } => {
+  const login = (identifier: string, password?: string): {
+    success: boolean;
+    message?: string;
+    isLocked?: boolean;
+    remainingMinutes?: number;
+    requiresEmailVerification?: boolean;
+    email?: string;
+    user?: User;
+  } => {
     const authRes = dbStore.authenticateUser(identifier, password);
 
     if (!authRes.success || !authRes.user) {
@@ -181,7 +225,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         success: false,
         message: authRes.message || "Identifiants incorrects.",
         isLocked: authRes.isLocked,
-        remainingMinutes: authRes.remainingMinutes
+        remainingMinutes: authRes.remainingMinutes,
+        requiresEmailVerification: authRes.requiresEmailVerification,
+        email: authRes.email
       };
     }
 
@@ -361,14 +407,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  const registerAgency = (data: any): { success: boolean; message: string; user?: User; tenant?: Tenant } => {
+  const registerAgency = (data: any): {
+    success: boolean;
+    message: string;
+    requiresEmailVerification?: boolean;
+    verificationToken?: string;
+    verificationUrl?: string;
+    email?: string;
+    user?: User;
+    tenant?: Tenant;
+  } => {
     const res = dbStore.registerAutonomousAgency(data);
     if (res.success && res.user && res.tenant) {
-      localStorage.setItem('cms_is_authenticated', 'true');
-      setIsAuthenticated(true);
+      // Si aucune vérification d'e-mail n'est requise (autoVerify activé), connecter immédiatement
+      if (!res.requiresEmailVerification) {
+        localStorage.setItem('cms_is_authenticated', 'true');
+        localStorage.setItem('cms_current_user_id', res.user.id);
+        setIsAuthenticated(true);
+      }
       return {
         success: true,
         message: res.message,
+        requiresEmailVerification: res.requiresEmailVerification,
+        verificationToken: res.verificationToken,
+        verificationUrl: res.verificationUrl,
+        email: res.email,
         user: res.user,
         tenant: res.tenant
       };
@@ -377,6 +440,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       success: false,
       message: res.message || "Erreur lors de la création de l'agence."
     };
+  };
+
+  const resendEmailVerification = (email: string) => {
+    return dbStore.resendEmailVerification(email);
+  };
+
+  const verifyEmailAndActivate = (token: string) => {
+    const res = dbStore.verifyEmailAndActivateAgency(token);
+    if (res.success && res.user && res.tenant) {
+      localStorage.setItem('cms_is_authenticated', 'true');
+      localStorage.setItem('cms_current_user_id', res.user.id);
+      localStorage.setItem('cms_active_section', 'dashboard');
+      window.location.hash = 'dashboard';
+      setIsAuthenticated(true);
+    }
+    return res;
   };
 
   return (
@@ -406,6 +485,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         unlockUserAccount,
         registerAgency,
+        resendEmailVerification,
+        verifyEmailAndActivate,
         logout,
         updateProfile,
         updateAvatar,

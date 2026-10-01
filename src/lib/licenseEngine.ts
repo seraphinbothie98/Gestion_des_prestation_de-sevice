@@ -129,6 +129,27 @@ export function evaluateTenantSubscription(tenant: Tenant | null, overrideNow?: 
     };
   }
 
+  // If Status is NOT_STARTED (Pending email verification)
+  if (tenant.subscriptionStatus === 'NOT_STARTED') {
+    return {
+      status: 'NOT_STARTED',
+      isTrial: true,
+      isActive: false,
+      isExpired: false,
+      isSuspended: false,
+      isClockRollbackDetected: false,
+      daysRemaining: totalDays,
+      totalDays,
+      progressPercent: 0,
+      startDate: tenant.trialStartedAt || tenant.createdAt,
+      endDate: tenant.trialEndsAt || tenant.createdAt,
+      warningLevel: 'INFO',
+      warningMessage: 'En attente de confirmation de votre adresse e-mail pour démarrer vos 15 jours d\'essai.',
+      bannerMessage: 'Confirmation d\'e-mail requise.',
+      supportContact,
+    };
+  }
+
   // If Status is SUSPENDED
   if (tenant.subscriptionStatus === 'SUSPENDED') {
     return {
@@ -141,8 +162,8 @@ export function evaluateTenantSubscription(tenant: Tenant | null, overrideNow?: 
       daysRemaining: 0,
       totalDays,
       progressPercent: 100,
-      startDate: tenant.trialStartedAt,
-      endDate: tenant.trialEndsAt,
+      startDate: tenant.trialStartedAt || tenant.createdAt,
+      endDate: tenant.trialEndsAt || tenant.createdAt,
       warningLevel: 'EXPIRED',
       warningMessage: 'Ce compte a été suspendu par l’administration centrale.',
       bannerMessage: 'Compte suspendu.',
@@ -163,8 +184,8 @@ export function evaluateTenantSubscription(tenant: Tenant | null, overrideNow?: 
         daysRemaining: 0,
         totalDays,
         progressPercent: 100,
-        startDate: tenant.trialStartedAt,
-        endDate: tenant.trialEndsAt,
+        startDate: tenant.trialStartedAt || tenant.createdAt,
+        endDate: tenant.trialEndsAt || tenant.createdAt,
         warningLevel: 'EXPIRED',
         warningMessage: 'Votre période d\'essai de 45 jours est arrivée à son terme.',
         bannerMessage: 'Période d\'essai terminée.',
@@ -203,8 +224,8 @@ export function evaluateTenantSubscription(tenant: Tenant | null, overrideNow?: 
       daysRemaining,
       totalDays,
       progressPercent,
-      startDate: tenant.trialStartedAt,
-      endDate: tenant.trialEndsAt,
+      startDate: tenant.trialStartedAt || tenant.createdAt,
+      endDate: tenant.trialEndsAt || tenant.createdAt,
       warningLevel,
       warningMessage,
       bannerMessage: `Version d'Essai — Il vous reste ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''}`,
@@ -223,8 +244,8 @@ export function evaluateTenantSubscription(tenant: Tenant | null, overrideNow?: 
     daysRemaining: 0,
     totalDays,
     progressPercent: 100,
-    startDate: tenant.trialStartedAt,
-    endDate: tenant.trialEndsAt,
+    startDate: tenant.trialStartedAt || tenant.createdAt,
+    endDate: tenant.trialEndsAt || tenant.createdAt,
     warningLevel: 'EXPIRED',
     warningMessage: 'Période d\'essai terminée.',
     bannerMessage: 'Période d\'essai terminée.',

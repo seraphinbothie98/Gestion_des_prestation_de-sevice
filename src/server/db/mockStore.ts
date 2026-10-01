@@ -9393,6 +9393,8 @@ class StoreManager {
     isLocked?: boolean;
     remainingMinutes?: number;
     rateLimited?: boolean;
+    requiresEmailVerification?: boolean;
+    email?: string;
   } {
     const now = customNow || new Date();
     const cleanId = (identifier || '').trim().toLowerCase();
@@ -9464,6 +9466,26 @@ class StoreManager {
         success: false,
         statusCode: 403,
         message: "Ce compte utilisateur est désactivé. Veuillez contacter un administrateur."
+      };
+    }
+
+    // 3b. Email verification check (Blocks unverified self-registered accounts)
+    if (user.emailVerified === false || user.accountStatus === 'PENDING_EMAIL_VERIFICATION') {
+      recordFailedIpAttempt(cleanIp, now);
+      this.logAudit('LOGIN_FAILED', 'USER', user.id, null, {
+        username: user.username,
+        email: user.email,
+        tenantId: user.tenantId,
+        reason: 'E-mail non vérifié',
+        ipAddress: cleanIp
+      }, cleanIp);
+
+      return {
+        success: false,
+        statusCode: 403,
+        requiresEmailVerification: true,
+        email: user.email,
+        message: "Veuillez confirmer votre adresse e-mail avant de vous connecter. Consultez votre boîte de réception ou demandez un nouvel e-mail."
       };
     }
 
@@ -9737,6 +9759,10 @@ class StoreManager {
     success: boolean;
     message: string;
     statusCode: number;
+    requiresEmailVerification?: boolean;
+    verificationToken?: string;
+    verificationUrl?: string;
+    email?: string;
     user?: User;
     tenant?: Tenant;
   } {
@@ -9778,10 +9804,21 @@ class StoreManager {
     const slug = cleanAgencyName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `agency-${Date.now()}`;
     const code = `AG-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const autoVerify = Boolean(data.autoVerifyEmail);
     const now = new Date();
-    const trialStartedAt = now.toISOString();
-    const trialEndsAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString(); // 15 jours
     const trialDaysTotal = 15;
+    const trialStartedAt = autoVerify ? now.toISOString() : undefined;
+    const trialEndsAt = autoVerify ? new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString() : undefined;
+
+    // Secure Verification Token (40+ random characters)
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let verificationToken = 'vtok_';
+    for (let i = 0; i < 40; i++) {
+      verificationToken += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const emailVerificationExpiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(); // 24h
+    const origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'http://localhost:3000';
+    const verificationUrl = `${origin}/verify-email?token=${verificationToken}`;
 
     // License
     const licenseId = `lic-${Date.now()}`;
@@ -9789,12 +9826,14 @@ class StoreManager {
       id: licenseId,
       agencyId: newTenantId,
       planId: 'STARTER' as const,
-      status: 'ACTIVE' as const,
-      startDate: trialStartedAt,
-      endDate: trialEndsAt,
+      status: (autoVerify ? 'ACTIVE' : 'INACTIVE') as any,
+      startDate: trialStartedAt || now.toISOString(),
+      endDate: trialEndsAt || new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString(),
       maxUsers: 5,
-      notes: "Licence d'essai gratuite de 15 jours créée automatiquement lors de l'inscription autonome.",
-      createdAt: trialStartedAt
+      notes: autoVerify
+        ? "Licence d'essai gratuite de 15 jours créée automatiquement lors de l'inscription autonome."
+        : "Licence d'essai gratuite de 15 jours en attente de confirmation de l'e-mail.",
+      createdAt: now.toISOString()
     };
 
     // Tenant
@@ -9804,7 +9843,7 @@ class StoreManager {
       code,
       slug,
       activityType: data.activityType || 'SERVICE_CENTER',
-      status: 'ACTIVE',
+      status: autoVerify ? 'ACTIVE' : 'PENDING_EMAIL_VERIFICATION',
       responsibleName: `${cleanFirstName} ${cleanLastName}`,
       phone: data.agencyPhone || cleanPhone,
       email: cleanEmail,
@@ -9817,11 +9856,12 @@ class StoreManager {
         'expenses', 'stock', 'boutique', 'suppliers', 'invoices', 'equipment', 'reports', 'settings'
       ],
       license: newLicense,
-      subscriptionStatus: 'TRIAL',
+      subscriptionStatus: autoVerify ? 'TRIAL' : 'NOT_STARTED',
+      trialStatus: autoVerify ? 'ACTIVE' : 'NOT_STARTED',
       trialStartedAt,
       trialEndsAt,
       trialDaysTotal,
-      lastSeenAt: trialStartedAt,
+      lastSeenAt: now.toISOString(),
       licensePlan: 'STARTER',
       onboardingCompleted: false,
       onboardingStep: 1,
@@ -9843,8 +9883,8 @@ class StoreManager {
           showFooter: true
         }
       },
-      createdAt: trialStartedAt,
-      updatedAt: trialStartedAt
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
     };
 
     // Branch
@@ -9893,7 +9933,12 @@ class StoreManager {
       isActive: true,
       isSuperAdmin: false,
       department: 'ADMINISTRATION',
-      createdAt: trialStartedAt
+      emailVerified: autoVerify ? true : false,
+      accountStatus: autoVerify ? 'ACTIVE' : 'PENDING_EMAIL_VERIFICATION',
+      emailVerificationToken: verificationToken,
+      emailVerificationExpiresAt,
+      emailVerificationSentAt: now.toISOString(),
+      createdAt: now.toISOString()
     };
 
     // Auto-create initial Fiscal Year & 12 Periods for new agency
@@ -9910,8 +9955,8 @@ class StoreManager {
       status: 'ACTIVE',
       isCurrentYear: true,
       notes: `Exercice initial de création pour ${cleanAgencyName}`,
-      createdAt: trialStartedAt,
-      updatedAt: trialStartedAt
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
     };
     const initialPeriods = generateMonthlyPeriodsForYear(newYearId, newTenantId, currentYear, now.getMonth());
 
@@ -9946,8 +9991,24 @@ class StoreManager {
         isActive: true
       });
 
-      draft.currentTenantId = newTenantId;
-      draft.currentUserId = newUser.id;
+      // Notification de vérification d'e-mail
+      if (!draft.notifications) draft.notifications = [];
+      draft.notifications.unshift({
+        id: `notif-email-verify-${Date.now()}`,
+        tenantId: newTenantId,
+        title: "Vérification d'adresse e-mail requise",
+        message: `Lien de validation envoyé à ${cleanEmail} : ${verificationUrl}`,
+        type: 'WARNING',
+        link: verificationUrl,
+        isRead: false,
+        createdAt: now.toISOString()
+      });
+
+      // NE PAS connecter immédiatement si confirmation requise
+      if (autoVerify) {
+        draft.currentTenantId = newTenantId;
+        draft.currentUserId = newUser.id;
+      }
     });
 
     this.logAudit('AGENCY_SELF_REGISTERED', 'TENANT', newTenantId, null, {
@@ -9956,16 +10017,254 @@ class StoreManager {
       responsible: `${cleanFirstName} ${cleanLastName}`,
       email: cleanEmail,
       phone: cleanPhone,
-      trialDays: 15,
-      trialEndsAt
+      autoVerify,
+      requiresEmailVerification: !autoVerify,
+      trialDays: 15
     });
 
     return {
       success: true,
       statusCode: 201,
-      message: `Votre agence « ${cleanAgencyName} » a été créée avec succès avec un essai gratuit de 15 jours.`,
+      requiresEmailVerification: !autoVerify,
+      verificationToken,
+      verificationUrl,
+      email: cleanEmail,
+      message: autoVerify
+        ? `Votre agence « ${cleanAgencyName} » a été créée avec succès avec un essai gratuit de 15 jours.`
+        : `Votre agence « ${cleanAgencyName} » a été pré-enregistrée. Veuillez vérifier votre adresse e-mail pour activer votre compte et démarrer vos 15 jours d'essai gratuit.`,
       user: newUser,
       tenant: newTenant
+    };
+  }
+
+  /**
+   * Renvoyer l'e-mail de confirmation avec protection anti-spam (cooldown 60s)
+   */
+  public resendEmailVerification(email: string): {
+    success: boolean;
+    statusCode: number;
+    message: string;
+    remainingSeconds?: number;
+    verificationToken?: string;
+    verificationUrl?: string;
+  } {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      return { success: false, statusCode: 400, message: "Adresse e-mail requise." };
+    }
+
+    const user = (this.state.users || []).find(
+      u => u.email && u.email.toLowerCase() === cleanEmail
+    );
+
+    if (!user) {
+      return { success: false, statusCode: 404, message: "Aucun compte trouvé avec cette adresse e-mail." };
+    }
+
+    // Already verified check
+    if (user.emailVerified === true && user.accountStatus !== 'PENDING_EMAIL_VERIFICATION') {
+      return {
+        success: false,
+        statusCode: 400,
+        message: "Cette adresse e-mail a déjà été confirmée. Vous pouvez vous connecter directement."
+      };
+    }
+
+    // Cooldown check: 60 seconds
+    const now = new Date();
+    if (user.emailVerificationSentAt) {
+      const lastSent = new Date(user.emailVerificationSentAt).getTime();
+      const elapsedSeconds = Math.floor((now.getTime() - lastSent) / 1000);
+      if (elapsedSeconds < 60) {
+        const remainingSeconds = 60 - elapsedSeconds;
+        return {
+          success: false,
+          statusCode: 429,
+          remainingSeconds,
+          message: `Veuillez patienter ${remainingSeconds} seconde(s) avant de demander un nouvel envoi d'e-mail.`
+        };
+      }
+    }
+
+    // Generate new token & extend validity for 24h
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let newToken = 'vtok_';
+    for (let i = 0; i < 40; i++) {
+      newToken += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    const origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'http://localhost:3000';
+    const verificationUrl = `${origin}/verify-email?token=${newToken}`;
+
+    this.updateState(draft => {
+      const u = draft.users.find(item => item.id === user.id);
+      if (u) {
+        u.emailVerificationToken = newToken;
+        u.emailVerificationExpiresAt = expiresAt;
+        u.emailVerificationSentAt = now.toISOString();
+      }
+      if (!draft.notifications) draft.notifications = [];
+      draft.notifications.unshift({
+        id: `notif-email-verify-${Date.now()}`,
+        tenantId: user.tenantId,
+        title: "Nouvel e-mail de confirmation généré",
+        message: `Nouveau lien de confirmation pour ${user.email} : ${verificationUrl}`,
+        type: 'WARNING',
+        link: verificationUrl,
+        isRead: false,
+        createdAt: now.toISOString()
+      });
+    });
+
+    this.logAudit('EMAIL_VERIFICATION_RESENT', 'USER', user.id, null, {
+      email: user.email,
+      tenantId: user.tenantId,
+      token: newToken
+    });
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: `Un nouvel e-mail de confirmation a été envoyé à ${user.email}.`,
+      verificationToken: newToken,
+      verificationUrl
+    };
+  }
+
+  /**
+   * Valider le jeton de confirmation et démarrer exactement à ce moment la période d'essai de 15 jours
+   */
+  public verifyEmailAndActivateAgency(token: string, simulatedNow?: Date): {
+    success: boolean;
+    statusCode: number;
+    reason?: 'INVALID' | 'ALREADY_USED' | 'EXPIRED';
+    message: string;
+    email?: string;
+    user?: User;
+    tenant?: Tenant;
+    trialStartedAt?: string;
+    trialEndsAt?: string;
+  } {
+    const cleanToken = (token || '').trim();
+    if (!cleanToken) {
+      return {
+        success: false,
+        statusCode: 400,
+        reason: 'INVALID',
+        message: "Jeton de confirmation manquant ou invalide."
+      };
+    }
+
+    // 1. Check if token was already used by a verified account
+    const alreadyUsedUser = (this.state.users || []).find(
+      u => u.emailVerificationToken === cleanToken && (u.emailVerified === true || Boolean(u.emailVerificationUsedAt))
+    );
+    if (alreadyUsedUser) {
+      const tenant = this.state.tenants.find(t => t.id === alreadyUsedUser.tenantId);
+      return {
+        success: false,
+        statusCode: 409,
+        reason: 'ALREADY_USED',
+        message: "Ce lien a déjà été utilisé. Votre compte est déjà actif.",
+        email: alreadyUsedUser.email,
+        user: alreadyUsedUser,
+        tenant
+      };
+    }
+
+    // 2. Look for user with this token
+    const user = (this.state.users || []).find(u => u.emailVerificationToken === cleanToken);
+    if (!user) {
+      return {
+        success: false,
+        statusCode: 404,
+        reason: 'INVALID',
+        message: "Lien de confirmation invalide ou introuvable. Veuillez vérifier le lien ou demander un nouvel e-mail."
+      };
+    }
+
+    const now = simulatedNow || new Date();
+
+    // 3. Expiration check (24h)
+    if (user.emailVerificationExpiresAt && new Date(user.emailVerificationExpiresAt).getTime() < now.getTime()) {
+      return {
+        success: false,
+        statusCode: 410,
+        reason: 'EXPIRED',
+        email: user.email,
+        message: "Le lien de confirmation a expiré (validité 24h). Veuillez demander un nouvel e-mail."
+      };
+    }
+
+    // 4. Activate account and start 15-day trial AT THIS EXACT MOMENT!
+    const trialStartedAt = now.toISOString();
+    const trialEndsAt = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString();
+
+    let updatedUser: User | undefined;
+    let updatedTenant: Tenant | undefined;
+
+    this.updateState(draft => {
+      const u = draft.users.find(item => item.id === user.id);
+      if (u) {
+        u.emailVerified = true;
+        u.accountStatus = 'ACTIVE';
+        u.emailVerificationUsedAt = trialStartedAt;
+        updatedUser = { ...u };
+      }
+
+      const t = draft.tenants.find(item => item.id === user.tenantId);
+      if (t) {
+        t.status = 'ACTIVE';
+        t.subscriptionStatus = 'TRIAL';
+        t.trialStatus = 'ACTIVE';
+        t.trialStartedAt = trialStartedAt;
+        t.trialEndsAt = trialEndsAt;
+        t.trialDaysTotal = 15;
+        t.lastSeenAt = trialStartedAt;
+        if (t.license) {
+          t.license.status = 'ACTIVE';
+          t.license.startDate = trialStartedAt;
+          t.license.endDate = trialEndsAt;
+        }
+        updatedTenant = { ...t };
+      }
+
+      if (u) {
+        draft.currentUserId = u.id;
+      }
+      if (t) {
+        draft.currentTenantId = t.id;
+      }
+
+      if (!draft.notifications) draft.notifications = [];
+      draft.notifications.unshift({
+        id: `notif-activated-${Date.now()}`,
+        tenantId: user.tenantId,
+        title: "Agence activée avec succès !",
+        message: `Félicitations ! Votre compte est validé et votre essai de 15 jours a commencé. Fin de l'essai le ${new Date(trialEndsAt).toLocaleDateString('fr-FR')}.`,
+        type: 'INFO',
+        link: '/verify-email',
+        isRead: false,
+        createdAt: trialStartedAt
+      });
+    });
+
+    this.logAudit('AGENCY_ACTIVATED_EMAIL_CONFIRMED', 'TENANT', user.tenantId, user.id, {
+      userId: user.id,
+      email: user.email,
+      trialStartedAt,
+      trialEndsAt,
+      trialDays: 15
+    });
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: `Félicitations ! Votre centre est activé. Votre période d'essai gratuit de 15 jours a commencé.`,
+      user: updatedUser || user,
+      tenant: updatedTenant,
+      trialStartedAt,
+      trialEndsAt
     };
   }
 
@@ -11559,6 +11858,7 @@ export interface AutonomousAgencyRegistrationData {
   agencyAddress?: string;
   agencyCity?: string;
   currency?: Currency;
+  autoVerifyEmail?: boolean;
 }
 
 export const dbStore = new StoreManager();
