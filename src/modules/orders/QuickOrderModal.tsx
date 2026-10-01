@@ -1757,7 +1757,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         <tr>
                           <th className="py-3 px-3 min-w-[150px]">Désignation</th>
                           <th className="py-3 px-3 min-w-[140px]">Paramètre</th>
-                          <th className="py-3 px-3 min-w-[140px]">Quantité</th>
+                          <th className="py-3 px-3 min-w-[190px]">Quantité</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap">Prix unitaire</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap">Total</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap min-w-[125px]">Actions</th>
@@ -1945,35 +1945,75 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                 )}
                               </td>
 
-                              {/* 3. QUANTITÉ (INPUTS EMPILÉS VERTICALEMENT AVEC DIMENSIONS CONFORTABLES) */}
-                              <td className="py-3 px-3 align-middle">
-                                {isPage ? (
-                                  <div className="flex flex-col gap-2 w-fit">
-                                    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 shadow-xs">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={line.pageCount || 1}
-                                        onChange={(e) => handleUpdateLine(idx, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
-                                        title="Nombre de pages du document original"
-                                      />
-                                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">pages</span>
-                                    </div>
+                                {/* 3. QUANTITÉ (BOUTONS (-) ET (+) DISPONIBLES POUR TOUS LES SERVICES) */}
+                                <td className="py-3 px-3 align-middle">
+                                  {isPage ? (
+                                    <div className="flex flex-col gap-1.5 w-fit">
+                                      {/* Pages originales avec boutons (-) et (+) */}
+                                      <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateLine(idx, { pageCount: Math.max(1, (line.pageCount || 1) - 1) })}
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          title="Diminuer le nombre de pages"
+                                        >
+                                          -
+                                        </button>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={line.pageCount || 1}
+                                          onChange={(e) => {
+                                            const v = parseInt(e.target.value);
+                                            handleUpdateLine(idx, { pageCount: isNaN(v) ? 1 : Math.max(1, v) });
+                                          }}
+                                          className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                                          title="Nombre de pages du document original"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateLine(idx, { pageCount: (line.pageCount || 1) + 1 })}
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          title="Augmenter le nombre de pages"
+                                        >
+                                          +
+                                        </button>
+                                        <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">pages</span>
+                                      </div>
 
-                                    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 shadow-xs">
-                                      <input
-                                        type="number"
-                                        min={1}
-                                        value={line.copiesCount || 1}
-                                        onChange={(e) => handleUpdateLine(idx, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
-                                        className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
-                                        title="Nombre d'exemplaires"
-                                      />
-                                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">ex.</span>
+                                      {/* Exemplaires avec boutons (-) et (+) */}
+                                      <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateLine(idx, { copiesCount: Math.max(1, (line.copiesCount || 1) - 1) })}
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          title="Diminuer le nombre d'exemplaires"
+                                        >
+                                          -
+                                        </button>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={line.copiesCount || 1}
+                                          onChange={(e) => {
+                                            const v = parseInt(e.target.value);
+                                            handleUpdateLine(idx, { copiesCount: isNaN(v) ? 1 : Math.max(1, v) });
+                                          }}
+                                          className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                                          title="Nombre d'exemplaires"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateLine(idx, { copiesCount: (line.copiesCount || 1) + 1 })}
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          title="Augmenter le nombre d'exemplaires"
+                                        >
+                                          +
+                                        </button>
+                                        <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">ex.</span>
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : (
+                                  ) : (
                                   <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs w-fit">
                                     <button
                                       type="button"
@@ -2261,26 +2301,62 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                           Nombre de pages doc original
                         </label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={currentEditingLine.pageCount || 1}
-                          onChange={(e) => handleUpdateLine(editingLineIndex, { pageCount: Number(e.target.value) })}
-                          className="text-sm font-bold h-10"
-                        />
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLine(editingLineIndex, { pageCount: Math.max(1, (currentEditingLine.pageCount || 1) - 1) })}
+                            className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-black text-lg transition-colors border border-slate-300 dark:border-slate-700 select-none shrink-0"
+                            title="Diminuer"
+                          >
+                            -
+                          </button>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={currentEditingLine.pageCount || 1}
+                            onChange={(e) => handleUpdateLine(editingLineIndex, { pageCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                            className="text-sm font-bold h-10 text-center"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLine(editingLineIndex, { pageCount: (currentEditingLine.pageCount || 1) + 1 })}
+                            className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-black text-lg transition-colors border border-slate-300 dark:border-slate-700 select-none shrink-0"
+                            title="Augmenter"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
 
                       <div>
                         <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
                           Nombre de tirages / exemplaires
                         </label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={currentEditingLine.copiesCount || 1}
-                          onChange={(e) => handleUpdateLine(editingLineIndex, { copiesCount: Number(e.target.value) })}
-                          className="text-sm font-bold h-10"
-                        />
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLine(editingLineIndex, { copiesCount: Math.max(1, (currentEditingLine.copiesCount || 1) - 1) })}
+                            className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-black text-lg transition-colors border border-slate-300 dark:border-slate-700 select-none shrink-0"
+                            title="Diminuer"
+                          >
+                            -
+                          </button>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={currentEditingLine.copiesCount || 1}
+                            onChange={(e) => handleUpdateLine(editingLineIndex, { copiesCount: Math.max(1, parseInt(e.target.value) || 1) })}
+                            className="text-sm font-bold h-10 text-center"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateLine(editingLineIndex, { copiesCount: (currentEditingLine.copiesCount || 1) + 1 })}
+                            className="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-black text-lg transition-colors border border-slate-300 dark:border-slate-700 select-none shrink-0"
+                            title="Augmenter"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
                     </div>
 
