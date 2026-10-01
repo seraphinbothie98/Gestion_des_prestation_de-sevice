@@ -548,6 +548,16 @@ export function getCanonicalServiceKey(name?: string, code?: string): string {
     return 'formation';
   }
 
+  // 12. Saisie Informatique (saisie de documents, textes, mémoires)
+  if (n.includes('saisie informatique') || n.includes('saisie de texte') || n.includes('saisie texte') || c.includes('saisie-info') || c === 'saisie-informatique') {
+    return 'saisie-informatique';
+  }
+
+  // 13. Autres (Services divers non catalogués : maintenance pc, téléphone, pilotes, etc.)
+  if (n === 'autres' || n.includes('autre') || n.includes('divers') || c.includes('autre') || c.includes('divers') || c === 'divers-autres') {
+    return 'autres';
+  }
+
   return (c || n).replace(/[^a-z0-9]/gi, '_').toLowerCase();
 }
 

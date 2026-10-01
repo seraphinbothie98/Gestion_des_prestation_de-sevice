@@ -157,8 +157,10 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
     { code: 'PLASTIF-A4', name: 'Plastification', category: 'Finition & Reliure', unit: 'document', basePrice: 5000, baseCost: 1500, isSelected: true },
     { code: 'PHOTO-IDENTITE-4X4', name: 'Planche Photo d\'Identité (x8 photos)', category: 'Design & Multimédia', unit: 'planche', basePrice: 15000, baseCost: 2500, isSelected: true },
     { code: 'CONCEPTION-GRAPHIQUE', name: 'Conception', category: 'Design & Multimédia', unit: 'document', basePrice: 50000, baseCost: 5000, isSelected: true },
+    { code: 'SAISIE-INFORMATIQUE', name: 'Saisie Informatique', category: 'Secrétariat & Saisie', unit: 'page', basePrice: 2000, baseCost: 0, isSelected: true },
     { code: 'RECHERCHE-DOC', name: 'Recherche', category: 'Secrétariat & Saisie', unit: 'prestation', basePrice: 20000, baseCost: 0, isSelected: true },
-    { code: 'EXPOSE-SAISIE', name: 'Exposé', category: 'Secrétariat & Saisie', unit: 'document', basePrice: 30000, baseCost: 0, isSelected: true }
+    { code: 'EXPOSE-SAISIE', name: 'Exposé', category: 'Secrétariat & Saisie', unit: 'document', basePrice: 30000, baseCost: 0, isSelected: true },
+    { code: 'DIVERS-AUTRES', name: 'Autres', category: 'Services Divers & Maintenance', unit: 'prestation', basePrice: 15000, baseCost: 0, isSelected: true }
   ];
   const [servicesList, setServicesList] = useState<any[]>(() => {
     return savedData.services || defaultServices;

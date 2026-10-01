@@ -833,7 +833,8 @@ export const INITIAL_STATE: DatabaseState = {
     { id: 'sc-02', tenantId: INITIAL_TENANT_ID, code: 'RELIURE', name: 'Finition & Reliure', icon: 'BookOpen', description: 'Reliure spirale plastique/métallique, thermique, dos carré collé', sortOrder: 2, isActive: true },
     { id: 'sc-03', tenantId: INITIAL_TENANT_ID, code: 'PLASTIFICATION', name: 'Plastification & Protection', icon: 'Shield', description: 'Pochettes brillantes et mates du format badge au A3', sortOrder: 3, isActive: true },
     { id: 'sc-04', tenantId: INITIAL_TENANT_ID, code: 'SCAN', name: 'Scan & Numérisation', icon: 'Scan', description: 'Numérisation haute résolution, OCR et archivage', sortOrder: 4, isActive: true },
-    { id: 'sc-05', tenantId: INITIAL_TENANT_ID, code: 'PHOTO', name: 'Tirage Photo & Découpe', icon: 'Image', description: 'Photos d\'identité, tirages artistiques, massicotage précis', sortOrder: 5, isActive: true }
+    { id: 'sc-05', tenantId: INITIAL_TENANT_ID, code: 'PHOTO', name: 'Tirage Photo & Découpe', icon: 'Image', description: 'Photos d\'identité, tirages artistiques, massicotage précis', sortOrder: 5, isActive: true },
+    { id: 'sc-06', tenantId: INITIAL_TENANT_ID, code: 'DIVERS', name: 'Services Divers & Maintenance', icon: 'Wrench', description: 'Maintenance informatique, téléphones, dépannage, interventions personnalisées', sortOrder: 6, isActive: true }
   ],
   services: [
     {
@@ -1390,6 +1391,132 @@ export const INITIAL_STATE: DatabaseState = {
           optionValues: { 'Format': 'A4' },
           price: 30000,
           billingUnit: 'document',
+          consumables: [],
+          isActive: true
+        }
+      ],
+      consumables: [],
+      pricingRules: []
+    },
+    {
+      id: 'srv-12',
+      tenantId: INITIAL_TENANT_ID,
+      categoryId: 'sc-04',
+      categoryName: 'Scan & Numérisation',
+      code: 'SAISIE-INFORMATIQUE',
+      name: 'Saisie Informatique',
+      description: 'Saisie de documents, textes, mémoires, rapports, tableaux et travaux administratifs',
+      unit: 'page',
+      baseCost: 0,
+      basePrice: 2000,
+      requiresFile: false,
+      estimatedDurationMinutes: 15,
+      isActive: true,
+      options: [
+        { id: 'opt-saisie-type', name: 'Type de document', values: ['Texte simple (courrier, rapport)', 'Document avec tableaux / chiffres', 'Mémoire / Thèse avec mise en page'] },
+        { id: 'opt-saisie-support', name: 'Support remis', values: ['Fichier Word / PDF (Email / USB)', 'Impression papier', 'Impression + Fichier numérique'] }
+      ],
+      configurations: [
+        {
+          id: 'cfg-saisie-1',
+          serviceId: 'srv-12',
+          optionValues: { 'Type de document': 'Texte simple (courrier, rapport)', 'Support remis': 'Fichier Word / PDF (Email / USB)' },
+          price: 2000,
+          billingUnit: 'page',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-saisie-2',
+          serviceId: 'srv-12',
+          optionValues: { 'Type de document': 'Document avec tableaux / chiffres', 'Support remis': 'Fichier Word / PDF (Email / USB)' },
+          price: 3500,
+          billingUnit: 'page',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-saisie-3',
+          serviceId: 'srv-12',
+          optionValues: { 'Type de document': 'Mémoire / Thèse avec mise en page', 'Support remis': 'Fichier Word / PDF (Email / USB)' },
+          price: 5000,
+          billingUnit: 'page',
+          consumables: [],
+          isActive: true
+        }
+      ],
+      consumables: [],
+      pricingRules: []
+    },
+    {
+      id: 'srv-13',
+      tenantId: INITIAL_TENANT_ID,
+      categoryId: 'sc-06',
+      categoryName: 'Services Divers & Maintenance',
+      code: 'DIVERS-AUTRES',
+      name: 'Autres',
+      description: 'Prestations et interventions diverses sur mesure : maintenance informatique, réparation téléphone, mise à jour pilotes, etc.',
+      unit: 'prestation',
+      baseCost: 0,
+      basePrice: 15000,
+      requiresFile: false,
+      estimatedDurationMinutes: 30,
+      isActive: true,
+      options: [
+        { id: 'opt-div-type', name: 'Type d\'intervention', values: ['Maintenance PC / Ordinateur', 'Réparation Téléphone', 'Mise à jour pilotes / Windows', 'Nettoyage matériel / Dépoussiérage', 'Installation Logiciel / Antivirus', 'Autre prestation personnalisée'] }
+      ],
+      configurations: [
+        {
+          id: 'cfg-div-1',
+          serviceId: 'srv-13',
+          optionValues: { 'Type d\'intervention': 'Maintenance PC / Ordinateur' },
+          price: 50000,
+          billingUnit: 'prestation',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-div-2',
+          serviceId: 'srv-13',
+          optionValues: { 'Type d\'intervention': 'Réparation Téléphone' },
+          price: 40000,
+          billingUnit: 'prestation',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-div-3',
+          serviceId: 'srv-13',
+          optionValues: { 'Type d\'intervention': 'Mise à jour pilotes / Windows' },
+          price: 25000,
+          billingUnit: 'prestation',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-div-4',
+          serviceId: 'srv-13',
+          optionValues: { 'Type d\'intervention': 'Nettoyage matériel / Dépoussiérage' },
+          price: 20000,
+          billingUnit: 'prestation',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-div-5',
+          serviceId: 'srv-13',
+          optionValues: { 'Type d\'intervention': 'Installation Logiciel / Antivirus' },
+          price: 30000,
+          billingUnit: 'prestation',
+          consumables: [],
+          isActive: true
+        },
+        {
+          id: 'cfg-div-6',
+          serviceId: 'srv-13',
+          optionValues: { 'Type d\'intervention': 'Autre prestation personnalisée' },
+          price: 15000,
+          billingUnit: 'prestation',
           consumables: [],
           isActive: true
         }
@@ -2852,6 +2979,16 @@ class StoreManager {
             const role = (parsed.roles as Role[]).find((r: Role) => r.code === u.roles[0]?.code);
             if (role) {
               u.permissions = role.permissions;
+            }
+          });
+        }
+        // Ensure serviceCategories are properly hydrated
+        if (!parsed.serviceCategories || parsed.serviceCategories.length === 0) {
+          parsed.serviceCategories = JSON.parse(JSON.stringify(INITIAL_STATE.serviceCategories));
+        } else {
+          INITIAL_STATE.serviceCategories.forEach((sc: any) => {
+            if (!parsed.serviceCategories.some((c: any) => c.id === sc.id || c.code === sc.code)) {
+              parsed.serviceCategories.push(JSON.parse(JSON.stringify(sc)));
             }
           });
         }

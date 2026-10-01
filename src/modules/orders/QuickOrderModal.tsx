@@ -52,6 +52,7 @@ interface OrderFormLine {
   itemType: 'SERVICE' | 'PRODUCT';
   serviceId?: string;
   productId?: string;
+  customDesignation?: string; // Désignation personnalisée pour prestation "Autres" ou sur-mesure
   pageCount?: number; // Nombre de pages du document original (ex: 5)
   copiesCount?: number; // Nombre d'exemplaires / tirages (ex: 20)
   quantity: number; // Total à produire et facturer = pageCount * copiesCount
@@ -119,6 +120,20 @@ export const isScanLine = (line: CalculatedLine) => {
   const name = (line.name || '').toLowerCase();
   const code = (line.service?.code || '').toLowerCase();
   return name.includes('numéris') || name.includes('numeris') || name.includes('scan');
+};
+
+export const isSaisieLine = (line: CalculatedLine | OrderFormLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = ((line as any).name || (line as any).service?.name || '').toLowerCase();
+  const code = ((line as any).service?.code || '').toLowerCase();
+  return name.includes('saisie informatique') || code.includes('saisie-info');
+};
+
+export const isAutreLine = (line: CalculatedLine | OrderFormLine) => {
+  if (line.itemType !== 'SERVICE') return false;
+  const name = ((line as any).name || (line as any).service?.name || '').toLowerCase();
+  const code = ((line as any).service?.code || '').toLowerCase();
+  return name === 'autres' || name.includes('autre') || code === 'divers-autres' || code.includes('autre');
 };
 
 export const isPageServiceLine = (line: CalculatedLine) => {
@@ -759,29 +774,34 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
     return lines.map(line => {
       if (line.itemType === 'SERVICE') {
         const srv = tenantServices.find(s => s.id === line.serviceId) || state.services.find(s => s.id === line.serviceId);
+        const isAutre = isAutreLine(line);
         const specsImpact = srv ? resolveServiceSpecsImpact(srv, line.notes, state.products) : null;
-        const standardUnitPrice = specsImpact ? specsImpact.standardUnitPrice : (srv?.basePrice || 0);
-        const appliedUnitPrice = line.isCustomPrice && line.customUnitPrice !== undefined
+        const standardUnitPrice = isAutre && line.customUnitPrice !== undefined
+          ? line.customUnitPrice
+          : (specsImpact ? specsImpact.standardUnitPrice : (srv?.basePrice || 0));
+        const appliedUnitPrice = line.customUnitPrice !== undefined
           ? line.customUnitPrice
           : standardUnitPrice;
 
         const grossTotal = standardUnitPrice * line.quantity;
         const netTotal = appliedUnitPrice * line.quantity;
-        const discountAmount = Math.max(0, grossTotal - netTotal);
-        const discountPercent = grossTotal > 0 ? Number(((discountAmount / grossTotal) * 100).toFixed(1)) : 0;
+        const discountAmount = isAutre ? 0 : Math.max(0, grossTotal - netTotal);
+        const discountPercent = isAutre ? 0 : (grossTotal > 0 ? Number(((discountAmount / grossTotal) * 100).toFixed(1)) : 0);
 
-        const permCheck = checkDiscountPermission(
-          userRoleCode,
-          discountPercent,
-          roleLimits,
-          hasAdminPerm
-        );
+        const permCheck = isAutre
+          ? { allowed: true, requiredRole: 'CAISSIER', requiresAuth: false }
+          : checkDiscountPermission(
+              userRoleCode,
+              discountPercent,
+              roleLimits,
+              hasAdminPerm
+            );
 
         return {
           ...line,
-          name: srv?.name || 'Prestation',
+          name: line.customDesignation || srv?.name || 'Prestation',
           category: (srv as any)?.category || srv?.categoryName || 'Service',
-          unit: srv?.unit || 'page',
+          unit: srv?.unit || (isAutre ? 'prestation' : 'page'),
           standardUnitPrice,
           appliedUnitPrice,
           grossTotal,
@@ -880,24 +900,27 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
       if (!srv) return;
       const srvSpecs = getServiceSpecificationGroups(srv);
       const defaultNotes = srvSpecs.map(g => `${g.name}: ${g.defaultValue || (typeof g.options[0] === 'string' ? g.options[0] : g.options[0]?.name)}`).join(' | ');
+      const isAutre = (srv.name || '').toLowerCase() === 'autres' || (srv.code || '').toLowerCase().includes('autre');
 
       const newLine: OrderFormLine = {
         id: `line-${Date.now()}-${lines.length + 1}`,
         itemType: 'SERVICE',
         serviceId: srv.id,
+        customDesignation: isAutre ? '' : undefined,
         pageCount: 1,
         copiesCount: 1,
         quantity: 1,
-        unit: srv.unit || 'page',
-        isCustomPrice: false,
+        unit: srv.unit || (isAutre ? 'prestation' : 'page'),
+        isCustomPrice: isAutre,
+        customUnitPrice: isAutre ? (srv.basePrice || 15000) : undefined,
         discountReasonCategory: 'COMMERCIAL_NEGOTIATION',
         discountReasonCustom: '',
-        assignedDepartment: 'PRINT',
-        notes: defaultNotes,
+        assignedDepartment: isAutre ? 'OTHER' : 'PRINT',
+        notes: isAutre ? '' : defaultNotes,
         files: [],
       };
       setLines(prev => [...prev, newLine]);
-      showToast('Prestation ajoutée', `« ${srv.name} » a été ajouté à la commande.`, 'SUCCESS');
+      showToast('Prestation ajoutée', isAutre ? 'Prestation « Autres » ajoutée. Précisez la désignation, la quantité et le prix.' : `« ${srv.name} » a été ajouté à la commande.`, 'SUCCESS');
     } else {
       const prod = tenantProducts.find(p => p.id === itemToAdd.id) || state.products.find(p => p.id === itemToAdd.id);
       if (!prod) return;
@@ -1133,11 +1156,15 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
         orderId,
         itemType: line.itemType,
         serviceId: line.serviceId,
-        serviceName: line.itemType === 'SERVICE' ? line.name : undefined,
+        serviceName: line.itemType === 'SERVICE'
+          ? (isAutreLine(line) && line.customDesignation?.trim() ? line.customDesignation.trim() : line.name)
+          : undefined,
         productId: line.productId,
         productName: line.itemType === 'PRODUCT' ? line.name : undefined,
         category: line.category,
-        description: line.notes || line.name,
+        description: line.customDesignation?.trim()
+          ? `${line.customDesignation.trim()}${line.notes ? ' — ' + line.notes : ''}`
+          : (line.notes || line.name),
         quantity: line.quantity,
         unit: line.unit,
         purchaseUnitName: line.purchaseUnitName,
@@ -1772,6 +1799,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                           const isPlast = isPlastificationLine(line);
                           const isScan = isScanLine(line);
                           const isPage = isPhoto || isImp || isPageServiceLine(line);
+                          const isAutre = isAutreLine(line);
 
                           const colorOpt = getLineColorOption(line);
                           const rectoVersoOpt = getLineRectoVerso(line);
@@ -1785,22 +1813,58 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                             <tr key={line.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/50 transition-colors">
                               {/* 1. DÉSIGNATION */}
                               <td className="py-3 px-3 align-middle">
-                                <div className="flex flex-col">
-                                  <strong className="text-slate-900 dark:text-white font-bold text-xs sm:text-sm">
-                                    {line.name}
-                                  </strong>
-                                  {line.itemType === 'PRODUCT' ? (
-                                    <span className="text-[11px] text-slate-400 font-medium">
-                                      Article stock (Dispo: {line.currentStock})
-                                    </span>
-                                  ) : (
-                                    line.notes && (
-                                      <span className="text-[11px] text-slate-400 font-normal leading-relaxed line-clamp-2 max-w-[220px]" title={line.notes}>
-                                        {line.notes.split(' | ').join(' · ')}
+                                {isAutre ? (
+                                  <div className="flex flex-col gap-1 min-w-[210px] max-w-[280px]">
+                                    <div className="flex items-center justify-between">
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                        Autre / Divers
                                       </span>
-                                    )
-                                  )}
-                                </div>
+                                      <span className="text-[10px] text-slate-400 font-medium">Désignation libre</span>
+                                    </div>
+                                    <input
+                                      type="text"
+                                      value={line.customDesignation ?? ''}
+                                      onChange={(e) => handleUpdateLine(idx, { customDesignation: e.target.value })}
+                                      placeholder="ex: Maintenance PC, Pilotes, Rép..."
+                                      className="w-full text-xs font-semibold rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/20 px-2.5 py-1.5 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-2xs"
+                                    />
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      {[
+                                        { label: 'Maint. PC', val: 'Maintenance PC' },
+                                        { label: 'Rép. Tél', val: 'Réparation Téléphone' },
+                                        { label: 'Pilotes', val: 'Mise à jour pilotes' },
+                                        { label: 'Nettoyage', val: 'Nettoyage PC' },
+                                        { label: 'Assistance', val: 'Assistance technique' },
+                                      ].map((preset) => (
+                                        <button
+                                          key={preset.label}
+                                          type="button"
+                                          onClick={() => handleUpdateLine(idx, { customDesignation: preset.val })}
+                                          className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 hover:bg-amber-100 dark:bg-slate-800 dark:hover:bg-amber-950/50 text-slate-600 hover:text-amber-800 dark:text-slate-300 dark:hover:text-amber-300 transition-colors border border-transparent hover:border-amber-300"
+                                        >
+                                          +{preset.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col">
+                                    <strong className="text-slate-900 dark:text-white font-bold text-xs sm:text-sm">
+                                      {line.name}
+                                    </strong>
+                                    {line.itemType === 'PRODUCT' ? (
+                                      <span className="text-[11px] text-slate-400 font-medium">
+                                        Article stock (Dispo: {line.currentStock})
+                                      </span>
+                                    ) : (
+                                      line.notes && (
+                                        <span className="text-[11px] text-slate-400 font-normal leading-relaxed line-clamp-2 max-w-[220px]" title={line.notes}>
+                                          {line.notes.split(' | ').join(' · ')}
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                )}
                               </td>
 
                               {/* 2. PARAMÈTRE (SELECTS EMPILÉS VERTICALEMENT) */}
@@ -2057,11 +2121,37 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
 
                               {/* 4. PRIX UNITAIRE */}
                               <td className="py-3 px-3 align-middle text-center whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300">
-                                <span>{formatCurrency(line.appliedUnitPrice)}</span>
-                                {line.isCustomPrice && line.standardUnitPrice !== line.appliedUnitPrice && (
-                                  <span className="text-[10px] text-slate-400 line-through block">
-                                    {formatCurrency(line.standardUnitPrice)}
-                                  </span>
+                                {isAutre ? (
+                                  <div className="flex flex-col items-center gap-1">
+                                    <div className="inline-flex items-center gap-1 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50/40 dark:bg-amber-950/30 px-2 py-1 shadow-2xs">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        step={1000}
+                                        value={line.customUnitPrice ?? line.appliedUnitPrice ?? 0}
+                                        onChange={(e) => {
+                                          const val = parseFloat(e.target.value);
+                                          handleUpdateLine(idx, {
+                                            isCustomPrice: true,
+                                            customUnitPrice: isNaN(val) ? 0 : Math.max(0, val),
+                                          });
+                                        }}
+                                        className="w-20 h-7 text-xs font-bold text-center bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                                        title="Prix unitaire libre"
+                                      />
+                                      <span className="text-[10px] font-bold text-slate-500">GNF</span>
+                                    </div>
+                                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Prix libre</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <span>{formatCurrency(line.appliedUnitPrice)}</span>
+                                    {line.isCustomPrice && line.standardUnitPrice !== line.appliedUnitPrice && (
+                                      <span className="text-[10px] text-slate-400 line-through block">
+                                        {formatCurrency(line.standardUnitPrice)}
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                               </td>
 
@@ -2255,6 +2345,47 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                 <span className="font-black text-sm text-brand-600">{formatCurrency(currentEditingLine.appliedUnitPrice)}</span>
               </div>
             </div>
+
+            {/* AUTRES / DIVERS CUSTOM INPUTS */}
+            {isAutreLine(currentEditingLine) && (
+              <div className="p-3 bg-amber-50/50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 space-y-3">
+                <h4 className="font-extrabold text-amber-900 dark:text-amber-200 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-amber-600" />
+                  Prestation Diverse — Personnalisation
+                </h4>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300 block text-[11px]">
+                    Désignation / Intitulé de la prestation
+                  </label>
+                  <Input
+                    type="text"
+                    value={currentEditingLine.customDesignation ?? ''}
+                    onChange={(e) => handleUpdateLine(editingLineIndex, { customDesignation: e.target.value })}
+                    placeholder="ex: Maintenance PC Lenovo, Réparation Téléphone, Mise à jour pilotes..."
+                    className="text-xs font-medium"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300 block text-[11px]">
+                    Prix unitaire de la prestation (GNF)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1000}
+                    value={currentEditingLine.customUnitPrice ?? currentEditingLine.appliedUnitPrice ?? 0}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      handleUpdateLine(editingLineIndex, {
+                        isCustomPrice: true,
+                        customUnitPrice: isNaN(val) ? 0 : Math.max(0, val),
+                      });
+                    }}
+                    className="text-xs font-bold"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* PRESTATION SPECIFICATIONS & OPTIONS */}
             {currentEditingLine.itemType === 'SERVICE' && currentEditingLine.service && (
