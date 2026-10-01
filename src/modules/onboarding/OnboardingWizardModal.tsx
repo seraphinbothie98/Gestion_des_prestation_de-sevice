@@ -304,18 +304,51 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
       isMainCash: true,
       isDefault: true,
       responsiblePerson: 'Caissier Principal',
-      description: 'Caisse centrale pour encaissements au comptoir'
+      description: 'Caisse centrale pour encaissements au comptoir et prestations'
     },
     {
-      name: 'Orange Money Marchand',
-      code: 'OM-01',
-      type: 'MOBILE_MONEY',
-      accountNumber: '+224 620 00 11 22',
+      name: 'Petite Caisse',
+      code: 'PC-01',
+      type: 'CASH',
+      initialBalance: 0,
+      isPettyCash: true,
+      isMainCash: false,
+      isDefault: false,
+      responsiblePerson: 'Direction / Accueil',
+      description: 'Petite caisse pour menues dépenses et achats urgents'
+    },
+    {
+      name: 'Compte Banque',
+      code: 'BNK-01',
+      type: 'BANK',
+      bankName: 'Compte Bancaire',
       initialBalance: 0,
       isMainCash: false,
       isDefault: false,
       responsiblePerson: 'Direction',
-      description: 'Encaissements électroniques Orange Money'
+      description: 'Compte bancaire courant pour virements clients et règlements'
+    },
+    {
+      name: 'Orange Money Agence',
+      code: 'OM-01',
+      type: 'MOBILE_MONEY',
+      accountNumber: currentTenant?.phone || '+224 620 00 11 22',
+      initialBalance: 0,
+      isMainCash: false,
+      isDefault: false,
+      responsiblePerson: 'Direction / Caisse',
+      description: 'Encaissements électroniques Orange Money Agence'
+    },
+    {
+      name: 'MTN Mobile Money',
+      code: 'MTN-01',
+      type: 'MOBILE_MONEY',
+      accountNumber: currentTenant?.phone || '+224 660 00 11 22',
+      initialBalance: 0,
+      isMainCash: false,
+      isDefault: false,
+      responsiblePerson: 'Direction / Caisse',
+      description: 'Encaissements électroniques MTN Mobile Money'
     }
   ];
   const [financialAccounts, setFinancialAccounts] = useState<any[]>(() => {
@@ -1567,7 +1600,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
                   <div key={idx} className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{acc.type === 'CASH' ? '💵' : '📱'}</span>
+                        <span className="text-lg">{acc.type === 'CASH' ? '💵' : acc.type === 'BANK' ? '🏦' : '📱'}</span>
                         <div>
                           <span className="text-xs font-bold text-white block">{acc.name}</span>
                           <span className="text-[10px] text-slate-400">Responsable : {acc.responsiblePerson || 'Caissier'}</span>

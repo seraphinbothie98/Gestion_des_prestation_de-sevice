@@ -209,6 +209,110 @@ export function generateMonthlyPeriodsForYear(
   });
 }
 
+/**
+ * Génère les 5 comptes de trésorerie initiaux préconfigurés pour un centre / prestataire :
+ * 1. Caisse Principale (CASH, Main Cash, Default)
+ * 2. Petite Caisse (CASH, Petty Cash)
+ * 3. Compte Banque (BANK)
+ * 4. Orange Money Agence (MOBILE_MONEY)
+ * 5. MTN Mobile Money (MOBILE_MONEY)
+ */
+export function generateStandardTreasuryAccounts(
+  tenantId: string,
+  currency: Currency = 'GNF',
+  phone?: string,
+  createdByName: string = 'Configuration Initiale'
+): FinancialAccount[] {
+  const now = new Date().toISOString();
+  return [
+    {
+      id: `fa-${tenantId}-cp-${Date.now()}`,
+      tenantId,
+      code: 'CP-01',
+      name: 'Caisse Principale',
+      type: 'CASH',
+      description: 'Caisse physique centrale accueil et encaissements quotidiens',
+      initialBalance: 0,
+      currentBalance: 0,
+      currency,
+      isActive: true,
+      isDefault: true,
+      isMainCash: true,
+      isPettyCash: false,
+      createdByUserName: createdByName,
+      createdAt: now
+    },
+    {
+      id: `fa-${tenantId}-pc-${Date.now() + 1}`,
+      tenantId,
+      code: 'PC-01',
+      name: 'Petite Caisse',
+      type: 'CASH',
+      description: 'Petite caisse dédiée aux dépenses urgentes, courses et fournitures',
+      initialBalance: 0,
+      currentBalance: 0,
+      currency,
+      isActive: true,
+      isDefault: false,
+      isMainCash: false,
+      isPettyCash: true,
+      createdByUserName: createdByName,
+      createdAt: now
+    },
+    {
+      id: `fa-${tenantId}-bnk-${Date.now() + 2}`,
+      tenantId,
+      code: 'BNK-01',
+      name: 'Compte Banque',
+      type: 'BANK',
+      bankName: 'Compte Bancaire',
+      description: 'Compte bancaire courant pour virements clients et règlements fournisseurs',
+      initialBalance: 0,
+      currentBalance: 0,
+      currency,
+      isActive: true,
+      isDefault: false,
+      isMainCash: false,
+      createdByUserName: createdByName,
+      createdAt: now
+    },
+    {
+      id: `fa-${tenantId}-om-${Date.now() + 3}`,
+      tenantId,
+      code: 'OM-01',
+      name: 'Orange Money Agence',
+      type: 'MOBILE_MONEY',
+      accountNumber: phone || '+224 620 00 00 00',
+      description: 'Compte marchand Orange Money pour encaissements et règlements rapides',
+      initialBalance: 0,
+      currentBalance: 0,
+      currency,
+      isActive: true,
+      isDefault: false,
+      isMainCash: false,
+      createdByUserName: createdByName,
+      createdAt: now
+    },
+    {
+      id: `fa-${tenantId}-mtn-${Date.now() + 4}`,
+      tenantId,
+      code: 'MTN-01',
+      name: 'MTN Mobile Money',
+      type: 'MOBILE_MONEY',
+      accountNumber: phone || '+224 660 00 00 00',
+      description: 'Compte marchand MTN Mobile Money pour encaissements et règlements',
+      initialBalance: 0,
+      currentBalance: 0,
+      currency,
+      isActive: true,
+      isDefault: false,
+      isMainCash: false,
+      createdByUserName: createdByName,
+      createdAt: now
+    }
+  ];
+}
+
 export const INITIAL_STATE: DatabaseState = {
   currentTenantId: INITIAL_TENANT_ID,
   currentUserId: 'u-admin-01',
@@ -3440,6 +3544,23 @@ class StoreManager {
     return this.state.tenants.filter(t => t.isActive);
   }
 
+  /**
+   * Génère les 5 comptes de trésorerie initiaux préconfigurés pour un centre / prestataire :
+   * 1. Caisse Principale
+   * 2. Petite Caisse
+   * 3. Compte Banque
+   * 4. Orange Money Agence
+   * 5. MTN Mobile Money
+   */
+  public generateDefaultTreasuryAccounts(
+    tenantId: string,
+    currency: Currency = 'GNF',
+    phone?: string,
+    createdByName: string = 'Configuration Initiale'
+  ): FinancialAccount[] {
+    return generateStandardTreasuryAccounts(tenantId, currency, phone, createdByName);
+  }
+
   public createAgency(data: {
     name: string;
     code: string;
@@ -3580,6 +3701,16 @@ class StoreManager {
         code: `CAISSE-01`,
         isActive: true
       });
+
+      // Default standard treasury accounts (Caisse Principale, Petite Caisse, Compte Banque, Orange Money Agence, MTN Mobile Money)
+      const defaultTreasuryAccounts = generateStandardTreasuryAccounts(
+        agencyId,
+        newAgency.currency,
+        data.phone,
+        data.responsibleName || 'Directeur Agence'
+      );
+      if (!draft.financialAccounts) draft.financialAccounts = [];
+      draft.financialAccounts.push(...defaultTreasuryAccounts);
     });
 
     this.logAudit('AGENCY_CREATED', 'AGENCY', agencyId, null, {
@@ -6415,7 +6546,19 @@ class StoreManager {
     if (!tenantId || tenantId === 'global' || tenantId === 'ALL') {
       return this.state.financialAccounts || [];
     }
-    return (this.state.financialAccounts || []).filter(a => a.tenantId === tenantId);
+    const accounts = (this.state.financialAccounts || []).filter(a => a.tenantId === tenantId);
+    if (accounts.length === 0) {
+      const tenant = (this.state.tenants || []).find(t => t.id === tenantId);
+      if (tenant) {
+        const defaults = generateStandardTreasuryAccounts(tenantId, tenant.currency || 'GNF', tenant.phone, 'Configuration Trésorerie');
+        this.updateState(draft => {
+          if (!draft.financialAccounts) draft.financialAccounts = [];
+          draft.financialAccounts.push(...defaults);
+        });
+        return defaults;
+      }
+    }
+    return accounts;
   }
 
   public getFinancialAccountById(
@@ -9782,6 +9925,27 @@ class StoreManager {
       if (!draft.financialPeriods) draft.financialPeriods = [];
       draft.financialYears.unshift(initialFiscalYear);
       draft.financialPeriods.push(...initialPeriods);
+
+      // Default preconfigured treasury accounts (Caisse Principale, Petite Caisse, Compte Banque, Orange Money Agence, MTN Mobile Money)
+      const defaultTreasuryAccounts = generateStandardTreasuryAccounts(
+        newTenantId,
+        newTenant.currency,
+        newTenant.phone,
+        `${cleanFirstName} ${cleanLastName}`
+      );
+      if (!draft.financialAccounts) draft.financialAccounts = [];
+      draft.financialAccounts.push(...defaultTreasuryAccounts);
+
+      // Default cash register
+      if (!draft.cashRegisters) draft.cashRegisters = [];
+      draft.cashRegisters.push({
+        id: `cr-${Date.now()}`,
+        tenantId: newTenantId,
+        name: `Caisse Principale Accueil`,
+        code: `CAISSE-01`,
+        isActive: true
+      });
+
       draft.currentTenantId = newTenantId;
       draft.currentUserId = newUser.id;
     });
