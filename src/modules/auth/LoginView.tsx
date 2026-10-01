@@ -1,17 +1,13 @@
 import React, { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
 import { ForgotPasswordModal } from './ForgotPasswordModal';
 import { RegisterAgencyModal } from './RegisterAgencyModal';
-import { dbStore } from '../../server/db/mockStore';
-import { checkAccountLockout } from '../../server/security/securityEngine';
 import {
   Lock, User as UserIcon, LogIn, Sparkles, Building2,
-  ShieldCheck, AlertCircle, Eye, EyeOff, Check, Crown,
-  Building, Briefcase, ArrowRight, ShieldAlert, PlusCircle, Clock, ShieldX
+  AlertCircle, Eye, EyeOff, Crown, ShieldAlert
 } from 'lucide-react';
 
 interface LoginViewProps {
@@ -21,34 +17,20 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({ 
   initialMode = 'AGENCY'
 }) => {
-  const { login, allUsers, currentTenant } = useAuth();
-  const state = dbStore.getState();
+  const { login, currentTenant } = useAuth();
 
   const [authMode, setAuthMode] = useState<'AGENCY' | 'SUPER_ADMIN'>(() => {
     if (window.location.hash === '#login-superadmin' || window.location.hash === '#superadmin' || window.location.hash === '#saas-superadmin') return 'SUPER_ADMIN';
     return initialMode;
   });
 
-  const [identifier, setIdentifier] = useState(() => {
-    if (initialMode === 'SUPER_ADMIN') return 'superadmin';
-    return 'admin';
-  });
-
-  const [password, setPassword] = useState(() => {
-    if (initialMode === 'SUPER_ADMIN') return 'superadmin123';
-    return 'admin123';
-  });
-
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLockedError, setIsLockedError] = useState(false);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-
-  // Grouped users for clear demo hierarchy
-  const superAdminUsers = state.users.filter(u => u.isSuperAdmin || u.username === 'superadmin' || u.roles.some(r => r.code === 'SUPER_ADMIN'));
-  const agencyAdminUsers = state.users.filter(u => !u.isSuperAdmin && u.username !== 'superadmin' && u.roles.some(r => r.code === 'ADMIN_CENTRE' || r.code === 'GERANT' || r.code === 'ADMIN_AGENCY'));
-  const staffUsers = state.users.filter(u => !u.isSuperAdmin && u.username !== 'superadmin' && !u.roles.some(r => r.code === 'ADMIN_CENTRE' || r.code === 'GERANT' || r.code === 'ADMIN_AGENCY' || r.code === 'SUPER_ADMIN'));
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +38,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setIsLockedError(false);
 
     if (!identifier.trim()) {
-      setErrorMsg("Veuillez saisir votre identifiant ou adresse email.");
+      setErrorMsg("Veuillez saisir votre identifiant, email ou numéro de téléphone.");
       return;
     }
 
@@ -74,13 +56,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
-  const handleQuickSelect = (username: string, pass: string, mode: 'AGENCY' | 'SUPER_ADMIN') => {
-    setAuthMode(mode);
-    setIdentifier(username);
-    setPassword(pass);
-    setErrorMsg(null);
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       {/* Background Glows */}
@@ -96,7 +71,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <Building2 className="w-8 h-8 relative z-10 text-brand-400" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            <span>GESTION DU CENTRE DE PRESTATIONS</span>
+            <span>Gestion des Centres de Prestation</span>
           </h1>
           <p className="text-xs text-slate-400 font-medium max-w-md mx-auto">
             Plateforme complète : Services, Reprographie, Production, Caisse & Formations
@@ -109,8 +84,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
             type="button"
             onClick={() => {
               setAuthMode('AGENCY');
-              setIdentifier('admin');
-              setPassword('admin123');
+              setIdentifier('');
+              setPassword('');
               setErrorMsg(null);
             }}
             className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -127,8 +102,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
             type="button"
             onClick={() => {
               setAuthMode('SUPER_ADMIN');
-              setIdentifier('superadmin');
-              setPassword('superadmin123');
+              setIdentifier('');
+              setPassword('');
               setErrorMsg(null);
             }}
             className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -202,9 +177,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1.5 flex items-center gap-1.5">
                 <UserIcon className="w-3.5 h-3.5 text-brand-400" />
-                {authMode === 'SUPER_ADMIN' 
-                  ? "Identifiant Super Admin ou Email" 
-                  : "Identifiant Collaborateur ou Email"}
+                Identifiant, email ou numéro de téléphone
               </label>
               <input
                 type="text"
@@ -212,8 +185,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder={
                   authMode === 'SUPER_ADMIN' 
-                    ? "superadmin" 
-                    : "admin, caissier, operateur..."
+                    ? "Identifiant, email ou téléphone (ex: superadmin)" 
+                    : "Identifiant, email ou téléphone (ex: admin, email@domaine.com, +224...)"
                 }
                 className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white text-xs font-medium focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all placeholder:text-slate-600 outline-none"
                 required
@@ -288,125 +261,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
             )}
           </form>
         </Card>
-
-        {/* Demo Fast Access Picker with Clear Hierarchy */}
-        <div className="p-5 bg-slate-900/70 backdrop-blur-md rounded-3xl border border-slate-800 text-xs space-y-4 shadow-xl">
-          <div className="flex items-center justify-between text-slate-300 border-b border-slate-800 pb-2.5">
-            <span className="font-extrabold text-xs flex items-center gap-1.5 text-white">
-              <Sparkles className="w-4 h-4 text-brand-400" />
-              Sélecteur Rapide de Rôles & Démonstration :
-            </span>
-            <span className="text-[10px] text-slate-400">Cliquez sur un compte pour tester</span>
-          </div>
-
-          {/* Niveau 1: Super Administrateur Global */}
-          <div className="space-y-1.5">
-            <div className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-              <Crown className="w-3.5 h-3.5" />
-              NIVEAU 1 — SUPER ADMINISTRATEUR GLOBAL (SaaS)
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              {superAdminUsers.map(u => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => handleQuickSelect(u.username, u.passwordHash || 'superadmin123', 'SUPER_ADMIN')}
-                  className={`p-3 rounded-2xl text-left border transition-all flex items-center justify-between cursor-pointer ${
-                    identifier === u.username
-                      ? 'bg-amber-950/60 border-amber-500 text-white shadow-md shadow-amber-950/50'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-amber-600/60 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-xs">
-                      👑
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <strong className="text-xs text-white">{u.firstName} {u.lastName}</strong>
-                        <Badge variant="warning" size="sm" className="text-[9px] py-0 px-1 font-bold">
-                          Global
-                        </Badge>
-                      </div>
-                      <span className="text-[10px] text-slate-400 block font-mono mt-0.5">
-                        login: <span className="text-amber-300 font-bold">{u.username}</span> • mdp: <span className="text-slate-300">superadmin123</span>
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-amber-400" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Niveau 2: Administrateurs de Centres */}
-          <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-wider text-brand-400 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5" />
-              NIVEAU 2 — DIRECTEURS & GÉRANTS DU CENTRE
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {agencyAdminUsers.map(u => {
-                const agency = state.tenants.find(t => t.id === u.tenantId);
-                const isAgencyA = u.tenantId === 't-001';
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => handleQuickSelect(u.username, u.passwordHash || 'admin123', 'AGENCY')}
-                    className={`p-2.5 rounded-2xl text-left border transition-all flex flex-col justify-between cursor-pointer ${
-                      identifier === u.username
-                        ? 'bg-brand-950/60 border-brand-500 text-white shadow-md'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:border-brand-600/60 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <strong className="text-xs text-white truncate">{u.firstName} {u.lastName}</strong>
-                      <Badge variant={isAgencyA ? 'primary' : 'success'} size="sm" className="text-[9px] py-0 px-1 font-bold">
-                        {isAgencyA ? 'NICOST' : 'Horizon'}
-                      </Badge>
-                    </div>
-                    <span className="text-[10px] text-brand-300 font-medium truncate mt-0.5">
-                      {agency?.name || 'Centre'}
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-mono mt-1">
-                      login: <span className="text-white font-bold">{u.username}</span> • mdp: admin123
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Niveau 3: Collaborateurs Métier */}
-          <div className="space-y-1.5 pt-1">
-            <div className="text-[10px] font-black uppercase tracking-wider text-emerald-400 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5" />
-                NIVEAU 3 — POSTES MÉTIER (CAISSE, ATELIER, FORMATION)
-              </span>
-              <span className="text-[9px] text-slate-400 font-mono">NICOST (t-001)</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
-              {staffUsers.filter(u => u.tenantId === 't-001').map(u => (
-                <button
-                  key={u.id}
-                  type="button"
-                  onClick={() => handleQuickSelect(u.username, u.passwordHash || `${u.username}123`, 'AGENCY')}
-                  className={`p-2 rounded-xl text-left border transition-all flex flex-col justify-between cursor-pointer ${
-                    identifier === u.username
-                      ? 'bg-emerald-950/60 border-emerald-500 text-white'
-                      : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="font-bold text-[11px] text-white truncate">{u.firstName} {u.lastName}</span>
-                  <span className="text-[10px] text-emerald-300 font-semibold">{u.roles[0]?.name}</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">login: {u.username}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Forgot Password Modal */}

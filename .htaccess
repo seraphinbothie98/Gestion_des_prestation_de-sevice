@@ -1,0 +1,48 @@
+# ==============================================================================
+# CENTRE MANAGEMENT SYSTEM (CMS) - CPANEL APACHE CONFIGURATION (.htaccess)
+# ==============================================================================
+
+# 1. Activation de la réécriture d'URL
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # 2. Sécurité : Empêcher l'accès direct aux fichiers sensibles
+    RewriteRule ^\.env - [F,L,NC]
+    RewriteRule ^database/ - [F,L,NC]
+    RewriteRule ^backup/ - [F,L,NC]
+    RewriteRule ^server/ - [F,L,NC]
+
+    # 3. Routage vers l'application Single Page (React / Vite)
+    # Si le fichier ou dossier demandé existe physiquement (assets, images, scripts), le servir directement
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Ne pas intercepter les requêtes API si gérées par un proxy inverse local
+    RewriteCond %{REQUEST_URI} ^/api/ [NC]
+    RewriteRule ^ - [L]
+
+    # Toutes les autres requêtes sont redirigées vers index.html pour le routage React
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# 4. Compression GZIP pour améliorer les performances
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# 5. En-têtes de sécurité et Cache
+<IfModule mod_headers.c>
+    # Protection contre le reniflement de type MIME
+    Header set X-Content-Type-Options "nosniff"
+    # Protection contre le clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    # Protection XSS
+    Header set X-XSS-Protection "1; mode=block"
+
+    # Cache des fichiers statiques immuables
+    <FilesMatch "\.(ico|pdf|flv|jpg|jpeg|png|gif|webp|js|css|swf|svg)$">
+        Header set Cache-Control "max-age=31536000, public"
+    </FilesMatch>
+</IfModule>

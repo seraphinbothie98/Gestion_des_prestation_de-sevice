@@ -39,8 +39,7 @@ import {
 } from '../security/securityEngine';
 import { isValidPhoneNumber, sanitizePhoneInput, validatePhoneWithDetails } from '../../lib/phoneValidation';
 import { validatePasswordByPolicy, hashPassword, getAccountCategory, verifyPassword } from '../../lib/passwordSecurity';
-import { supabaseService } from './supabaseService';
-import { isSupabaseConfigured, checkSupabaseConnection } from '../../lib/supabaseClient';
+import { apiClient } from '../../lib/apiClient';
 
 const STORAGE_KEY = 'cms_app_database_state_v1';
 
@@ -89,6 +88,7 @@ export interface DatabaseState {
   auditLogs: AuditLog[];
   currentTenantId: string;
   currentUserId: string;
+  _zeroCentralStockInitialized?: boolean;
 }
 
 const INITIAL_TENANT_ID = 't-001';
@@ -1815,9 +1815,9 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 80, // 80 GNF / feuille (40 000 GNF / paquet de 500)
       salePrice: 500, // 500 GNF / feuille au détail
       wholesalePrice: 400,
-      initialStock: 25000, // 10 cartons = 50 paquets = 25 000 feuilles
-      currentStock: 22500, // Stock Magasin (Principal 15 000 + Boutique 7 500)
-      prestationStock: 2500, // Stock Prestation (Atelier Reprographie & Prestations)
+      initialStock: 0,
+      currentStock: 0,
+      prestationStock: 0,
       minStockAlert: 2500, // 1 carton de sécurité
       prestationMinStockAlert: 500,
       maxStock: 50000,
@@ -1856,8 +1856,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-01',
       supplierName: 'Papeterie Centrale de Guinée',
       location: 'Magasin Principal - Étagère A1',
-      stockByLocation: { 'MAIN_STORE': 15000, 'BOUTIQUE': 7500, 'PRESTATION': 2500 },
-      stockByStore: { 'store-cpep-main': 15000, 'store-cpep-boutique': 7500, 'store-cpep-workshop': 2500 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0, 'PRESTATION': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-boutique': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -1880,8 +1880,8 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 270, // 270 GNF / feuille (27 000 GNF / paquet de 100)
       salePrice: 1000, // 1 000 GNF / feuille au détail
       wholesalePrice: 800,
-      initialStock: 2000, // 2 cartons = 20 paquets = 2 000 feuilles
-      currentStock: 2000,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 200,
       maxStock: 5000,
       packagings: [
@@ -1919,8 +1919,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-01',
       supplierName: 'Papeterie Centrale de Guinée',
       location: 'Magasin Principal - Étagère A2',
-      stockByLocation: { 'MAIN_STORE': 1200, 'BOUTIQUE': 800 },
-      stockByStore: { 'store-cpep-main': 1200, 'store-cpep-workshop': 800 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -1943,8 +1943,8 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 1500,
       salePrice: 2500,
       wholesalePrice: 2000,
-      initialStock: 150,
-      currentStock: 150,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 25,
       maxStock: 500,
       packagings: [
@@ -1967,8 +1967,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-01',
       supplierName: 'Papeterie Centrale de Guinée',
       location: 'Boutique - Tiroir B1',
-      stockByLocation: { 'MAIN_STORE': 100, 'BOUTIQUE': 50 },
-      stockByStore: { 'store-cpep-main': 100, 'store-cpep-boutique': 50 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-boutique': 0 },
       isConsumable: false,
       isSellable: true,
       isActive: true,
@@ -1989,16 +1989,16 @@ export const INITIAL_STATE: DatabaseState = {
       defaultPurchaseUnit: 'cartouche',
       costPrice: 350000,
       salePrice: 420000,
-      initialStock: 6,
-      currentStock: 4,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 2,
       maxStock: 15,
       packagings: [], // 1 niveau
       supplierId: 'sup-02',
       supplierName: 'Global Tech & Bureautique SARL',
       location: 'Atelier Reprographie - Armoire B',
-      stockByLocation: { 'MAIN_STORE': 2, 'PRODUCTION': 2 },
-      stockByStore: { 'store-cpep-main': 2, 'store-cpep-workshop': 2 },
+      stockByLocation: { 'MAIN_STORE': 0, 'PRODUCTION': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: false,
       isActive: true,
@@ -2019,16 +2019,16 @@ export const INITIAL_STATE: DatabaseState = {
       defaultPurchaseUnit: 'kit',
       costPrice: 280000,
       salePrice: 340000,
-      initialStock: 5,
-      currentStock: 3,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 3,
       maxStock: 10,
       packagings: [], // 1 niveau
       supplierId: 'sup-02',
       supplierName: 'Global Tech & Bureautique SARL',
       location: 'Atelier Photo - Rayon E',
-      stockByLocation: { 'MAIN_STORE': 1, 'PRODUCTION': 2 },
-      stockByStore: { 'store-cpep-main': 1, 'store-cpep-workshop': 2 },
+      stockByLocation: { 'MAIN_STORE': 0, 'PRODUCTION': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: false,
       isActive: true,
@@ -2049,8 +2049,8 @@ export const INITIAL_STATE: DatabaseState = {
       defaultPurchaseUnit: 'paquet',
       costPrice: 300, // 300 GNF / boudin (30 000 GNF / boîte de 100)
       salePrice: 1000,
-      initialStock: 2500, // 25 boîtes = 2 500 unités
-      currentStock: 1800, // 18 boîtes = 1 800 unités
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 500,
       maxStock: 4000,
       packagings: [
@@ -2073,8 +2073,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-01',
       supplierName: 'Papeterie Centrale de Guinée',
       location: 'Atelier Façonnage - Tiroir R1',
-      stockByLocation: { 'MAIN_STORE': 1000, 'PRODUCTION': 800 },
-      stockByStore: { 'store-cpep-main': 1000, 'store-cpep-workshop': 800 },
+      stockByLocation: { 'MAIN_STORE': 0, 'PRODUCTION': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -2095,8 +2095,8 @@ export const INITIAL_STATE: DatabaseState = {
       defaultPurchaseUnit: 'paquet',
       costPrice: 900, // 900 GNF / feuille (90 000 GNF / paquet de 100)
       salePrice: 1000,
-      initialStock: 2000,
-      currentStock: 1400,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 500,
       maxStock: 5000,
       packagings: [
@@ -2119,8 +2119,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-01',
       supplierName: 'Papeterie Centrale de Guinée',
       location: 'Atelier Façonnage - Tiroir R2',
-      stockByLocation: { 'MAIN_STORE': 800, 'PRODUCTION': 600 },
-      stockByStore: { 'store-cpep-main': 800, 'store-cpep-workshop': 600 },
+      stockByLocation: { 'MAIN_STORE': 0, 'PRODUCTION': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -2141,8 +2141,8 @@ export const INITIAL_STATE: DatabaseState = {
       defaultPurchaseUnit: 'boîte',
       costPrice: 850,
       salePrice: 1500,
-      initialStock: 1500,
-      currentStock: 900,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 400,
       maxStock: 3000,
       packagings: [
@@ -2165,8 +2165,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-01',
       supplierName: 'Papeterie Centrale de Guinée',
       location: 'Atelier Façonnage - Étagère P',
-      stockByLocation: { 'MAIN_STORE': 500, 'PRODUCTION': 400 },
-      stockByStore: { 'store-cpep-main': 500, 'store-cpep-workshop': 400 },
+      stockByLocation: { 'MAIN_STORE': 0, 'PRODUCTION': 0 },
+      stockByStore: { 'store-cpep-main': 0, 'store-cpep-workshop': 0 },
       isConsumable: true,
       isSellable: true,
       isActive: true,
@@ -2189,8 +2189,8 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 75000,
       salePrice: 85000,
       wholesalePrice: 82000,
-      initialStock: 400,
-      currentStock: 400,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 80,
       maxStock: 2000,
       packagings: [
@@ -2213,8 +2213,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-b-01',
       supplierName: 'Cimenterie de Guinée SARL',
       location: 'Dépôt Matériaux - Quai A',
-      stockByLocation: { 'MAIN_STORE': 350, 'BOUTIQUE': 50 },
-      stockByStore: { 'store-horizon-main': 350, 'store-horizon-shop': 50 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0 },
+      stockByStore: { 'store-horizon-main': 0, 'store-horizon-shop': 0 },
       isConsumable: false,
       isSellable: true,
       isActive: true,
@@ -2237,8 +2237,8 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 95000,
       salePrice: 110000,
       wholesalePrice: 105000,
-      initialStock: 300,
-      currentStock: 300,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 50,
       maxStock: 1500,
       packagings: [
@@ -2261,8 +2261,8 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-b-02',
       supplierName: 'SOGUIMAT Distribution',
       location: 'Dépôt Métal - Allée B',
-      stockByLocation: { 'MAIN_STORE': 250, 'BOUTIQUE': 50 },
-      stockByStore: { 'store-horizon-main': 250, 'store-horizon-shop': 50 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0 },
+      stockByStore: { 'store-horizon-main': 0, 'store-horizon-shop': 0 },
       isConsumable: false,
       isSellable: true,
       isActive: true,
@@ -2285,15 +2285,15 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 280000,
       salePrice: 330000,
       wholesalePrice: 310000,
-      initialStock: 50,
-      currentStock: 45,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 10,
       maxStock: 200,
       packagings: [],
       supplierId: 'sup-b-03',
       supplierName: 'Chimie & Peintures d’Afrique',
       location: 'Rayon Peintures - R1',
-      stockByLocation: { 'MAIN_STORE': 30, 'BOUTIQUE': 15 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0 },
       isActive: true,
       isArchived: false,
       createdAt: '2026-01-15T08:00:00Z'
@@ -2314,8 +2314,8 @@ export const INITIAL_STATE: DatabaseState = {
       costPrice: 40,
       salePrice: 60,
       wholesalePrice: 50,
-      initialStock: 30000,
-      currentStock: 30000,
+      initialStock: 0,
+      currentStock: 0,
       minStockAlert: 5000,
       maxStock: 100000,
       packagings: [
@@ -2353,7 +2353,7 @@ export const INITIAL_STATE: DatabaseState = {
       supplierId: 'sup-b-02',
       supplierName: 'SOGUIMAT Distribution',
       location: 'Rayon Visserie - Tiroir V4',
-      stockByLocation: { 'MAIN_STORE': 20000, 'BOUTIQUE': 10000 },
+      stockByLocation: { 'MAIN_STORE': 0, 'BOUTIQUE': 0 },
       isActive: true,
       isArchived: false,
       createdAt: '2026-01-15T08:00:00Z'
@@ -2867,6 +2867,21 @@ class StoreManager {
           });
         }
 
+        // Ensure all central stock is set to zero initially
+        if (!parsed._zeroCentralStockInitialized) {
+          if (parsed.products) {
+            parsed.products.forEach((p: any) => {
+              p.initialStock = 0;
+              p.currentStock = 0;
+              p.prestationStock = 0;
+              p.stockByLocation = { CENTRAL: 0, MAIN_STORE: 0, BOUTIQUE: 0, PRESTATION: 0 };
+              p.stockByStore = { CENTRAL: 0 };
+            });
+          }
+          parsed.stockMovements = [];
+          parsed._zeroCentralStockInitialized = true;
+        }
+
         // Ensure products have baseUnit, multi-level packagings and categoryId hydrated
         if (!parsed.products || parsed.products.length === 0 || !parsed.products[0].baseUnit) {
           parsed.products = JSON.parse(JSON.stringify(INITIAL_STATE.products));
@@ -3334,69 +3349,86 @@ class StoreManager {
     this.listeners.forEach(fn => fn());
   }
 
-  // --- SUPABASE POSTGRESQL INTEGRATION ---
+  // --- POSTGRESQL CPANEL INTEGRATION ---
+
+  public isPostgresEnabled(): boolean {
+    return true; // Toujours disponible via l'API Node.js cPanel
+  }
 
   public isSupabaseEnabled(): boolean {
-    return isSupabaseConfigured() && supabaseService.isReady();
+    return false; // Obsolète: migration cPanel
+  }
+
+  public async checkPostgresHealth() {
+    try {
+      const res = await apiClient.checkHealth();
+      return {
+        connected: res.database?.connected ?? false,
+        message: res.database?.message || 'Connexion API / PostgreSQL opérationnelle',
+        url: 'http://localhost/api/health'
+      };
+    } catch (err: any) {
+      return {
+        connected: false,
+        message: `Erreur API cPanel: ${err.message}`,
+        url: '/api/health'
+      };
+    }
   }
 
   public async checkSupabaseHealth() {
-    return await checkSupabaseConnection();
+    return this.checkPostgresHealth();
   }
 
-  public async syncWithSupabase(tenantId?: string): Promise<{ success: boolean; message: string }> {
-    if (!this.isSupabaseEnabled()) {
-      return { success: false, message: 'Supabase n\'est pas activé ou configuré.' };
-    }
+  public async syncWithDatabase(tenantId?: string): Promise<{ success: boolean; message: string }> {
     try {
       const targetTenant = tenantId || this.state.currentTenantId;
-      const [remoteTenants, remotePersons, remoteServices, remoteProducts, remoteOrders, remoteAccounts] = await Promise.all([
-        supabaseService.getTenants(),
-        supabaseService.getPersons(targetTenant),
-        supabaseService.getServices(targetTenant),
-        supabaseService.getProducts(targetTenant),
-        supabaseService.getOrders(targetTenant),
-        supabaseService.getFinancialAccounts(targetTenant)
-      ]);
+      const remoteData = await apiClient.syncState(targetTenant);
 
       this.updateState(draft => {
-        if (remoteTenants.length > 0) draft.tenants = remoteTenants;
-        if (remotePersons.length > 0) {
+        if (remoteData.tenants && remoteData.tenants.length > 0) {
+          draft.tenants = remoteData.tenants;
+        }
+        if (remoteData.persons && remoteData.persons.length > 0) {
           draft.persons = [
             ...draft.persons.filter(p => p.tenantId !== targetTenant),
-            ...remotePersons
+            ...remoteData.persons
           ];
         }
-        if (remoteServices.length > 0) {
+        if (remoteData.services && remoteData.services.length > 0) {
           draft.services = [
             ...draft.services.filter(s => s.tenantId !== targetTenant),
-            ...remoteServices
+            ...remoteData.services
           ];
         }
-        if (remoteProducts.length > 0) {
+        if (remoteData.products && remoteData.products.length > 0) {
           draft.products = [
             ...draft.products.filter(p => p.tenantId !== targetTenant),
-            ...remoteProducts
+            ...remoteData.products
           ];
         }
-        if (remoteOrders.length > 0) {
+        if (remoteData.orders && remoteData.orders.length > 0) {
           draft.orders = [
             ...draft.orders.filter(o => o.tenantId !== targetTenant),
-            ...remoteOrders
+            ...remoteData.orders
           ];
         }
-        if (remoteAccounts.length > 0) {
+        if (remoteData.financialAccounts && remoteData.financialAccounts.length > 0) {
           draft.financialAccounts = [
             ...draft.financialAccounts.filter(a => a.tenantId !== targetTenant),
-            ...remoteAccounts
+            ...remoteData.financialAccounts
           ];
         }
       });
 
-      return { success: true, message: 'Synchronisation Supabase PostgreSQL effectuée avec succès.' };
+      return { success: true, message: 'Synchronisation PostgreSQL cPanel effectuée avec succès.' };
     } catch (err: any) {
-      return { success: false, message: `Erreur de synchronisation: ${err.message}` };
+      return { success: false, message: `Erreur de synchronisation cPanel: ${err.message}` };
     }
+  }
+
+  public async syncWithSupabase(tenantId?: string): Promise<{ success: boolean; message: string }> {
+    return this.syncWithDatabase(tenantId);
   }
 
   // --- SAAS MULTI-AGENCY ACTIONS ---
@@ -9241,15 +9273,27 @@ class StoreManager {
     }
 
     if (!cleanId) {
-      return { success: false, statusCode: 400, message: "Veuillez saisir votre identifiant ou adresse email." };
+      return { success: false, statusCode: 400, message: "Veuillez saisir votre identifiant, email ou numéro de téléphone." };
     }
 
     // 2. Lookup user by email, username or phone number
-    const user = this.state.users.find(
-      u => u.email.toLowerCase() === cleanId || 
-           (u.username && u.username.toLowerCase() === cleanId) ||
-           (u.phone && u.phone.replace(/\s+/g, '') === cleanId.replace(/\s+/g, ''))
-    );
+    const normalizeDigits = (str?: string) => (str || '').replace(/\D+/g, '');
+    const cleanDigits = normalizeDigits(cleanId);
+
+    const user = this.state.users.find(u => {
+      const matchEmail = Boolean(u.email && u.email.toLowerCase() === cleanId);
+      const matchUsername = Boolean(u.username && u.username.toLowerCase() === cleanId);
+      
+      const userPhoneDigits = normalizeDigits(u.phone);
+      const matchPhoneExact = Boolean(u.phone && u.phone.replace(/\s+/g, '') === cleanId.replace(/\s+/g, ''));
+      const matchPhoneDigits = Boolean(cleanDigits.length >= 7 && userPhoneDigits.length >= 7 && (
+        userPhoneDigits === cleanDigits ||
+        userPhoneDigits.endsWith(cleanDigits) ||
+        cleanDigits.endsWith(userPhoneDigits)
+      ));
+
+      return matchEmail || matchUsername || matchPhoneExact || matchPhoneDigits;
+    });
 
     if (!user) {
       recordFailedIpAttempt(cleanIp, now);

@@ -279,6 +279,18 @@ const ProductActionsDropdown: React.FC<{
                 type="button"
                 onClick={() => {
                   onClose();
+                  window.location.hash = '#suppliers';
+                }}
+                className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-left transition-colors"
+              >
+                <Truck className="w-4 h-4 text-brand-600" />
+                <span>🚚 Commander chez un fournisseur</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
                   onBarcode();
                 }}
                 className="flex items-center gap-2.5 w-full px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition-colors"
@@ -470,7 +482,7 @@ export const StockView: React.FC = () => {
   const [newConversionFactorToStock, setNewConversionFactorToStock] = useState<number>(2500);
 
   // Section C: Stock & Location (All quantities in Base Unit)
-  const [newInitialStock, setNewInitialStock] = useState<number>(25000);
+  const [newInitialStock, setNewInitialStock] = useState<number>(0);
   const [newMinAlert, setNewMinAlert] = useState<number>(2500);
   const [newMaxStock, setNewMaxStock] = useState<number>(50000);
   const [newLocation, setNewLocation] = useState('Magasin Principal - Étagère A1');
@@ -1232,7 +1244,7 @@ export const StockView: React.FC = () => {
     setNewCostPrice(120);
     setNewSalePrice(500);
     setNewWholesalePrice(400);
-    setNewInitialStock(25000);
+    setNewInitialStock(0);
     setNewMinAlert(2500);
     setNewMaxStock(50000);
     setNewLocation('Magasin Principal - Étagère A1');
@@ -2267,65 +2279,32 @@ export const StockView: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Quick Actions Buttons Footer */}
-                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              icon={Zap}
-                              onClick={() => handleQuickAddUnit(p)}
-                              className={`text-xs font-extrabold shadow-sm bg-white dark:bg-slate-900 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 dark:hover:bg-emerald-950/40 ${
-                                !hasPackaging ? 'col-span-2' : ''
-                              }`}
-                              title={`Ajouter +1 ${unitLabel}`}
-                            >
-                              + 1 {unitLabel}
-                            </Button>
+                        {/* Actions Footer */}
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setProductToView(p)}
+                            className="text-xs font-bold text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Voir fiche</span>
+                          </button>
 
-                            {hasPackaging && (
-                              <Button
-                                type="button"
-                                variant="primary"
-                                size="sm"
-                                icon={Plus}
-                                onClick={() => handleQuickAddPackage(p)}
-                                className="text-xs font-extrabold bg-brand-600 hover:bg-brand-700 text-white shadow-sm"
-                                title={`Ajouter +1 ${pkg?.unitName} (+${pkg?.factorToBase} ${unitLabel}s)`}
-                              >
-                                + 1 {pkg?.unitName}
-                              </Button>
-                            )}
-                          </div>
-
-                          {/* Secondary context buttons */}
-                          <div className="flex items-center justify-between pt-1 text-slate-400">
-                            <button
-                              type="button"
-                              onClick={() => setProductToView(p)}
-                              className="text-[11px] font-semibold text-slate-500 hover:text-brand-600 flex items-center gap-1"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                              Fiche
-                            </button>
-
-                            <div className="flex items-center gap-1">
-                              <ProductActionsDropdown
-                                product={p}
-                                isOpen={activeActionMenuId === p.id}
-                                onToggle={() => setActiveActionMenuId(activeActionMenuId === p.id ? null : p.id)}
-                                onClose={() => setActiveActionMenuId(null)}
-                                onView={() => setProductToView(p)}
-                                onEdit={() => handleOpenEditProduct(p)}
-                                onAdjust={() => handleOpenAdjustStock(p)}
-                                onBarcode={() => setProductForBarcode(p)}
-                                onToggleActive={() => handleToggleProductActive(p)}
-                                onDelete={() => setProductToDelete(p)}
-                                canEdit={isSuperAdmin || hasPermission('article.edit') || hasPermission('stock.manage')}
-                                canDelete={isSuperAdmin || hasPermission('article.delete') || hasPermission('stock.manage')}
-                              />
-                            </div>
+                          <div className="flex items-center gap-1">
+                            <ProductActionsDropdown
+                              product={p}
+                              isOpen={activeActionMenuId === p.id}
+                              onToggle={() => setActiveActionMenuId(activeActionMenuId === p.id ? null : p.id)}
+                              onClose={() => setActiveActionMenuId(null)}
+                              onView={() => setProductToView(p)}
+                              onEdit={() => handleOpenEditProduct(p)}
+                              onAdjust={() => handleOpenAdjustStock(p)}
+                              onBarcode={() => setProductForBarcode(p)}
+                              onToggleActive={() => handleToggleProductActive(p)}
+                              onDelete={() => setProductToDelete(p)}
+                              canEdit={isSuperAdmin || hasPermission('article.edit') || hasPermission('stock.manage')}
+                              canDelete={isSuperAdmin || hasPermission('article.delete') || hasPermission('stock.manage')}
+                            />
                           </div>
                         </div>
                       </div>
@@ -2461,31 +2440,6 @@ export const StockView: React.FC = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Fast Action Buttons in table */}
-                            {!p.isArchived && (
-                              <div className="flex items-center gap-1 mr-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleQuickAddUnit(p)}
-                                  className="h-7 px-2 text-[10px] font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
-                                  title={`+1 ${unitLabel}`}
-                                >
-                                  +1 {unitLabel}
-                                </Button>
-                                {hasPackaging && (
-                                  <Button
-                                    size="sm"
-                                    variant="primary"
-                                    onClick={() => handleQuickAddPackage(p)}
-                                    className="h-7 px-2 text-[10px] font-bold bg-brand-600 text-white"
-                                    title={`+1 ${pkg?.unitName} (+${pkg?.factorToBase} ${unitLabel}s)`}
-                                  >
-                                    +1 {pkg?.unitName}
-                                  </Button>
-                                )}
-                              </div>
-                            )}
 
                             <Button
                               size="sm"
@@ -4376,17 +4330,17 @@ export const StockView: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <label className="font-bold text-slate-700 dark:text-slate-300 block mb-1">
-                    Stock Initial ({newBaseUnit}s) *
+                    Stock Initial ({newBaseUnit}s)
                   </label>
                   <Input
                     type="number"
-                    min="0"
-                    value={newInitialStock}
-                    onChange={(e) => setNewInitialStock(parseInt(e.target.value) || 0)}
-                    required
-                    className="font-bold"
+                    value={0}
+                    disabled
+                    className="font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed"
                   />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">En unité de base</span>
+                  <span className="text-[10px] text-brand-600 dark:text-brand-400 mt-0.5 block font-medium">
+                    0 à l'état initial (approvisionnement via commande fournisseur)
+                  </span>
                 </div>
 
                 <div>

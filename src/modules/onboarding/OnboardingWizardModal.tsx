@@ -177,7 +177,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
       unit: 'paquet',
       costPrice: 45000,
       sellingPrice: 55000,
-      initialStock: 25,
+      initialStock: 0,
       minStockAlert: 5
     },
     {
@@ -187,7 +187,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
       unit: 'pièce',
       costPrice: 1500,
       sellingPrice: 2500,
-      initialStock: 100,
+      initialStock: 0,
       minStockAlert: 20
     },
     {
@@ -197,7 +197,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
       unit: 'pièce',
       costPrice: 40000,
       sellingPrice: 65000,
-      initialStock: 15,
+      initialStock: 0,
       minStockAlert: 3
     },
     {
@@ -207,7 +207,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
       unit: 'pièce',
       costPrice: 2000,
       sellingPrice: 4000,
-      initialStock: 80,
+      initialStock: 0,
       minStockAlert: 15
     }
   ];
@@ -219,7 +219,7 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
   const [newProdCategory, setNewProdCategory] = useState('Fournitures');
   const [newProdCostPrice, setNewProdCostPrice] = useState(10000);
   const [newProdSellingPrice, setNewProdSellingPrice] = useState(15000);
-  const [newProdQty, setNewProdQty] = useState(10);
+  const [newProdQty, setNewProdQty] = useState(0);
   const [newProdUnit, setNewProdUnit] = useState('pièce');
   const [newProdAlert, setNewProdAlert] = useState(3);
 
