@@ -1760,7 +1760,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                           <th className="py-3 px-3 min-w-[140px]">Quantité</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap">Prix unitaire</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap">Total</th>
-                          <th className="py-3 px-3 text-center whitespace-nowrap">Actions</th>
+                          <th className="py-3 px-3 text-center whitespace-nowrap min-w-[125px]">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -2045,13 +2045,13 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                 </div>
                               </td>
 
-                              {/* 6. ACTIONS (PILULES MODIFIER + REMISE + POUBELLE ROUGE) */}
-                              <td className="py-3 px-3 align-middle whitespace-nowrap text-center">
-                                <div className="flex items-center justify-center gap-1.5">
+                              {/* 6. ACTIONS (BOUTONS SUPERPOSÉS VERTICALEMENT : MODIFIER, REMISE, SUPPRIMER) */}
+                              <td className="py-2.5 px-3 align-middle whitespace-nowrap text-center">
+                                <div className="flex flex-col items-center justify-center gap-1 w-28 mx-auto">
                                   <button
                                     type="button"
                                     onClick={() => setEditingLineIndex(idx)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition-colors"
+                                    className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition-colors"
                                     title="Modifier tous les paramètres de cette prestation"
                                   >
                                     <SlidersHorizontal className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
@@ -2061,7 +2061,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleOpenRemiseModal(idx)}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold shadow-2xs transition-colors ${
+                                    className={`w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold shadow-2xs transition-colors ${
                                       line.discountAmount > 0
                                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 shadow-xs'
                                         : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -2075,10 +2075,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveLine(idx)}
-                                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-full transition-colors ml-0.5"
+                                    className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-slate-900 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 shadow-2xs transition-colors"
                                     title="Supprimer la ligne"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                    <span>Supprimer</span>
                                   </button>
                                 </div>
                               </td>
