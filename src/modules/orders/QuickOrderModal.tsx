@@ -488,6 +488,29 @@ export const getLinePrimaryOption = (line: CalculatedLine) => {
   return getLineColorOption(line) || getLineSecondaryOption(line);
 };
 
+/**
+ * Abrège les noms d'unités longs à 3-4 caractères (ex. "pag.", "ex.", "doc.", "prest.", "art.")
+ * pour harmoniser la largeur des cadres de quantité.
+ */
+export const formatShortUnit = (unit?: string): string => {
+  if (!unit) return 'doc.';
+  const u = unit.trim().toLowerCase();
+  if (u.startsWith('page')) return 'pag.';
+  if (u.startsWith('ex') || u === 'copie' || u === 'copies' || u === 'tirage' || u === 'tirages') return 'ex.';
+  if (u.startsWith('prest')) return 'prest.';
+  if (u.startsWith('doc')) return 'doc.';
+  if (u.startsWith('art')) return 'art.';
+  if (u.startsWith('unit') || u === 'u' || u === 'unite') return 'unit.';
+  if (u.startsWith('heur') || u === 'h') return 'h.';
+  if (u.startsWith('forf')) return 'forf.';
+  if (u.startsWith('feuill') || u.startsWith('fl')) return 'fl.';
+  if (u.startsWith('lot')) return 'lot';
+  if (u.startsWith('cart')) return 'cart.';
+  if (u.startsWith('paq')) return 'paq.';
+  if (u.length > 5) return u.slice(0, 4) + '.';
+  return u;
+};
+
 export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   isOpen,
   onClose,
@@ -1757,7 +1780,7 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                         <tr>
                           <th className="py-3 px-3 min-w-[150px]">Désignation</th>
                           <th className="py-3 px-3 min-w-[140px]">Paramètre</th>
-                          <th className="py-3 px-3 min-w-[190px]">Quantité</th>
+                          <th className="py-3 px-3 min-w-[195px]">Quantité</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap">Prix unitaire</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap">Total</th>
                           <th className="py-3 px-3 text-center whitespace-nowrap min-w-[125px]">Actions</th>
@@ -1950,11 +1973,11 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                   {isPage ? (
                                     <div className="flex flex-col gap-1.5 w-fit">
                                       {/* Pages originales avec boutons (-) et (+) */}
-                                      <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs">
+                                      <div className="inline-flex items-center justify-between gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs w-[172px]">
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateLine(idx, { pageCount: Math.max(1, (line.pageCount || 1) - 1) })}
-                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors shrink-0"
                                           title="Diminuer le nombre de pages"
                                         >
                                           -
@@ -1967,26 +1990,28 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                             const v = parseInt(e.target.value);
                                             handleUpdateLine(idx, { pageCount: isNaN(v) ? 1 : Math.max(1, v) });
                                           }}
-                                          className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                                          className="w-14 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs shrink-0"
                                           title="Nombre de pages du document original"
                                         />
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateLine(idx, { pageCount: (line.pageCount || 1) + 1 })}
-                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors shrink-0"
                                           title="Augmenter le nombre de pages"
                                         >
                                           +
                                         </button>
-                                        <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">pages</span>
+                                        <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold w-11 text-center shrink-0" title="Pages">
+                                          pag.
+                                        </span>
                                       </div>
 
                                       {/* Exemplaires avec boutons (-) et (+) */}
-                                      <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs">
+                                      <div className="inline-flex items-center justify-between gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs w-[172px]">
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateLine(idx, { copiesCount: Math.max(1, (line.copiesCount || 1) - 1) })}
-                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors shrink-0"
                                           title="Diminuer le nombre d'exemplaires"
                                         >
                                           -
@@ -1999,55 +2024,57 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
                                             const v = parseInt(e.target.value);
                                             handleUpdateLine(idx, { copiesCount: isNaN(v) ? 1 : Math.max(1, v) });
                                           }}
-                                          className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
+                                          className="w-14 h-8 text-sm font-bold text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs shrink-0"
                                           title="Nombre d'exemplaires"
                                         />
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateLine(idx, { copiesCount: (line.copiesCount || 1) + 1 })}
-                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
+                                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors shrink-0"
                                           title="Augmenter le nombre d'exemplaires"
                                         >
                                           +
                                         </button>
-                                        <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">ex.</span>
+                                        <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold w-11 text-center shrink-0" title="Exemplaires">
+                                          ex.
+                                        </span>
                                       </div>
                                     </div>
                                   ) : (
-                                  <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs w-fit">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateLine(idx, { quantity: Math.max(1, (line.quantity || 1) - 1) })}
-                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
-                                      title="Diminuer la quantité"
-                                    >
-                                      -
-                                    </button>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={line.itemType === 'PRODUCT' ? (line.currentStock || 9999) : 9999}
-                                      value={line.quantity}
-                                      onChange={(e) => {
-                                        const v = parseInt(e.target.value);
-                                        handleUpdateLine(idx, { quantity: isNaN(v) ? 1 : Math.max(1, v) });
-                                      }}
-                                      className="w-14 sm:w-16 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs"
-                                      title="Quantité"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleUpdateLine(idx, { quantity: (line.quantity || 1) + 1 })}
-                                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors"
-                                      title="Augmenter la quantité"
-                                    >
-                                      +
-                                    </button>
-                                    <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold min-w-[34px]">
-                                      {line.unit || 'doc'}
-                                    </span>
-                                  </div>
-                                )}
+                                    <div className="inline-flex items-center justify-between gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 shadow-xs w-[172px]">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateLine(idx, { quantity: Math.max(1, (line.quantity || 1) - 1) })}
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors shrink-0"
+                                        title="Diminuer la quantité"
+                                      >
+                                        -
+                                      </button>
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={line.itemType === 'PRODUCT' ? (line.currentStock || 9999) : 9999}
+                                        value={line.quantity}
+                                        onChange={(e) => {
+                                          const v = parseInt(e.target.value);
+                                          handleUpdateLine(idx, { quantity: isNaN(v) ? 1 : Math.max(1, v) });
+                                        }}
+                                        className="w-14 h-8 text-sm font-bold text-center rounded-lg border-2 border-slate-800 dark:border-slate-200 bg-white dark:bg-slate-950 px-1 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-2xs shrink-0"
+                                        title="Quantité"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateLine(idx, { quantity: (line.quantity || 1) + 1 })}
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-sm select-none transition-colors shrink-0"
+                                        title="Augmenter la quantité"
+                                      >
+                                        +
+                                      </button>
+                                      <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold w-11 text-center shrink-0" title={line.unit || 'document'}>
+                                        {formatShortUnit(line.unit)}
+                                      </span>
+                                    </div>
+                                  )}
                               </td>
 
                               {/* 4. PRIX UNITAIRE */}
