@@ -1,0 +1,9 @@
+# Auto detect text files and perform LF normalization on checkout
+* text=auto
+
+# Enforce LF endings on shell scripts and configuration files for Linux cPanel compatibility
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+.htaccess text eol=lf

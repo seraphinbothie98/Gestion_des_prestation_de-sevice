@@ -1,0 +1,19 @@
+---
+# ==============================================================================
+# CENTRE MANAGEMENT SYSTEM (CMS) - FICHIER DE DÉPLOIEMENT CPANEL (.cpanel.yml)
+# ==============================================================================
+# Requis par cPanel Git Version Control pour activer le bouton "Deploy HEAD Commit".
+# Exécute automatiquement la préparation de production, l'installation des dépendances,
+# la création des répertoires runtime et le rechargement de Phusion Passenger.
+# ==============================================================================
+
+deployment:
+  tasks:
+    # 1. Définition du chemin cible optionnel (ou via fichier .deploypath)
+    - export DEPLOYPATH=${DEPLOYPATH:-}
+
+    # 2. Attribution des droits d'exécution au script de déploiement
+    - /bin/chmod +x ./scripts/cpanel-deploy.sh 2>/dev/null || chmod +x ./scripts/cpanel-deploy.sh || true
+
+    # 3. Exécution du script de déploiement intelligent
+    - /bin/bash ./scripts/cpanel-deploy.sh
