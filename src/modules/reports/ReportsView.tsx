@@ -7,6 +7,7 @@ import { Tabs } from '../../components/ui/Tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
 import { dbStore } from '../../server/db/mockStore';
 import { formatCurrency, formatDate } from '../../lib/utils';
+import { getCanonicalServiceKey } from '../../lib/serviceSpecs';
 import {
   BarChart3, Download, Printer, DollarSign,
   ShoppingBag, GraduationCap, Boxes, TrendingUp,
@@ -16,6 +17,19 @@ import {
 export const ReportsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'finances' | 'services' | 'formation' | 'stock'>('finances');
   const state = dbStore.getState();
+
+  const uniqueServices = React.useMemo(() => {
+    const seen = new Set<string>();
+    const list: typeof state.services = [];
+    (state.services || []).forEach(s => {
+      const key = getCanonicalServiceKey(s.name, s.code);
+      if (!seen.has(key)) {
+        seen.add(key);
+        list.push(s);
+      }
+    });
+    return list;
+  }, [state.services]);
 
   const handleExportCSV = (filename: string, rows: (string | number)[][]) => {
     const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
@@ -244,7 +258,7 @@ export const ReportsView: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {state.services.map(s => (
+                {uniqueServices.map(s => (
                   <TableRow key={s.id}>
                     <TableCell>
                       <span className="font-bold text-xs text-slate-900 dark:text-white block">{s.name}</span>

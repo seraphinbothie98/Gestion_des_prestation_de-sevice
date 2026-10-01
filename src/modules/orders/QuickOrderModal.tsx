@@ -34,7 +34,8 @@ import {
   resolveServiceSpecsImpact,
   getServiceOptions,
   canonicalOptionKey,
-  canonicalOptionValue
+  canonicalOptionValue,
+  getCanonicalServiceKey
 } from '../../lib/serviceSpecs';
 import { formatReceiptItemDetails } from '../../lib/orderItemUtils';
 
@@ -532,55 +533,32 @@ export const QuickOrderModal: React.FC<QuickOrderModalProps> = ({
   }, [state.services, tenantId]);
 
   // Clean deduplicated selectable services for "Type de service"
-  // Ensures only 1 "Photocopie" and 1 "Impression", while preserving all other services intact
+  // Ensures strictly 1 service of each type, with full configurations
   const selectableServices = useMemo(() => {
     if (!tenantServices || tenantServices.length === 0) return [];
 
-    const photoServices = tenantServices.filter(s => {
-      const n = (s.name || '').toLowerCase();
-      const c = (s.code || '').toLowerCase();
-      return (n.includes('photocopie') || c.includes('photo')) && !n.includes('planche') && !n.includes('identité') && !n.includes('photo-id');
-    });
-
-    const primaryPhoto = photoServices.find(s => s.name.trim().toLowerCase() === 'photocopie')
-      || photoServices.find(s => !s.name.toLowerCase().includes('n&b') && !s.name.toLowerCase().includes('couleur') && !s.name.toLowerCase().includes('a4'))
-      || photoServices[0];
-
-    const impServices = tenantServices.filter(s => {
-      const n = (s.name || '').toLowerCase();
-      const c = (s.code || '').toLowerCase();
-      return (n.includes('impression') || c.includes('imp')) && !photoServices.some(p => p.id === s.id);
-    });
-
-    const primaryImp = impServices.find(s => s.name.trim().toLowerCase() === 'impression')
-      || impServices.find(s => s.name.trim().toLowerCase() === 'impression numérique')
-      || impServices.find(s => !s.name.toLowerCase().includes('n&b') && !s.name.toLowerCase().includes('couleur') && !s.name.toLowerCase().includes('a4'))
-      || impServices[0];
-
+    const seen = new Set<string>();
     const list: Service[] = [];
 
-    if (primaryPhoto) {
-      list.push({
-        ...primaryPhoto,
-        name: 'Photocopie'
-      });
-    }
+    // Prioritize services with full options / configurations
+    const sorted = [...tenantServices].sort((a, b) => {
+      const aIsInit = a.id.startsWith('srv-') && a.id.length <= 6 ? 100 : 0;
+      const bIsInit = b.id.startsWith('srv-') && b.id.length <= 6 ? 100 : 0;
+      const aScore = aIsInit + (a.options?.length || 0) * 10 + (a.configurations?.length || 0) + (a.isActive ? 5 : 0);
+      const bScore = bIsInit + (b.options?.length || 0) * 10 + (b.configurations?.length || 0) + (b.isActive ? 5 : 0);
+      return bScore - aScore;
+    });
 
-    if (primaryImp) {
-      list.push({
-        ...primaryImp,
-        name: 'Impression'
-      });
-    }
-
-    tenantServices.forEach(s => {
-      const isPhotoVar = photoServices.some(p => p.id === s.id);
-      const isImpVar = impServices.some(i => i.id === s.id);
+    for (const s of sorted) {
       const isFormation = (s.name || '').toLowerCase().includes('formation') || (s.code || '').toLowerCase().includes('formation') || (s.categoryName || '').toLowerCase().includes('formation');
-      if (!isPhotoVar && !isImpVar && !isFormation) {
+      if (isFormation) continue;
+
+      const key = getCanonicalServiceKey(s.name, s.code);
+      if (!seen.has(key)) {
+        seen.add(key);
         list.push(s);
       }
-    });
+    }
 
     return list;
   }, [tenantServices]);

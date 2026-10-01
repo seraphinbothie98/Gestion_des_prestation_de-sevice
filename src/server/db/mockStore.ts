@@ -40,6 +40,7 @@ import {
 import { isValidPhoneNumber, sanitizePhoneInput, validatePhoneWithDetails } from '../../lib/phoneValidation';
 import { validatePasswordByPolicy, hashPassword, getAccountCategory, verifyPassword } from '../../lib/passwordSecurity';
 import { apiClient } from '../../lib/apiClient';
+import { getCanonicalServiceKey } from '../../lib/serviceSpecs';
 
 const STORAGE_KEY = 'cms_app_database_state_v1';
 
@@ -2855,66 +2856,130 @@ class StoreManager {
           });
         }
 
-        // Ensure services have standard options and configurations hydrated, with single Photocopie & Impression
-        if (parsed.services) {
+        // Ensure services have standard options and configurations hydrated, with STRICT UNIQUE SERVICES (No duplicates)
+        if (parsed.services && Array.isArray(parsed.services)) {
+          // 1. Group services by canonical key
+          const serviceGroups = new Map<string, Service[]>();
           parsed.services.forEach((s: Service) => {
-            if (s.id === 'srv-02' || (s.code === 'IMPRESSION-A4-COUL' && s.name.includes('Numérique'))) {
-              s.name = 'Impression';
+            const key = getCanonicalServiceKey(s.name, s.code);
+            if (!serviceGroups.has(key)) {
+              serviceGroups.set(key, []);
+            }
+            serviceGroups.get(key)!.push(s);
+          });
+
+          const deduplicatedServices: Service[] = [];
+          const replacedServiceIdMap = new Map<string, string>(); // oldId -> canonicalId
+
+          serviceGroups.forEach((groupServices, key) => {
+            // Sort to select the most complete, standard service
+            groupServices.sort((a, b) => {
+              const aIsInit = a.id.startsWith('srv-') && a.id.length <= 6 ? 100 : 0;
+              const bIsInit = b.id.startsWith('srv-') && b.id.length <= 6 ? 100 : 0;
+              const aScore = aIsInit + (a.options?.length || 0) * 10 + (a.configurations?.length || 0) + (a.isActive ? 5 : 0);
+              const bScore = bIsInit + (b.options?.length || 0) * 10 + (b.configurations?.length || 0) + (b.isActive ? 5 : 0);
+              return bScore - aScore;
+            });
+
+            const primary = groupServices[0];
+
+            // Re-map all duplicate IDs to the primary ID
+            for (let i = 1; i < groupServices.length; i++) {
+              replacedServiceIdMap.set(groupServices[i].id, primary.id);
             }
 
-            // Flag legacy duplicate variants so they don't appear in "Type de service" catalogues
-            const n = (s.name || '').toLowerCase();
-            const isLegacyVariant = (
-              (n.includes('photocopie') && (n.includes('n&b') || n.includes('noir') || n.includes('couleur') || n.includes('a4') || n.includes('a3')) && s.id !== 'srv-01') ||
-              (n.includes('impression') && (n.includes('n&b') || n.includes('noir') || n.includes('couleur') || n.includes('a4') || n.includes('a3') || n.includes('numérique')) && s.id !== 'srv-02')
-            );
-            if (isLegacyVariant) {
-              (s as any).isLegacyVariant = true;
-              s.isActive = false;
+            // Hydrate canonical name, category, options and configurations from INITIAL_STATE if applicable
+            const initialSrv = INITIAL_STATE.services.find(init => getCanonicalServiceKey(init.name, init.code) === key);
+            if (initialSrv) {
+              primary.name = initialSrv.name;
+              primary.categoryName = initialSrv.categoryName;
+              primary.categoryId = initialSrv.categoryId;
+              primary.unit = initialSrv.unit;
+              if (!primary.options || primary.options.length === 0) {
+                primary.options = JSON.parse(JSON.stringify(initialSrv.options || []));
+              }
+              if (!primary.configurations || primary.configurations.length === 0) {
+                primary.configurations = JSON.parse(JSON.stringify(initialSrv.configurations || []));
+              }
+              if (!primary.consumables || primary.consumables.length === 0) {
+                primary.consumables = JSON.parse(JSON.stringify(initialSrv.consumables || []));
+              }
+              if (!primary.pricingRules || primary.pricingRules.length === 0) {
+                primary.pricingRules = JSON.parse(JSON.stringify(initialSrv.pricingRules || []));
+              }
+              if (initialSrv.consumableMode) {
+                primary.consumableMode = initialSrv.consumableMode;
+              }
             }
 
-            const initialSrv = INITIAL_STATE.services.find(init => init.id === s.id || init.code === s.code);
-            if ((!s.options || s.options.length === 0) && initialSrv?.options && initialSrv.options.length > 0) {
-              s.options = JSON.parse(JSON.stringify(initialSrv.options));
-            }
-            if ((!s.configurations || s.configurations.length === 0) && initialSrv?.configurations && initialSrv.configurations.length > 0) {
-              s.configurations = JSON.parse(JSON.stringify(initialSrv.configurations));
-            }
-            // If still no configurations defined, create fallback default config
-            if (!s.configurations || s.configurations.length === 0) {
-              s.configurations = [
+            // Ensure configurations exist
+            if (!primary.configurations || primary.configurations.length === 0) {
+              primary.configurations = [
                 {
-                  id: `cfg-${s.id}-default`,
-                  serviceId: s.id,
+                  id: `cfg-${primary.id}-default`,
+                  serviceId: primary.id,
                   optionValues: {},
-                  price: s.basePrice || 0,
-                  billingUnit: s.unit || 'prestation',
-                  consumables: (s.consumables || []).map(c => ({
+                  price: primary.basePrice || 0,
+                  billingUnit: primary.unit || 'prestation',
+                  consumables: (primary.consumables || []).map(c => ({
                     productId: c.productId,
                     productName: c.productName,
                     quantityPerUnit: c.quantityPerUnit || 1,
                     unit: c.unit || 'unité',
                     isClientSupplied: Boolean(c.isClientSupplied)
                   })),
-                  isActive: s.isActive !== false
+                  isActive: true
                 }
               ];
             }
-            if (!s.options) {
-              s.options = [];
+            if (!primary.options) {
+              primary.options = [];
+            }
+
+            primary.isActive = true;
+            (primary as any).isLegacyVariant = false;
+
+            deduplicatedServices.push(primary);
+          });
+
+          // Ensure standard core services from INITIAL_STATE are all present
+          INITIAL_STATE.services.forEach(init => {
+            const initKey = getCanonicalServiceKey(init.name, init.code);
+            if (!deduplicatedServices.some(s => getCanonicalServiceKey(s.name, s.code) === initKey)) {
+              deduplicatedServices.push(JSON.parse(JSON.stringify(init)));
             }
           });
 
-          // Ensure standard services like Conception, Recherche, Exposé exist in state
-          const existingServiceCodes = new Set(parsed.services.map((s: Service) => s.code));
-          ['CONCEPTION-GRAPHIQUE', 'RECHERCHE-DOC', 'EXPOSE-SAISIE'].forEach(code => {
-            if (!existingServiceCodes.has(code)) {
-              const toAdd = INITIAL_STATE.services.find(init => init.code === code);
-              if (toAdd) {
-                parsed.services.push(JSON.parse(JSON.stringify(toAdd)));
-              }
+          parsed.services = deduplicatedServices;
+
+          // Re-map references in orders, production jobs, and price histories if duplicates were merged
+          if (replacedServiceIdMap.size > 0) {
+            if (Array.isArray(parsed.orders)) {
+              parsed.orders.forEach((o: any) => {
+                if (Array.isArray(o.items)) {
+                  o.items.forEach((it: any) => {
+                    if (it.serviceId && replacedServiceIdMap.has(it.serviceId)) {
+                      it.serviceId = replacedServiceIdMap.get(it.serviceId);
+                    }
+                  });
+                }
+              });
             }
-          });
+            if (Array.isArray(parsed.productionJobs)) {
+              parsed.productionJobs.forEach((job: any) => {
+                if (job.serviceId && replacedServiceIdMap.has(job.serviceId)) {
+                  job.serviceId = replacedServiceIdMap.get(job.serviceId);
+                }
+              });
+            }
+            if (Array.isArray(parsed.priceHistories)) {
+              parsed.priceHistories.forEach((ph: any) => {
+                if (ph.serviceId && replacedServiceIdMap.has(ph.serviceId)) {
+                  ph.serviceId = replacedServiceIdMap.get(ph.serviceId);
+                }
+              });
+            }
+          }
         }
 
         // Ensure priceHistories is hydrated
@@ -3380,8 +3445,17 @@ class StoreManager {
           parsed.cashSessions = parsed.cashSessions.filter((cs: any) => cs.id !== 'cs-01');
         }
 
+        if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          } catch (e) {
+            // ignore
+          }
+        }
+
         return parsed;
       }
+
     } catch (e) {
       console.warn('LocalStorage unavailable or parse error, using default memory state');
     }
@@ -10349,10 +10423,25 @@ class StoreManager {
         if (!draft.services) draft.services = [];
         if (!draft.serviceCategories) draft.serviceCategories = [];
         stepData.services.forEach((srv: any) => {
-          const existingSrv = draft.services.find(s => s.tenantId === tenantId && s.code === srv.code);
-          if (!existingSrv && srv.name) {
-            const catId = `sc-${Date.now()}-${Math.floor(Math.random() * 100)}`;
-            const catName = srv.category || 'Prestations Générales';
+          const srvKey = getCanonicalServiceKey(srv.name, srv.code);
+          const existingSrv = draft.services.find(s =>
+            (s.tenantId === tenantId || s.tenantId === 'global' || !s.tenantId) &&
+            getCanonicalServiceKey(s.name, s.code) === srvKey
+          );
+
+          if (existingSrv) {
+            // Update existing service instead of creating a duplicate!
+            if (srv.basePrice !== undefined) existingSrv.basePrice = Number(srv.basePrice) || existingSrv.basePrice;
+            if (srv.baseCost !== undefined) existingSrv.baseCost = Number(srv.baseCost) || 0;
+            if (srv.unit) existingSrv.unit = srv.unit;
+            existingSrv.isActive = true;
+            return;
+          }
+
+          if (srv.name) {
+            const initialTemplate = INITIAL_STATE.services.find(init => getCanonicalServiceKey(init.name, init.code) === srvKey);
+            const catId = initialTemplate?.categoryId || `sc-${Date.now()}-${Math.floor(Math.random() * 100)}`;
+            const catName = initialTemplate?.categoryName || srv.category || 'Prestations Générales';
             if (!draft.serviceCategories.some(c => c.tenantId === tenantId && c.name === catName)) {
               draft.serviceCategories.push({
                 id: catId,
@@ -10369,20 +10458,24 @@ class StoreManager {
               tenantId,
               categoryId: catId,
               categoryName: catName,
-              code: srv.code || `SRV-${Date.now().toString().slice(-4)}`,
-              name: srv.name,
-              description: srv.description || undefined,
-              unit: srv.unit || 'page',
-              baseCost: Number(srv.baseCost) || 0,
-              basePrice: Number(srv.basePrice) || 500,
-              requiresFile: Boolean(srv.requiresFile),
-              estimatedDurationMinutes: 1,
-              isActive: srv.isActive !== undefined ? srv.isActive : true,
-              pricingRules: srv.pricingRules || []
+              code: initialTemplate?.code || srv.code || `SRV-${Date.now().toString().slice(-4)}`,
+              name: initialTemplate?.name || srv.name,
+              description: initialTemplate?.description || srv.description || undefined,
+              unit: srv.unit || initialTemplate?.unit || 'page',
+              baseCost: Number(srv.baseCost) || initialTemplate?.baseCost || 0,
+              basePrice: Number(srv.basePrice) || initialTemplate?.basePrice || 500,
+              requiresFile: initialTemplate?.requiresFile ?? Boolean(srv.requiresFile),
+              estimatedDurationMinutes: initialTemplate?.estimatedDurationMinutes || 1,
+              isActive: true,
+              options: initialTemplate?.options ? JSON.parse(JSON.stringify(initialTemplate.options)) : [],
+              configurations: initialTemplate?.configurations ? JSON.parse(JSON.stringify(initialTemplate.configurations)) : [],
+              consumables: initialTemplate?.consumables ? JSON.parse(JSON.stringify(initialTemplate.consumables)) : [],
+              pricingRules: initialTemplate?.pricingRules ? JSON.parse(JSON.stringify(initialTemplate.pricingRules)) : (srv.pricingRules || [])
             });
           }
         });
       }
+
 
       // --- STEP 5: Pricing & Commercial Rules ---
       if (stepData.maxDiscountWithoutApprovalPct !== undefined) {

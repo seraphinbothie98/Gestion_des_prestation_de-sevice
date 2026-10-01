@@ -32,6 +32,12 @@ const MainAppRouter: React.FC<{
     );
   }
 
+  useEffect(() => {
+    if (!isAuthenticated && window.location.hash && !window.location.hash.startsWith('#verify-email') && !window.location.hash.startsWith('#superadmin') && !window.location.hash.startsWith('#login-superadmin')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [isAuthenticated]);
+
   if (isAuthenticated) {
     return (
       <AppLayout

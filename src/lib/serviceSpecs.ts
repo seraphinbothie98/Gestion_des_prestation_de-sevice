@@ -481,3 +481,74 @@ export function getSelectedSpecOption(
   return found || normalizedOptions[0] || { name: selectedName };
 }
 
+/**
+ * Standard canonical service key normalizer to guarantee each service exists ONLY ONCE
+ * across configurators, order entries, stock requirements, and reports.
+ */
+export function getCanonicalServiceKey(name?: string, code?: string): string {
+  const n = (name || '').trim().toLowerCase();
+  const c = (code || '').trim().toLowerCase();
+
+  // 1. Photocopie
+  if (n.includes('photocopie') || c.includes('photo-a4') || c.includes('photocopie') || c === 'photocopie') {
+    if (!n.includes('planche') && !n.includes('identité') && !n.includes('identite') && !c.includes('photo-id') && !c.includes('photo-identite')) {
+      return 'photocopie';
+    }
+  }
+
+  // 2. Impression
+  if (n.includes('impression') || c.includes('impression') || c.startsWith('imp-') || c === 'impression') {
+    if (!n.includes('photocopie')) {
+      return 'impression';
+    }
+  }
+
+  // 3. Scan & Numérisation
+  if (n.includes('scan') || n.includes('numérisation') || n.includes('numerisation') || c.includes('scan')) {
+    return 'scan';
+  }
+
+  // 4. Reliure
+  if (n.includes('reliure') || c.includes('reliure') || c.includes('rel-spir') || c.includes('rel_') || c === 'reliure') {
+    return 'reliure';
+  }
+
+  // 5. Plastification
+  if (n.includes('plastif') || c.includes('plast')) {
+    return 'plastification';
+  }
+
+  // 6. Photo d'identité / Planche photo
+  if (n.includes('photo') && (n.includes('identité') || n.includes('identite') || n.includes('planche')) || c.includes('photo-id') || c.includes('photo-identite')) {
+    return 'photo-identite';
+  }
+
+  // 7. Conception Graphique
+  if (n.includes('conception') || c.includes('conception')) {
+    return 'conception';
+  }
+
+  // 8. Recherche Documentaire
+  if (n.includes('recherche') || c.includes('recherche')) {
+    return 'recherche';
+  }
+
+  // 9. Exposé & Saisie
+  if (n.includes('exposé') || n.includes('expose') || c.includes('expose')) {
+    return 'expose';
+  }
+
+  // 10. Orientation étudiant
+  if (n.includes('orientation') || c.includes('orientation')) {
+    return 'orientation';
+  }
+
+  // 11. Formation
+  if (n.includes('formation') || c.includes('formation')) {
+    return 'formation';
+  }
+
+  return (c || n).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
+
+

@@ -150,12 +150,12 @@ export const OnboardingWizardModal: React.FC<OnboardingWizardModalProps> = ({
   // ÉTAPE 4 : SERVICES & ACTIVITÉS (DYNAMIQUE)
   // -------------------------------------------------------------------------
   const defaultServices = [
-    { code: 'PHOTOCOPIE', name: 'Photocopie', category: 'Impression & Photocopie', unit: 'page', basePrice: 500, baseCost: 150, isSelected: true },
-    { code: 'IMPRESSION', name: 'Impression', category: 'Impression & Photocopie', unit: 'page', basePrice: 1000, baseCost: 200, isSelected: true },
-    { code: 'SCAN-DOC', name: 'Numérisation / Scan', category: 'Secrétariat & Saisie', unit: 'page', basePrice: 1500, baseCost: 100, isSelected: true },
-    { code: 'REL-SPIR-A4', name: 'Reliure', category: 'Finition & Reliure', unit: 'document', basePrice: 10000, baseCost: 3000, isSelected: true },
-    { code: 'PLAST-A4', name: 'Plastification', category: 'Finition & Reliure', unit: 'document', basePrice: 5000, baseCost: 1500, isSelected: true },
-    { code: 'PHOTO-ID', name: 'Planche photo', category: 'Design & Multimédia', unit: 'planche', basePrice: 15000, baseCost: 2500, isSelected: true },
+    { code: 'PHOTOCOPIE-A4-NB', name: 'Photocopie', category: 'Impression & Photocopie', unit: 'page', basePrice: 500, baseCost: 150, isSelected: true },
+    { code: 'IMPRESSION-A4-COUL', name: 'Impression', category: 'Impression & Photocopie', unit: 'page', basePrice: 2000, baseCost: 500, isSelected: true },
+    { code: 'SCAN-DOC-A4', name: 'Numérisation / Scan', category: 'Secrétariat & Saisie', unit: 'page', basePrice: 1500, baseCost: 100, isSelected: true },
+    { code: 'RELIURE-SPIRALE-A4', name: 'Reliure', category: 'Finition & Reliure', unit: 'document', basePrice: 10000, baseCost: 3000, isSelected: true },
+    { code: 'PLASTIF-A4', name: 'Plastification', category: 'Finition & Reliure', unit: 'document', basePrice: 5000, baseCost: 1500, isSelected: true },
+    { code: 'PHOTO-IDENTITE-4X4', name: 'Planche Photo d\'Identité (x8 photos)', category: 'Design & Multimédia', unit: 'planche', basePrice: 15000, baseCost: 2500, isSelected: true },
     { code: 'CONCEPTION-GRAPHIQUE', name: 'Conception', category: 'Design & Multimédia', unit: 'document', basePrice: 50000, baseCost: 5000, isSelected: true },
     { code: 'RECHERCHE-DOC', name: 'Recherche', category: 'Secrétariat & Saisie', unit: 'prestation', basePrice: 20000, baseCost: 0, isSelected: true },
     { code: 'EXPOSE-SAISIE', name: 'Exposé', category: 'Secrétariat & Saisie', unit: 'document', basePrice: 30000, baseCost: 0, isSelected: true }

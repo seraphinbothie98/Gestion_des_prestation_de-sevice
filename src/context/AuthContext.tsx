@@ -82,17 +82,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [dbState, setDbState] = useState<DatabaseState>(dbStore.getState());
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('cms_is_authenticated') === 'true';
+    if (typeof window === 'undefined') return false;
+    // Session active strictement isolée par session de navigation (sessionStorage)
+    // Au lancement du projet ou ouverture initiale, l'utilisateur est toujours orienté vers la page de connexion.
+    const isAuthSession = sessionStorage.getItem('cms_is_authenticated') === 'true';
+    if (!isAuthSession) {
+      // Nettoyage de tout token d'authentification persistant préalable pour garantir la page de connexion à l'arrivée
+      localStorage.removeItem('cms_is_authenticated');
+    }
+    return isAuthSession;
   });
 
   useEffect(() => {
     return dbStore.subscribe(() => {
       setDbState({ ...dbStore.getState() });
-      setIsAuthenticated(localStorage.getItem('cms_is_authenticated') === 'true');
+      setIsAuthenticated(sessionStorage.getItem('cms_is_authenticated') === 'true');
     });
   }, []);
 
-  const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('cms_current_user_id') : null;
+  const savedUserId = typeof window !== 'undefined'
+    ? (sessionStorage.getItem('cms_current_user_id') || localStorage.getItem('cms_current_user_id'))
+    : null;
   const activeUserId = savedUserId || dbState.currentUserId;
   const currentUser: User | null = isAuthenticated
     ? (dbState.users.find(u => u.id === activeUserId) || null)
@@ -256,6 +266,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.location.hash = 'dashboard';
     }
 
+    sessionStorage.setItem('cms_is_authenticated', 'true');
+    sessionStorage.setItem('cms_current_user_id', user.id);
     localStorage.setItem('cms_is_authenticated', 'true');
     localStorage.setItem('cms_current_user_id', user.id);
     dbStore.updateState(draft => {
@@ -283,6 +295,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: currentUser.email
       });
     }
+    sessionStorage.removeItem('cms_is_authenticated');
+    sessionStorage.removeItem('cms_current_user_id');
     localStorage.removeItem('cms_is_authenticated');
     localStorage.removeItem('cms_current_user_id');
     localStorage.removeItem('cms_active_section');
@@ -421,6 +435,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (res.success && res.user && res.tenant) {
       // Si aucune vérification d'e-mail n'est requise (autoVerify activé), connecter immédiatement
       if (!res.requiresEmailVerification) {
+        sessionStorage.setItem('cms_is_authenticated', 'true');
+        sessionStorage.setItem('cms_current_user_id', res.user.id);
         localStorage.setItem('cms_is_authenticated', 'true');
         localStorage.setItem('cms_current_user_id', res.user.id);
         setIsAuthenticated(true);
@@ -449,6 +465,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const verifyEmailAndActivate = (token: string) => {
     const res = dbStore.verifyEmailAndActivateAgency(token);
     if (res.success && res.user && res.tenant) {
+      sessionStorage.setItem('cms_is_authenticated', 'true');
+      sessionStorage.setItem('cms_current_user_id', res.user.id);
       localStorage.setItem('cms_is_authenticated', 'true');
       localStorage.setItem('cms_current_user_id', res.user.id);
       localStorage.setItem('cms_active_section', 'dashboard');

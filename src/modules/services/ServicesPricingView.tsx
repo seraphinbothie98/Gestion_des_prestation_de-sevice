@@ -28,7 +28,8 @@ import {
   getServiceOptions,
   getServiceConfigurations,
   formatCompactOptionValues,
-  formatConfigOptionValues
+  formatConfigOptionValues,
+  getCanonicalServiceKey
 } from '../../lib/serviceSpecs';
 
 const COMMON_BILLING_UNITS = [
@@ -57,10 +58,43 @@ export const ServicesPricingView: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  // Unique Cleaned Services List (Guarantees each service type appears strictly once)
+  const uniqueServices = useMemo(() => {
+    const rawServices = state.services || [];
+    const seen = new Set<string>();
+    const deduplicated: Service[] = [];
+
+    // Prioritize services with configured options/configurations
+    const sorted = [...rawServices].sort((a, b) => {
+      const aIsInit = a.id.startsWith('srv-') && a.id.length <= 6 ? 100 : 0;
+      const bIsInit = b.id.startsWith('srv-') && b.id.length <= 6 ? 100 : 0;
+      const aScore = aIsInit + (a.options?.length || 0) * 10 + (a.configurations?.length || 0) + (a.isActive ? 5 : 0);
+      const bScore = bIsInit + (b.options?.length || 0) * 10 + (b.configurations?.length || 0) + (b.isActive ? 5 : 0);
+      return bScore - aScore;
+    });
+
+    for (const s of sorted) {
+      const key = getCanonicalServiceKey(s.name, s.code);
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduplicated.push(s);
+      }
+    }
+
+    return deduplicated;
+  }, [state.services]);
+
   // Selected Service in Master-Detail view
   const [selectedServiceId, setSelectedServiceId] = useState<string>(
-    state.services[0]?.id || ''
+    uniqueServices[0]?.id || ''
   );
+
+  // Synchronize selectedServiceId when services change
+  React.useEffect(() => {
+    if (uniqueServices.length > 0 && !uniqueServices.some(s => s.id === selectedServiceId)) {
+      setSelectedServiceId(uniqueServices[0].id);
+    }
+  }, [uniqueServices, selectedServiceId]);
 
   // Modals State
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
@@ -102,7 +136,7 @@ export const ServicesPricingView: React.FC = () => {
 
   // Filtered Services List
   const filteredServices = useMemo(() => {
-    return (state.services || []).filter(s => {
+    return uniqueServices.filter(s => {
       const matchesSearch =
         s.name.toLowerCase().includes(search.toLowerCase()) ||
         s.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -114,13 +148,14 @@ export const ServicesPricingView: React.FC = () => {
 
       return matchesSearch && matchesCat && matchesStatus;
     });
-  }, [state.services, search, categoryFilter, statusFilter]);
+  }, [uniqueServices, search, categoryFilter, statusFilter]);
 
   // Selected Service
   const selectedService = useMemo(() => {
-    const found = state.services.find(s => s.id === selectedServiceId);
-    return found || filteredServices[0] || state.services[0];
-  }, [state.services, selectedServiceId, filteredServices]);
+    const found = uniqueServices.find(s => s.id === selectedServiceId);
+    return found || filteredServices[0] || uniqueServices[0] || state.services[0];
+  }, [uniqueServices, selectedServiceId, filteredServices, state.services]);
+
 
   // Available Stock Products for Consumables
   const availableProducts = useMemo(() => {
@@ -591,7 +626,7 @@ export const ServicesPricingView: React.FC = () => {
           }`}
         >
           <Sliders className="w-4 h-4" />
-          Configurateur de Prestations ({state.services.length})
+          Configurateur de Prestations ({uniqueServices.length})
         </button>
         <button
           onClick={() => setActiveTab('history')}
