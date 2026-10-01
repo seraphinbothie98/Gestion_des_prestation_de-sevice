@@ -171,9 +171,12 @@ export const EmailVerificationView: React.FC<EmailVerificationViewProps> = ({
       <div className="w-full max-w-lg relative z-10 space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 text-brand-400 flex items-center justify-center mx-auto shadow-xl relative overflow-hidden">
-            <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-brand-600 via-amber-400 to-emerald-500" />
-            <Building2 className="w-8 h-8 relative z-10 text-brand-400" />
+          <div className="w-20 h-20 rounded-2xl bg-white p-1.5 flex items-center justify-center mx-auto shadow-2xl relative overflow-hidden border border-slate-700/60">
+            <img
+              src="/logo.png"
+              alt="Gestion des Centres de Prestation"
+              className="max-h-full max-w-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-black text-white tracking-tight">
             Gestion des Centres de Prestation

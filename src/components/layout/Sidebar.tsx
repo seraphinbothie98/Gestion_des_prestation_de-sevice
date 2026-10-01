@@ -257,8 +257,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 👑
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-glow shrink-0">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center overflow-hidden border border-slate-700/60 shadow-glow shrink-0">
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  className="max-h-full max-w-full object-contain rounded"
+                />
               </div>
             )}
             <div className="min-w-0">
