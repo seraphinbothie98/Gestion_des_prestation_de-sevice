@@ -23,11 +23,10 @@ router.get('/', async (req, res) => {
     database: {
       provider: 'cPanel PostgreSQL',
       connected: dbHealth.connected,
-      latencyMs: dbHealth.latencyMs || null,
-      version: dbHealth.version || null,
-      databaseName: dbHealth.database || null,
-      error: dbHealth.error || null,
-      message: dbHealth.message
+      latencyMs: dbHealth.connected ? (dbHealth.latencyMs || null) : null,
+      databaseName: dbHealth.connected ? (dbHealth.database || null) : null,
+      error: dbHealth.connected ? null : (process.env.NODE_ENV === 'development' ? dbHealth.error : 'Vérifiez la configuration de vos variables DB_* dans le fichier .env'),
+      message: dbHealth.connected ? 'Connexion PostgreSQL établie avec succès.' : 'En attente de configuration de la base de données PostgreSQL.'
     }
   });
 });
