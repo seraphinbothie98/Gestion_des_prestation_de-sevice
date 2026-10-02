@@ -37,4 +37,6 @@ tmp/
 .deploypath
 storage/uploads/*
 !storage/uploads/.gitkeep
+*.zip
+
 

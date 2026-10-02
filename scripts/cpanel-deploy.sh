@@ -139,6 +139,13 @@ fi
 # ------------------------------------------------------------------------------
 if [ -f "$TARGET_DIR/dist/index.html" ]; then
   echo "✅ Assets frontend de production (dist/) prêts et validés."
+  # Sécurité anti-page blanche : remplacer tout index.html vide ou obsolète à la racine par dist/index.html
+  /bin/cp -f "$TARGET_DIR/dist/index.html" "$TARGET_DIR/index.html"
+  if [ -d "$TARGET_DIR/dist/assets" ]; then
+    /bin/mkdir -p "$TARGET_DIR/assets"
+    /bin/cp -Rf "$TARGET_DIR/dist/assets/"* "$TARGET_DIR/assets/" 2>/dev/null || true
+  fi
+  echo "✅ Racine index.html et assets synchronisés avec la version compilée de production."
 else
   echo "⚠️ dist/index.html manquant dans $TARGET_DIR."
   if command -v npm >/dev/null 2>&1; then
@@ -147,6 +154,9 @@ else
     if [ "$TARGET_DIR" != "$REPO_DIR" ] && [ -d "$REPO_DIR/dist" ]; then
       mkdir -p "$TARGET_DIR/dist"
       /bin/cp -Rf "$REPO_DIR/dist/"* "$TARGET_DIR/dist/" 2>/dev/null || true
+    fi
+    if [ -f "$TARGET_DIR/dist/index.html" ]; then
+      /bin/cp -f "$TARGET_DIR/dist/index.html" "$TARGET_DIR/index.html"
     fi
   fi
 fi
